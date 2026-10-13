@@ -1,0 +1,254 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+/* =========================================================
+   RESTRO — LIGHT THEME
+   ========================================================= */
+
+:root {
+  /* Base */
+  --background: oklch(0.965 0.008 95);
+  --foreground: oklch(0.20 0.015 70);
+
+  /* Cards & Popovers */
+  --card: oklch(0.995 0.003 95);
+  --card-foreground: oklch(0.20 0.015 70);
+
+  --popover: oklch(0.995 0.003 95);
+  --popover-foreground: oklch(0.20 0.015 70);
+
+  /* Brand — Restro Olive */
+  --primary: oklch(0.48 0.145 125);
+  --primary-foreground: oklch(0.98 0.01 95);
+
+  /* Secondary */
+  --secondary: oklch(0.92 0.018 95);
+  --secondary-foreground: oklch(0.28 0.025 70);
+
+  /* Muted */
+  --muted: oklch(0.925 0.012 95);
+  --muted-foreground: oklch(0.50 0.018 70);
+
+  /* Accent — Clean Neutral / Subtle Theme Highlight (No Orange) */
+  --accent: oklch(0.945 0.012 125);
+  --accent-foreground: oklch(0.20 0.015 70);
+
+  /* Destructive */
+  --destructive: oklch(0.58 0.22 27);
+
+  /* Borders & Inputs */
+  --border: oklch(0.87 0.012 95);
+  --input: oklch(0.87 0.012 95);
+
+  /* Focus Ring */
+  --ring: oklch(0.48 0.145 125);
+
+  /* Charts */
+  --chart-1: oklch(0.48 0.145 125);
+  --chart-2: oklch(0.72 0.15 82);
+  --chart-3: oklch(0.55 0.12 155);
+  --chart-4: oklch(0.62 0.13 45);
+  --chart-5: oklch(0.48 0.08 285);
+
+  /* Radius */
+  --radius: 0.75rem;
+
+  /* Sidebar */
+  --sidebar: oklch(0.925 0.012 95);
+  --sidebar-foreground: oklch(0.20 0.015 70);
+
+  --sidebar-primary: oklch(0.48 0.145 125);
+  --sidebar-primary-foreground: oklch(0.98 0.01 95);
+
+  --sidebar-accent: oklch(0.875 0.025 95);
+  --sidebar-accent-foreground: oklch(0.28 0.025 70);
+
+  --sidebar-border: oklch(0.86 0.012 95);
+  --sidebar-ring: oklch(0.48 0.145 125);
+}
+
+
+/* =========================================================
+   RESTRO — DARK THEME
+   ========================================================= */
+
+.dark {
+  /* Base */
+  --background: oklch(0.165 0.007 70);
+  --foreground: oklch(0.96 0.008 95);
+
+  /* Cards & Popovers */
+  --card: oklch(0.215 0.009 70);
+  --card-foreground: oklch(0.96 0.008 95);
+
+  --popover: oklch(0.245 0.01 70);
+  --popover-foreground: oklch(0.96 0.008 95);
+
+  /* Brand — Restro Olive Vibrant */
+  --primary: oklch(0.60 0.16 125);
+  --primary-foreground: oklch(0.99 0.002 95);
+
+  /* Secondary */
+  --secondary: oklch(0.26 0.01 70);
+  --secondary-foreground: oklch(0.95 0.008 95);
+
+  /* Muted */
+  --muted: oklch(0.24 0.008 70);
+  --muted-foreground: oklch(0.72 0.015 95);
+
+  /* Accent — Clean Dark Highlight */
+  --accent: oklch(0.28 0.015 125);
+  --accent-foreground: oklch(0.98 0.005 95);
+
+  /* Destructive */
+  --destructive: oklch(0.65 0.20 27);
+
+  /* Borders & Inputs */
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 16%);
+
+  /* Focus Ring */
+  --ring: oklch(0.60 0.16 125);
+
+  /* Charts */
+  --chart-1: oklch(0.65 0.16 125);
+  --chart-2: oklch(0.75 0.15 82);
+  --chart-3: oklch(0.62 0.13 155);
+  --chart-4: oklch(0.68 0.14 45);
+  --chart-5: oklch(0.62 0.09 285);
+
+  /* Sidebar */
+  --sidebar: oklch(0.185 0.007 70);
+  --sidebar-foreground: oklch(0.96 0.008 95);
+
+  --sidebar-primary: oklch(0.60 0.16 125);
+  --sidebar-primary-foreground: oklch(0.99 0.002 95);
+
+  --sidebar-accent: oklch(0.245 0.01 70);
+  --sidebar-accent-foreground: oklch(0.98 0.005 95);
+
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.60 0.16 125);
+}
+
+/* =========================================================
+   GLOBAL BROWSER / SYSTEM CONTROLS THEME ADAPTATION
+   ========================================================= */
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+select {
+  color-scheme: light dark;
+}
+
+select option {
+  background-color: var(--card);
+  color: var(--card-foreground);
+}
+
+/* =========================================================
+   THERMAL RECEIPT PRINT STYLES (MONOCHROME BLACK & WHITE)
+   ========================================================= */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide website chrome, sidebar, dialog overlays, buttons */
+  header,
+  nav,
+  aside,
+  button,
+  [data-slot="dialog-overlay"],
+  [data-slot="dialog-close"],
+  [data-slot="dialog-header"],
+  [data-slot="dialog-footer"],
+  .no-print {
+    display: none !important;
+  }
+
+  .printable-thermal-receipt {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 4mm 2mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    visibility: visible !important;
+  }
+}
