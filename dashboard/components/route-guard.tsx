@@ -27,7 +27,7 @@ const CASHIER_ALLOWED_PREFIXES = [
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, isInitialized, initialize } = useAuthStore()
+  const { user, token, isInitialized, initialize } = useAuthStore()
   const [isAuthorized, setIsAuthorized] = React.useState<boolean | null>(null)
 
   React.useEffect(() => {
@@ -37,9 +37,20 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (!isInitialized) return
 
-    const role = user?.role || "admin"
+    // 1. إذا كان المستخدم غير مسجل دخول
+    if (!user || !token) {
+      setIsAuthorized(false)
+      if (typeof window !== "undefined") {
+        window.location.replace("/login")
+      } else {
+        router.replace("/login")
+      }
+      return
+    }
 
-    // Check kitchen permissions
+    const role = user.role
+
+    // 2. تطبيق صلاحيات رئيس المطبخ (Kitchen)
     if (role === "kitchen") {
       const allowed = KITCHEN_ALLOWED_PREFIXES.some(
         (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
@@ -51,7 +62,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Check cashier permissions
+    // 3. تطبيق صلاحيات كاشير الصالة (Cashier)
     if (role === "cashier") {
       if (pathname === "/dashboard" || pathname === "/dashboard/") {
         setIsAuthorized(false)
@@ -69,9 +80,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Admin or allowed route
+    // 4. مدير النظام أو مسار مصرح به
     setIsAuthorized(true)
-  }, [pathname, user, isInitialized, router])
+  }, [pathname, user, token, isInitialized, router])
 
   if (!isInitialized || isAuthorized === null) {
     return (

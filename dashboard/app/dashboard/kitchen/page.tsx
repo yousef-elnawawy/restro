@@ -95,10 +95,14 @@ export default function KitchenPage() {
 
   const { setOpen, open, toggleSidebar } = useSidebar()
 
-  // طي القائمة الجانبية تلقائياً في الشاشات المقسمة لتوفير أقصى مساحة لتذاكر الأوردرات
+  // طي القائمة الجانبية لمرة واحدة فقط عند الدخول لشاشة المطبخ في الشاشات المتوسطة لتوفير مساحة لتذاكر الأوردرات
+  const hasAutoCollapsedRef = React.useRef(false)
   React.useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 1200) {
-      setOpen(false)
+    if (!hasAutoCollapsedRef.current) {
+      hasAutoCollapsedRef.current = true
+      if (typeof window !== "undefined" && window.innerWidth < 1200) {
+        setOpen(false)
+      }
     }
   }, [setOpen])
 

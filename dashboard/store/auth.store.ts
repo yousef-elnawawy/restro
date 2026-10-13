@@ -50,31 +50,36 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     const storedUser = getStoredUser()
     const storedToken = getAuthToken()
 
-    if (storedUser && storedToken) {
-      set({ user: storedUser, token: storedToken, isInitialized: true })
-      if (typeof document !== "undefined") {
-        const maxAge = 60 * 60 * 24 * 30
-        document.cookie = `auth_role=${encodeURIComponent(storedUser.role || "admin")}; path=/; max-age=${maxAge}; SameSite=Lax`
-      }
-    } else {
-      set({ isInitialized: true })
+    // إذا لم يكن هناك توكن أو مستخدم مخزن، نعتبر الجلسة منتهية فوراً وبدون أي انتظار
+    if (!storedUser || !storedToken) {
+      clearAuthSession()
+      set({ user: null, token: null, isInitialized: true })
+      return
     }
 
-    // التحقق من صلاحية التوكن وجلب أحدث بيانات المستخدم من الباك إند
-    if (storedToken) {
-      try {
-        const res = await getMeApi()
-        if (res.success && res.data) {
-          set({ user: res.data })
-          setAuthSession(storedToken, res.data)
-        } else {
-          // إذا كان التوكن غير صالح أو منتهي
-          clearAuthSession()
-          set({ user: null, token: null })
+    // تهيئة فورية من الذاكرة المحلية حتى تفتح الواجهة بسلاسة بدون شاشات تحميل مزعجة
+    set({ user: storedUser, token: storedToken, isInitialized: true })
+    if (typeof document !== "undefined") {
+      const maxAge = 60 * 60 * 24 * 30
+      document.cookie = `auth_role=${encodeURIComponent(storedUser.role || "admin")}; path=/; max-age=${maxAge}; SameSite=Lax`
+    }
+
+    // التحقق الصامت في الخلفية من صلاحية التوكن لدى الباك إند
+    try {
+      const res = await getMeApi()
+      if (res.success && res.data) {
+        set({ user: res.data })
+        setAuthSession(storedToken, res.data)
+      } else {
+        // إذا كان التوكن غير صالح أو أُعيد تعيين قاعدة البيانات (401)
+        clearAuthSession()
+        set({ user: null, token: null })
+        if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) {
+          window.location.replace("/login")
         }
-      } catch {
-        // في حال تعذر الاتصال نعتمد على البيانات المخزنة محلياً
       }
+    } catch {
+      // في حال انقطاع الشبكة نبقي على البيانات المحلية
     }
   },
 

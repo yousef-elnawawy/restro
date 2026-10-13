@@ -61,6 +61,8 @@ import {
   LayoutGridIcon,
   ListIcon,
   ArrowLeftIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   SaveIcon,
   TruckIcon,
 } from "lucide-react"
@@ -93,6 +95,7 @@ function PosContent() {
   const { registers, fetchRegisters } = useRegisterStore()
   const { createOrder, updateOrder, payOrder, getOrder } = useOrderStore()
   const { settings, fetchSettings } = useSettingStore()
+  const currency = settings.currency || "ج.م"
 
   const [mounted, setMounted] = React.useState(false)
 
@@ -171,6 +174,38 @@ function PosContent() {
   // التبديل بين الكتالوج والفاتورة في الشاشات الصغيرة (الموبايل والتابلت)
   const [mobileTab, setMobileTab] = React.useState<"catalog" | "invoice">("catalog")
   const [viewMode, setViewMode] = React.useState<"grid" | "compact">("grid")
+
+  // مرجع شريط تمرير الأقسام للتمرير السلس بالأزرار وبكرة الماوس
+  const categoriesScrollRef = React.useRef<HTMLDivElement>(null)
+
+  const scrollCategories = (direction: "forward" | "backward") => {
+    if (!categoriesScrollRef.current) return
+    const el = categoriesScrollRef.current
+    // في واجهة RTL: التمرير لليسار (forward) يكون بسالب، والعودة لليمين (backward) يكون بموجب
+    const amount = 240
+    el.scrollBy({
+      left: direction === "forward" ? -amount : amount,
+      behavior: "smooth",
+    })
+  }
+
+  React.useEffect(() => {
+    const el = categoriesScrollRef.current
+    if (!el) return
+
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        const maxScroll = el.scrollWidth - el.clientWidth
+        if (maxScroll > 0) {
+          e.preventDefault()
+          el.scrollBy({ left: -e.deltaY, behavior: "auto" })
+        }
+      }
+    }
+
+    el.addEventListener("wheel", handleWheel, { passive: false })
+    return () => el.removeEventListener("wheel", handleWheel)
+  }, [])
 
   // تعيين الخزنة الافتراضية عند تحميل الخزائن
   React.useEffect(() => {
@@ -258,6 +293,18 @@ function PosContent() {
       })),
     ]
   }, [customers])
+
+  // خيارات الخزائن المالية للتحصيل (نمط shadcn الموحد)
+  const registerOptions: ComboboxOption[] = React.useMemo(() => {
+    return registers
+      .filter((r) => r.is_active)
+      .map((r) => ({
+        value: String(r.id),
+        label: `${r.name} ${r.is_default ? "(الافتراضية)" : ""}`,
+        badge: `${Number(r.balance || 0).toLocaleString("ar-EG")} ${currency}`,
+        badgeVariant: "success" as const,
+      }))
+  }, [registers, currency])
 
   const handleSelectCustomer = (val: string) => {
     if (!val) {
@@ -440,7 +487,6 @@ function PosContent() {
   }
 
   // حساب الإجماليات
-  const currency = settings.currency || "ج.م"
   const taxRate = settings.tax_enabled ? (Number(settings.tax_percentage || 0) / 100) : 0
   const deliveryFee = orderType === "delivery" ? Number(settings.delivery_fee || 0) : 0
   const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0)
@@ -670,41 +716,23 @@ function PosContent() {
       description="إصدار الطلبات، حجز وسداد الطاولات، وربط التحصيل بالخزائن النقدية"
       className="p-1 sm:p-2.5 max-w-full gap-2 sm:gap-2.5"
       action={
-        <div className="flex items-center gap-1.5">
-          {/* شارة الخزنة النشطة الحالية */}
-          {selectedRegisterId && (
-            <div className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
-              <LandmarkIcon className="size-3" />
-              <span>{registers.find((r) => r.id === selectedRegisterId)?.name || "الخزنة"}</span>
+        <div className="flex items-center gap-2">
+          {/* محدد الخزنة النقدية للتحصيل بنمط shadcn الموحد */}
+          <div className="flex items-center gap-1.5 p-1 rounded-lg bg-card border border-border/60 shadow-xs">
+            <span className="text-xs text-muted-foreground font-semibold shrink-0 flex items-center gap-1 ps-1.5">
+              <LandmarkIcon className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>الخزنة:</span>
+            </span>
+            <div className="w-56 sm:w-64">
+              <ComboboxSelect
+                value={selectedRegisterId ? String(selectedRegisterId) : ""}
+                onValueChange={(val) => setSelectedRegisterId(val ? Number(val) : null)}
+                options={registerOptions}
+                placeholder="اختر الخزنة..."
+                emptyText="لا توجد خزائن"
+                className="h-8 text-xs bg-muted/30 hover:bg-muted/50 border-0 rounded-md font-bold"
+              />
             </div>
-          )}
-
-          {/* تبديل طريقة العرض شبكة / مدمج */}
-          <div className="flex items-center bg-muted/60 p-0.5 rounded-md border border-border/50">
-            <button
-              type="button"
-              onClick={() => setViewMode("grid")}
-              className={`p-1 rounded text-xs transition-colors ${
-                viewMode === "grid"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="عرض الشبكة المصورة"
-            >
-              <LayoutGridIcon className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("compact")}
-              className={`p-1 rounded text-xs transition-colors ${
-                viewMode === "compact"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="عرض القائمة المدمجة السريعة"
-            >
-              <ListIcon className="size-3.5" />
-            </button>
           </div>
         </div>
       }
@@ -754,7 +782,7 @@ function PosContent() {
       </div>
 
       {/* المخطط العام المتجاوب: كتالوج الأصناف + الفاتورة */}
-      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-2.5 sm:gap-3 items-start pb-20 min-[1100px]:pb-0">
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-2.5 sm:gap-3 pb-20 min-[1100px]:pb-0">
         {/* قسم كتالوج المنتجات والأصناف (7 أعمدة في الشاشات العريضة) */}
         <div className={`min-[1100px]:col-span-7 2xl:col-span-8 flex flex-col gap-2.5 ${mobileTab === "invoice" ? "hidden min-[1100px]:flex" : "flex"}`}>
           {/* شريط التحكم السريع: نوع الطلب + الطاولة + العميل */}
@@ -860,49 +888,104 @@ function PosContent() {
               </div>
             </div>
 
-            {/* حقل البحث السريع */}
-            <div className="relative pt-1 border-t border-border/40">
-              <SearchIcon className="absolute start-2.5 top-[calc(50%+2px)] -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ابحث عن صنف بالاسم أو الوصف..."
-                className="ps-8.5 h-8.5 bg-muted/30 rounded-lg text-xs"
-              />
+            {/* حقل البحث السريع + زرار نمط العرض (كروت / صفوف) للأصناف */}
+            <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+              <div className="relative flex-1">
+                <SearchIcon className="absolute start-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="ابحث عن صنف بالاسم أو الوصف..."
+                  className="ps-8.5 h-8.5 bg-muted/30 rounded-lg text-xs"
+                />
+              </div>
+
+              {/* تبديل نمط عرض المنتجات (كروت / صفوف) */}
+              <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border/50 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  className={`px-2 py-1 rounded-md text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewMode === "grid"
+                      ? "bg-card text-primary shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="عرض كروت مصورة"
+                >
+                  <LayoutGridIcon className="size-3.5" />
+                  <span className="text-[11px]">كروت</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("compact")}
+                  className={`px-2 py-1 rounded-md text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewMode === "compact"
+                      ? "bg-card text-primary shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="عرض صفوف قائمة"
+                >
+                  <ListIcon className="size-3.5" />
+                  <span className="text-[11px]">صفوف</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* شريط الأقسام السريعة */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {/* شريط الأقسام السريعة مع شريط تمرير أنيق وأزرار تنقل */}
+          <div className="relative flex items-center gap-1.5 w-full">
             <button
               type="button"
-              onClick={() => setSelectedCategoryId("all")}
-              className={`shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                selectedCategoryId === "all"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "bg-card hover:bg-muted text-muted-foreground border border-border/60"
-              }`}
+              onClick={() => scrollCategories("backward")}
+              className="size-7 rounded-lg bg-card hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 flex items-center justify-center shrink-0 shadow-xs cursor-pointer transition-colors"
+              title="التمرير للأقسام السابقة (اليمين)"
             >
-              كل الأصناف {mounted ? `(${products.filter((p) => p.is_active).length})` : ""}
+              <ChevronRightIcon className="size-4" />
             </button>
 
-            {categories.map((cat) => (
+            <div
+              ref={categoriesScrollRef}
+              className="flex-1 flex items-center gap-1.5 overflow-x-auto pb-2 pt-0.5 custom-scrollbar scroll-smooth"
+            >
               <button
-                key={cat.id}
                 type="button"
-                onClick={() => setSelectedCategoryId(cat.id)}
-                className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                  selectedCategoryId === cat.id
+                onClick={() => setSelectedCategoryId("all")}
+                className={`shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  selectedCategoryId === "all"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-card hover:bg-muted text-muted-foreground border border-border/60"
                 }`}
               >
-                {cat.image && (cat.image.startsWith("http") || cat.image.startsWith("data:")) && (
-                  <img src={cat.image} alt="" className="size-3.5 rounded-sm object-cover" />
-                )}
-                <span>{cat.name}</span>
+                كل الأصناف {mounted ? `(${products.filter((p) => p.is_active).length})` : ""}
               </button>
-            ))}
+
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCategoryId(cat.id)}
+                  className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                    selectedCategoryId === cat.id
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-card hover:bg-muted text-muted-foreground border border-border/60"
+                  }`}
+                >
+                  {cat.image && (cat.image.startsWith("http") || cat.image.startsWith("data:")) && (
+                    <img src={cat.image} alt="" className="size-3.5 rounded-sm object-cover" />
+                  )}
+                  <span>{cat.name}</span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => scrollCategories("forward")}
+              className="size-7 rounded-lg bg-card hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 flex items-center justify-center shrink-0 shadow-xs cursor-pointer transition-colors"
+              title="التمرير للأقسام التالية (اليسار)"
+            >
+              <ChevronLeftIcon className="size-4" />
+            </button>
           </div>
 
           {/* شبكة الأطباق للطلب المباشر */}
@@ -1031,7 +1114,7 @@ function PosContent() {
         {/* =========================================================
             سلايد الفاتورة والحساب (5 أعمدة في الشاشات العريضة)
             ========================================================= */}
-        <div className={`min-[1100px]:col-span-5 2xl:col-span-4 min-[1100px]:sticky min-[1100px]:top-2 min-[1100px]:h-[calc(100vh-4.2rem)] flex flex-col rounded-md bg-card border border-border/60 shadow-xs overflow-hidden text-right ${mobileTab === "catalog" ? "hidden min-[1100px]:flex" : "flex"}`}>
+        <div className={`min-[1100px]:col-span-5 2xl:col-span-4 min-[1100px]:self-start min-[1100px]:sticky min-[1100px]:top-3 min-[1100px]:z-20 min-[1100px]:h-[calc(100vh-6.5rem)] h-[calc(100dvh-8.5rem)] flex flex-col rounded-xl bg-card border border-border/60 shadow-xs overflow-hidden text-right ${mobileTab === "catalog" ? "hidden min-[1100px]:flex" : "flex"}`}>
           {/* زر العودة للأصناف على الشاشات الصغيرة */}
           <div className="min-[1100px]:hidden p-2 bg-muted/40 border-b border-border/60 flex items-center justify-between">
             <Button
@@ -1136,8 +1219,8 @@ function PosContent() {
             </div>
           )}
 
-          {/* قائمة أصناف الفاتورة (Scrollable) */}
-          <div className="p-2.5 divide-y divide-border/40 flex-1 min-h-[200px] max-h-[50vh] min-[1100px]:max-h-none overflow-y-auto space-y-1.5 text-xs">
+          {/* قائمة أصناف الفاتورة (تتحرك بسكرول داخلي فقط والباقي ثابت) */}
+          <div className="p-2.5 divide-y divide-border/40 flex-1 min-h-0 overflow-y-auto space-y-1.5 text-xs">
             {invoiceItems.length === 0 ? (
               <div className="py-10 text-center text-muted-foreground space-y-1.5">
                 <ShoppingBagIcon className="size-8 mx-auto text-muted-foreground/30 stroke-1" />
@@ -1149,15 +1232,21 @@ function PosContent() {
                 <div key={item.id} className="pt-1.5 first:pt-0 space-y-1">
                   <div className="flex items-start justify-between gap-1">
                     <div className="min-w-0 flex-1">
-                      <span className="font-bold text-foreground text-xs block truncate">{item.name}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-foreground text-xs truncate">{item.name}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground font-mono font-medium">
+                          {item.unitPrice} {currency}
+                        </span>
+                      </div>
                       {item.selectedSize && (
-                        <span className="text-[10px] text-muted-foreground">الحجم: {item.selectedSize.name}</span>
+                        <span className="text-[10px] text-muted-foreground block">الحجم: {item.selectedSize.name}</span>
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveInvoiceItem(item.id)}
-                      className="text-muted-foreground hover:text-destructive p-0.5"
+                      className="text-muted-foreground hover:text-destructive p-0.5 cursor-pointer"
+                      title="حذف الصنف"
                     >
                       <Trash2Icon className="size-3" />
                     </button>
@@ -1178,32 +1267,41 @@ function PosContent() {
                   )}
 
                   <div className="flex items-center justify-between pt-0.5">
-                    <div className="flex items-center gap-1 bg-background rounded border border-border/60 p-0.5">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateQuantity(item.id, -1)}
-                        className="size-4.5 rounded flex items-center justify-center hover:bg-muted text-muted-foreground"
-                      >
-                        <MinusIcon className="size-2.5" />
-                      </button>
-                      <span className="w-4 text-center font-bold text-xs">{item.quantity}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateQuantity(item.id, 1)}
-                        className="size-4.5 rounded flex items-center justify-center hover:bg-muted text-muted-foreground"
-                      >
-                        <PlusIcon className="size-2.5" />
-                      </button>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1 bg-background rounded border border-border/60 p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, -1)}
+                          className="size-4.5 rounded flex items-center justify-center hover:bg-muted text-muted-foreground cursor-pointer"
+                          title="إنقاص الكمية"
+                        >
+                          <MinusIcon className="size-2.5" />
+                        </button>
+                        <span className="w-4 text-center font-bold text-xs">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, 1)}
+                          className="size-4.5 rounded flex items-center justify-center hover:bg-muted text-muted-foreground cursor-pointer"
+                          title="زيادة الكمية"
+                        >
+                          <PlusIcon className="size-2.5" />
+                        </button>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-mono font-medium" title="سعر الصنف الفردي">
+                        × {item.unitPrice} {currency}
+                      </span>
                     </div>
-                    <span className="font-bold font-mono text-foreground text-xs">{item.totalPrice} {currency}</span>
+                    <span className="font-bold font-mono text-primary text-xs" title="إجمالي هذا الصنف">
+                      {item.totalPrice} {currency}
+                    </span>
                   </div>
                 </div>
               ))
             )}
           </div>
 
-          {/* ملخص الحساب والأزرار الإجرائية (Sticky at bottom) */}
-          <div className="p-2.5 sm:p-3 bg-muted/20 border-t border-border/50 space-y-2 text-xs shrink-0">
+          {/* ملخص الحساب والأزرار الإجرائية (ثابتة تماماً في الأسفل) */}
+          <div className="p-2.5 sm:p-3 bg-muted/20 border-t border-border/50 space-y-2 text-xs shrink-0 mt-auto">
             <div className="space-y-0.5 text-muted-foreground">
               <div className="flex justify-between text-[11px]">
                 <span>المجموع الفرعي:</span>

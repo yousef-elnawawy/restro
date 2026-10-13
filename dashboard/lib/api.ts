@@ -20,17 +20,27 @@ export interface LoginResponseData {
   user: User
 }
 
+// التحقق من صحة التوكن كقيمة غير فارغة أو غير تالفة
+export function isValidToken(token: string | null | undefined): boolean {
+  if (!token) return false
+  const t = token.trim()
+  return t.length > 0 && t !== "undefined" && t !== "null"
+}
+
 // قراءة التوكن من الـ Cookies أو الـ localStorage
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null
 
-  // قراءة من localStorage
+  // قراءة من localStorage أولاً
   const localToken = localStorage.getItem("auth_token")
-  if (localToken) return localToken
+  if (isValidToken(localToken)) return localToken!
 
   // قراءة من الكوكيز كبديل
   const match = document.cookie.match(new RegExp("(^| )auth_token=([^;]+)"))
-  return match ? decodeURIComponent(match[2]) : null
+  const cookieToken = match ? decodeURIComponent(match[2]) : null
+  if (isValidToken(cookieToken)) return cookieToken!
+
+  return null
 }
 
 // حفظ التوكن وبيانات المستخدم في Cookies و localStorage
@@ -48,15 +58,25 @@ export function setAuthSession(token: string, user: User) {
   document.cookie = `auth_role=${encodeURIComponent(role)}; path=/; max-age=${maxAge}; SameSite=Lax`
 }
 
-// مسح الجلسة والتوكن
+// مسح الجلسة والتوكن بصورة قطعية
 export function clearAuthSession() {
   if (typeof window === "undefined") return
 
   localStorage.removeItem("auth_token")
   localStorage.removeItem("auth_user")
   localStorage.removeItem("auth_role")
-  document.cookie = "auth_token=; path=/; max-age=0; SameSite=Lax"
-  document.cookie = "auth_role=; path=/; max-age=0; SameSite=Lax"
+
+  const pastDate = "Thu, 01 Jan 1970 00:00:00 GMT"
+  document.cookie = `auth_token=; path=/; expires=${pastDate}; max-age=0; SameSite=Lax`
+  document.cookie = `auth_role=; path=/; expires=${pastDate}; max-age=0; SameSite=Lax`
+}
+
+// توجيه تلقائي وفوري لصفحة تسجيل الدخول عند فقدان الجلسة
+export function handleUnauthorized() {
+  clearAuthSession()
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) {
+    window.location.replace("/login")
+  }
 }
 
 // جلب المستخدم المخزن محلياً
@@ -89,20 +109,29 @@ export async function loginApi(email: string, password: string): Promise<ApiResp
 // جلب بيانات الحساب والتحقق من التوكن
 export async function getMeApi(): Promise<ApiResponse<User>> {
   const token = getAuthToken()
-  if (!token) {
+  if (!isValidToken(token)) {
     return { success: false, message: "غير مسجل دخول." }
   }
 
-  const res = await fetch(`${API_URL}/auth/me`, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  })
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
 
-  const data = await res.json()
-  return data
+    if (res.status === 401) {
+      handleUnauthorized()
+      return { success: false, message: "غير مسجل دخول أو انتهت صلاحية الجلسة." }
+    }
+
+    const data = await res.json()
+    return data
+  } catch {
+    return { success: false, message: "تعذر الاتصال بالخادم للتحقق من الجلسة." }
+  }
 }
 
 // تسجيل الخروج

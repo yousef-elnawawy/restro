@@ -53,8 +53,7 @@ export function LoginForm({
             ? "/dashboard/pos"
             : "/dashboard"
 
-        router.push(targetUrl)
-        router.refresh()
+        window.location.replace(targetUrl)
       } else {
         setErrorMessage(res.message)
       }

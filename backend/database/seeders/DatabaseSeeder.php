@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             TableSeeder::class,
             CustomerSeeder::class,
             DeliveryDriverSeeder::class,
+            OrderSeeder::class,
         ]);
     }
 }

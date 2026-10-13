@@ -13,19 +13,22 @@ export default async function DashboardLayout({
 }) {
   const cookieStore = await cookies()
   const token = cookieStore.get("auth_token")?.value
+  const hasValidToken = Boolean(
+    token && token !== "undefined" && token !== "null" && token.trim().length > 0
+  )
 
-  if (!token) {
+  if (!hasValidToken) {
     redirect("/login")
   }
 
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="min-w-0 max-w-full overflow-x-hidden">
+      <SidebarInset className="min-w-0 max-w-full overflow-x-clip">
         <RealtimeListener />
         <DashboardHeader />
         <RouteGuard>
-          <div className="flex flex-1 flex-col gap-3 p-2 sm:p-3 pt-2.5 sm:pt-3 min-w-0 max-w-full overflow-x-hidden">
+          <div className="flex flex-1 flex-col gap-3 p-2 sm:p-3 pt-2.5 sm:pt-3 min-w-0 max-w-full overflow-x-clip">
             {children}
           </div>
         </RouteGuard>

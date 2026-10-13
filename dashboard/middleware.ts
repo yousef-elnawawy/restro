@@ -21,19 +21,40 @@ const CASHIER_ALLOWED_PREFIXES = [
   "/dashboard/help",
 ]
 
+function isValidToken(token: string | null | undefined): boolean {
+  if (!token) return false
+  const t = token.trim()
+  return t.length > 0 && t !== "undefined" && t !== "null"
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const token = request.cookies.get("auth_token")?.value
+  const rawToken = request.cookies.get("auth_token")?.value
+  const hasToken = isValidToken(rawToken)
   const role = request.cookies.get("auth_role")?.value || "admin"
 
-  // 1. حماية مسارات لوحة التحكم من الزوار غير المسجلين
+  // 1. توجيه الصفحة الرئيسية الجذرية (/)
+  if (pathname === "/") {
+    if (!hasToken) {
+      return NextResponse.redirect(new URL("/login", request.url))
+    }
+    if (role === "kitchen") {
+      return NextResponse.redirect(new URL("/dashboard/kitchen", request.url))
+    }
+    if (role === "cashier") {
+      return NextResponse.redirect(new URL("/dashboard/pos", request.url))
+    }
+    return NextResponse.redirect(new URL("/dashboard", request.url))
+  }
+
+  // 2. حماية مسارات لوحة التحكم من الزوار غير المسجلين
   if (pathname.startsWith("/dashboard")) {
-    if (!token) {
+    if (!hasToken) {
       const loginUrl = new URL("/login", request.url)
       return NextResponse.redirect(loginUrl)
     }
 
-    // 2. تطبيق صلاحيات رئيس المطبخ (Kitchen)
+    // تطبيق صلاحيات رئيس المطبخ (Kitchen)
     if (role === "kitchen") {
       const isAllowed = KITCHEN_ALLOWED_PREFIXES.some(
         (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
@@ -43,9 +64,9 @@ export function middleware(request: NextRequest) {
       }
     }
 
-    // 3. تطبيق صلاحيات كاشير الصالة (Cashier)
+    // تطبيق صلاحيات كاشير الصالة (Cashier)
     if (role === "cashier") {
-      // منع الكاشير تماماً من رؤية لوحة التحكم الإدارية وتقارير الأرباح
+      // منع الكاشير تماماً من رؤية لوحة التحكم الإدارية العامة
       if (pathname === "/dashboard" || pathname === "/dashboard/") {
         return NextResponse.redirect(new URL("/dashboard/pos", request.url))
       }
@@ -59,8 +80,8 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 4. توجيه المستخدم المسجل بالفعل إذا حاول فتح صفحة تسجيل الدخول
-  if (pathname === "/login" && token) {
+  // 3. توجيه المستخدم المسجل بالفعل إذا حاول فتح صفحة تسجيل الدخول
+  if (pathname === "/login" && hasToken) {
     if (role === "kitchen") {
       return NextResponse.redirect(new URL("/dashboard/kitchen", request.url))
     }
@@ -74,5 +95,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/login", "/"],
 }
