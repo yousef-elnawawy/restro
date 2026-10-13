@@ -55,7 +55,7 @@ test('non-admin user cannot login to dashboard and receives 403 forbidden', func
     $response->assertStatus(403)
         ->assertJson([
             'success' => false,
-            'message' => 'غير مصرح لك بالوصول إلى لوحة التحكم.',
+            'message' => 'غير مصرح لك بالوصول إلى لوحة التحكم. حسابك مخصص للزبائن.',
         ]);
 });
 
@@ -112,15 +112,17 @@ test('authenticated admin can retrieve current profile via /api/auth/me', functi
 });
 
 test('non-admin user cannot access protected admin routes even if authenticated', function () {
-    $customer = User::factory()->create(['role' => 'customer']);
-    Sanctum::actingAs($customer);
+    $cashier = User::factory()->create(['role' => 'cashier']);
+    Sanctum::actingAs($cashier);
 
-    $response = $this->getJson('/api/auth/me');
+    $response = $this->postJson('/api/cash-registers', [
+        'name' => 'خزنة تجريبية',
+    ]);
 
     $response->assertStatus(403)
         ->assertJson([
             'success' => false,
-            'message' => 'غير مصرح لك بالوصول إلى لوحة التحكم.',
+            'message' => 'ليس لديك صلاحية لتنفيذ هذا الإجراء. هذه العملية مخصصة لمدير النظام فقط.',
         ]);
 });
 

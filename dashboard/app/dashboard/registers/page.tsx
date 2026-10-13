@@ -5,6 +5,7 @@ import { PageContainer } from "@/components/page-container"
 import { useRegisterStore } from "@/store/register.store"
 import { useFinancialStore } from "@/store/financial.store"
 import { useSettingStore } from "@/store/setting.store"
+import { useAuthStore } from "@/store/auth.store"
 import { type CashRegister, type CashRegisterPayload, type FinancialTransaction } from "@/lib/api"
 import { VoucherDialog } from "@/components/voucher-dialog"
 import { RegisterStatementDialog } from "@/components/register-statement-dialog"
@@ -91,6 +92,8 @@ export default function RegistersPage() {
   } = useFinancialStore()
 
   const { settings, fetchSettings } = useSettingStore()
+  const user = useAuthStore((state) => state.user)
+  const isAdmin = user?.role === "admin"
   const [mounted, setMounted] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<"registers" | "vouchers">("registers")
 
@@ -173,6 +176,10 @@ export default function RegistersPage() {
 
   // فتح نافذة إضافة خزنة
   const handleOpenCreateRegister = () => {
+    if (!isAdmin) {
+      showBanner("عفواً، إضافة الخزائن المالية مخصصة لمدير النظام فقط.", "error")
+      return
+    }
     setEditingRegister(null)
     setFormData({
       name: "",
@@ -186,6 +193,10 @@ export default function RegistersPage() {
 
   // فتح نافذة تعديل خزنة
   const handleOpenEditRegister = (reg: CashRegister) => {
+    if (!isAdmin) {
+      showBanner("عفواً، تعديل بيانات الخزائن مخصص لمدير النظام فقط.", "error")
+      return
+    }
     setEditingRegister(reg)
     setFormData({
       name: reg.name,
@@ -201,6 +212,11 @@ export default function RegistersPage() {
   const handleSaveRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
+
+    if (!isAdmin) {
+      setFormError("ليس لديك صلاحية لتنفيذ هذا الإجراء. إدارة الخزائن مخصصة لمدير النظام فقط.")
+      return
+    }
 
     if (!formData.name.trim()) {
       setFormError("يرجى إدخال اسم الخزنة.")
@@ -228,6 +244,10 @@ export default function RegistersPage() {
 
   // حذف خزنة
   const handleOpenDeleteRegister = (reg: CashRegister) => {
+    if (!isAdmin) {
+      showBanner("عفواً، حذف الخزائن مخصص لمدير النظام فقط.", "error")
+      return
+    }
     if (reg.is_default) {
       showBanner("لا يمكن حذف الخزنة الرئيسية الافتراضية للنظام.", "error")
       return
@@ -237,6 +257,10 @@ export default function RegistersPage() {
   }
 
   const handleConfirmDeleteRegister = async () => {
+    if (!isAdmin) {
+      showBanner("عفواً، حذف الخزائن مخصص لمدير النظام فقط.", "error")
+      return
+    }
     if (!registerToDelete) return
     const res = await deleteRegister(registerToDelete.id)
     setDeleteConfirmOpen(false)
@@ -250,6 +274,10 @@ export default function RegistersPage() {
 
   // تبديل تفعيل الخزنة
   const handleToggleRegister = async (reg: CashRegister) => {
+    if (!isAdmin) {
+      showBanner("عفواً، تغيير حالة الخزنة مخصص لمدير النظام فقط.", "error")
+      return
+    }
     const res = await toggleRegisterActive(reg.id)
     if (res.success) {
       showBanner(res.message, "success")
@@ -329,14 +357,16 @@ export default function RegistersPage() {
             <span>تحديث</span>
           </Button>
 
-          <Button
-            size="sm"
-            onClick={handleOpenCreateRegister}
-            className="h-8.5 gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-semibold"
-          >
-            <PlusIcon className="size-4" />
-            <span>خزنة جديدة</span>
-          </Button>
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={handleOpenCreateRegister}
+              className="h-8.5 gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-semibold"
+            >
+              <PlusIcon className="size-4" />
+              <span>خزنة جديدة</span>
+            </Button>
+          )}
         </div>
       }
     >
@@ -515,30 +545,32 @@ export default function RegistersPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => handleOpenEditRegister(reg)}
-                        className="size-7 text-muted-foreground hover:text-foreground"
-                        title="تعديل"
-                      >
-                        <Edit2Icon className="size-3.5" />
-                      </Button>
-                      {!reg.is_default && (
+                    {isAdmin && (
+                      <div className="flex items-center gap-1">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon-xs"
-                          onClick={() => handleOpenDeleteRegister(reg)}
-                          className="size-7 text-muted-foreground hover:text-destructive"
-                          title="حذف"
+                          onClick={() => handleOpenEditRegister(reg)}
+                          className="size-7 text-muted-foreground hover:text-foreground"
+                          title="تعديل"
                         >
-                          <Trash2Icon className="size-3.5" />
+                          <Edit2Icon className="size-3.5" />
                         </Button>
-                      )}
-                    </div>
+                        {!reg.is_default && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => handleOpenDeleteRegister(reg)}
+                            className="size-7 text-muted-foreground hover:text-destructive"
+                            title="حذف"
+                          >
+                            <Trash2Icon className="size-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* تفاصيل الأرصدة (رصيد أول المدة + الرصيد الفعلي الحالي) */}
@@ -574,23 +606,40 @@ export default function RegistersPage() {
 
                   {/* أزرار الإجراءات السريعة للخزنة */}
                   <div className="flex items-center justify-between pt-1 border-t border-border/40 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleRegister(reg)}
-                      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-                    >
-                      {reg.is_active ? (
-                        <>
-                          <ToggleRightIcon className="size-4 text-emerald-600" />
-                          <span className="text-emerald-600 font-medium">نشطة</span>
-                        </>
-                      ) : (
-                        <>
-                          <ToggleLeftIcon className="size-4 text-muted-foreground" />
-                          <span>معطلة</span>
-                        </>
-                      )}
-                    </button>
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleRegister(reg)}
+                        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
+                        title="تغيير حالة تفعيل الخزنة"
+                      >
+                        {reg.is_active ? (
+                          <>
+                            <ToggleRightIcon className="size-4 text-emerald-600" />
+                            <span className="text-emerald-600 font-medium">نشطة</span>
+                          </>
+                        ) : (
+                          <>
+                            <ToggleLeftIcon className="size-4 text-muted-foreground" />
+                            <span>معطلة</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[11px]">
+                        {reg.is_active ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            <span className="size-1.5 rounded-full bg-emerald-500" />
+                            نشطة
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground">
+                            <span className="size-1.5 rounded-full bg-muted-foreground" />
+                            معطلة
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-1">
                       <Button
@@ -779,7 +828,7 @@ export default function RegistersPage() {
                       <TableHead className="text-start">البيان والتصنيف</TableHead>
                       <TableHead className="text-start">العميل المستفيد</TableHead>
                       <TableHead className="text-center w-24">التاريخ</TableHead>
-                      <TableHead className="text-center w-16">إجراء</TableHead>
+                      <TableHead className="text-center w-16">{isAdmin ? "إجراء" : ""}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -865,19 +914,23 @@ export default function RegistersPage() {
                         </TableCell>
 
                         <TableCell className="p-2.5 text-center">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() => {
-                              setVoucherToDelete(tx)
-                              setVoucherDeleteOpen(true)
-                            }}
-                            className="size-7 text-muted-foreground hover:text-destructive"
-                            title="حذف السند وإلغاء أثره المالي"
-                          >
-                            <Trash2Icon className="size-3.5" />
-                          </Button>
+                          {isAdmin ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => {
+                                setVoucherToDelete(tx)
+                                setVoucherDeleteOpen(true)
+                              }}
+                              className="size-7 text-muted-foreground hover:text-destructive"
+                              title="حذف السند وإلغاء أثره المالي"
+                            >
+                              <Trash2Icon className="size-3.5" />
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground/30 text-[11px]">-</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

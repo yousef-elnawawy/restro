@@ -54,7 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage() ?: 'غير مصرح لك بالوصول إلى لوحة التحكم.',
+                    'message' => $e->getMessage() ?: 'ليس لديك صلاحية لتنفيذ هذا الإجراء. هذه العملية مخصصة لمدير النظام فقط.',
                     'errors' => (object) [],
                 ], 403);
             }

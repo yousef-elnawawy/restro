@@ -18,8 +18,12 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user() || ! $request->user()->isAdmin()) {
-            return $this->errorResponse('غير مصرح لك بالوصول إلى لوحة التحكم.', null, Response::HTTP_FORBIDDEN);
+        if (! $request->user()) {
+            return $this->errorResponse('غير مسجل دخول أو انتهت صلاحية الجلسة.', null, Response::HTTP_UNAUTHORIZED);
+        }
+
+        if (! $request->user()->isAdmin()) {
+            return $this->errorResponse('ليس لديك صلاحية لتنفيذ هذا الإجراء. هذه العملية مخصصة لمدير النظام فقط.', null, Response::HTTP_FORBIDDEN);
         }
 
         return $next($request);
