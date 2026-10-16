@@ -30,7 +30,7 @@ interface StaffState {
   isSaving: boolean
   error: string | null
   searchQuery: string
-  roleFilter: "all" | "admin" | "cashier" | "kitchen"
+  roleFilter: "all" | "admin" | "cashier" | "kitchen" | "delivery"
 
   // Actions
   fetchStaff: () => Promise<void>
@@ -43,7 +43,7 @@ interface StaffState {
   ) => Promise<{ success: boolean; message: string; data?: StaffUser }>
   deleteStaff: (id: number) => Promise<{ success: boolean; message: string }>
   setSearchQuery: (query: string) => void
-  setRoleFilter: (filter: "all" | "admin" | "cashier" | "kitchen") => void
+  setRoleFilter: (filter: "all" | "admin" | "cashier" | "kitchen" | "delivery") => void
   resetFilters: () => void
 }
 

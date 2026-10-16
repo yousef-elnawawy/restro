@@ -37,6 +37,28 @@ class OrderController extends Controller
             'payments.cashRegister',
         ]);
 
+        $authUser = $request->user() ?? auth('sanctum')->user();
+        if ($authUser && $authUser->isDelivery()) {
+            $driver = $authUser->deliveryDriver;
+            if (! $driver) {
+                $driver = DeliveryDriver::firstOrCreate(
+                    ['user_id' => $authUser->id],
+                    [
+                        'name' => $authUser->name,
+                        'phone' => '010' . str_pad((string) $authUser->id, 8, '0', STR_PAD_LEFT),
+                        'vehicle_type' => 'motorcycle',
+                        'status' => 'available',
+                        'is_active' => true,
+                    ]
+                );
+            }
+            // مسؤول وسائق الديليفري يرى فقط طلبات التوصيل المسندة إليه
+            $query->where('order_type', 'delivery')
+                  ->where('delivery_driver_id', $driver->id);
+        } elseif ($driverId = $request->query('delivery_driver_id')) {
+            $query->where('delivery_driver_id', $driverId);
+        }
+
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'like', "%{$search}%")

@@ -17,6 +17,7 @@ const CASHIER_ALLOWED_PREFIXES = [
   "/dashboard/pos",
   "/dashboard/tables",
   "/dashboard/orders",
+  "/dashboard/delivery",
   "/dashboard/customers",
   "/dashboard/registers",
   "/dashboard/profile",
@@ -24,22 +25,51 @@ const CASHIER_ALLOWED_PREFIXES = [
   "/dashboard/help",
 ]
 
+const DELIVERY_ALLOWED_PREFIXES = [
+  "/dashboard/delivery",
+  "/dashboard/profile",
+  "/dashboard/notifications",
+  "/dashboard/help",
+]
+
+function checkPermission(role: string | undefined, pathname: string): boolean {
+  if (role === "kitchen") {
+    return KITCHEN_ALLOWED_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+    )
+  }
+  if (role === "cashier") {
+    if (pathname === "/dashboard" || pathname === "/dashboard/") return false
+    return CASHIER_ALLOWED_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+    )
+  }
+  if (role === "delivery") {
+    if (pathname === "/dashboard" || pathname === "/dashboard/") return false
+    return DELIVERY_ALLOWED_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+    )
+  }
+  return true
+}
+
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, token, isInitialized, initialize } = useAuthStore()
-  const [isAuthorized, setIsAuthorized] = React.useState<boolean | null>(null)
 
   React.useEffect(() => {
     initialize()
   }, [initialize])
 
+  // التحقق الفوري والمتزامن لتجنب وميض التحميل المزعج
+  const hasAuth = Boolean(user && token)
+  const isAllowed = hasAuth ? checkPermission(user?.role, pathname) : null
+
   React.useEffect(() => {
     if (!isInitialized) return
 
-    // 1. إذا كان المستخدم غير مسجل دخول
     if (!user || !token) {
-      setIsAuthorized(false)
       if (typeof window !== "undefined") {
         window.location.replace("/login")
       } else {
@@ -48,63 +78,40 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       return
     }
 
-    const role = user.role
-
-    // 2. تطبيق صلاحيات رئيس المطبخ (Kitchen)
-    if (role === "kitchen") {
-      const allowed = KITCHEN_ALLOWED_PREFIXES.some(
-        (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
-      )
-      if (!allowed) {
-        setIsAuthorized(false)
+    if (!isAllowed) {
+      if (user.role === "kitchen") {
         router.replace("/dashboard/kitchen")
-        return
+      } else if (user.role === "cashier") {
+        router.replace("/dashboard/pos")
+      } else if (user.role === "delivery") {
+        router.replace("/dashboard/delivery")
       }
     }
+  }, [pathname, user, token, isInitialized, isAllowed, router])
 
-    // 3. تطبيق صلاحيات كاشير الصالة (Cashier)
-    if (role === "cashier") {
-      if (pathname === "/dashboard" || pathname === "/dashboard/") {
-        setIsAuthorized(false)
-        router.replace("/dashboard/pos")
-        return
-      }
-
-      const allowed = CASHIER_ALLOWED_PREFIXES.some(
-        (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
-      )
-      if (!allowed) {
-        setIsAuthorized(false)
-        router.replace("/dashboard/pos")
-        return
-      }
-    }
-
-    // 4. مدير النظام أو مسار مصرح به
-    setIsAuthorized(true)
-  }, [pathname, user, token, isInitialized, router])
-
-  if (!isInitialized || isAuthorized === null) {
+  if (!isInitialized && !hasAuth) {
     return (
-      <div className="flex h-96 w-full items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2Icon className="size-6 animate-spin text-primary" />
-          <span className="text-xs text-muted-foreground font-medium">جاري التحقق من الصلاحيات...</span>
+      <div className="flex h-64 w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-2.5 text-center">
+          <Loader2Icon className="size-5 animate-spin text-primary" />
+          <span className="text-xs text-muted-foreground font-medium">
+            جاري التحميل...
+          </span>
         </div>
       </div>
     )
   }
 
-  if (isAuthorized === false) {
+  if (hasAuth && !isAllowed) {
     return (
-      <div className="flex h-96 w-full flex-col items-center justify-center gap-4 text-center">
-        <div className="rounded-full bg-destructive/10 p-4 text-destructive">
-          <ShieldAlertIcon className="size-8" />
+      <div className="flex h-64 w-full flex-col items-center justify-center gap-3 text-center">
+        <div className="rounded-full bg-destructive/10 p-3 text-destructive">
+          <ShieldAlertIcon className="size-6" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-base font-bold text-foreground">غير مصرح بالدخول</h3>
+          <h3 className="text-sm font-bold text-foreground">غير مصرح بالدخول</h3>
           <p className="text-xs text-muted-foreground">
-            ليس لديك صلاحية لعرض هذه الصفحة. يتم توجيهك إلى قسمك المخصص...
+            جاري نقلك إلى قسمك المخصص...
           </p>
         </div>
       </div>
@@ -113,3 +120,4 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>
 }
+

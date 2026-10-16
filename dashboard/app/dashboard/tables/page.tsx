@@ -6,6 +6,7 @@ import { PageContainer } from "@/components/page-container"
 import { useTableStore } from "@/store/table.store"
 import { useOrderStore } from "@/store/order.store"
 import { useSettingStore } from "@/store/setting.store"
+import { useAuthStore } from "@/store/auth.store"
 import { type RestaurantTable, type TablePayload, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -84,6 +85,9 @@ export default function TablesPage() {
 
     return () => clearInterval(interval)
   }, [fetchTables, fetchSettings])
+
+  const user = useAuthStore((state) => state.user)
+  const isAdmin = user?.role === "admin"
 
   const activeCurrency = settings?.currency || "ج.م"
 
@@ -286,14 +290,16 @@ export default function TablesPage() {
             <span>طباعة باركود QR</span>
           </Button>
 
-          <Button
-            size="sm"
-            onClick={handleOpenCreate}
-            className="h-8.5 gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-semibold"
-          >
-            <PlusIcon className="size-4" />
-            <span>إضافة طاولة جديدة</span>
-          </Button>
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={handleOpenCreate}
+              className="h-8.5 gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-semibold"
+            >
+              <PlusIcon className="size-4" />
+              <span>إضافة طاولة جديدة</span>
+            </Button>
+          )}
         </div>
       }
     >
@@ -605,29 +611,31 @@ export default function TablesPage() {
                       <span>رمز QR</span>
                     </Button>
 
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleOpenEdit(table, e)}
-                        className="text-xs text-muted-foreground hover:text-foreground p-1.5 h-auto rounded-md"
-                      >
-                        <Edit2Icon className="size-3.5 ms-1" />
-                        <span>تعديل</span>
-                      </Button>
+                    {isAdmin && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleOpenEdit(table, e)}
+                          className="text-xs text-muted-foreground hover:text-foreground p-1.5 h-auto rounded-md"
+                        >
+                          <Edit2Icon className="size-3.5 ms-1" />
+                          <span>تعديل</span>
+                        </Button>
 
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleOpenDelete(table, e)}
-                        className="text-xs text-muted-foreground hover:text-destructive p-1.5 h-auto rounded-md"
-                      >
-                        <Trash2Icon className="size-3.5 ms-1" />
-                        <span>حذف</span>
-                      </Button>
-                    </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleOpenDelete(table, e)}
+                          className="text-xs text-muted-foreground hover:text-destructive p-1.5 h-auto rounded-md"
+                        >
+                          <Trash2Icon className="size-3.5 ms-1" />
+                          <span>حذف</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

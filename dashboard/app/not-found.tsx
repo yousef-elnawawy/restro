@@ -17,10 +17,10 @@ export default function NotFound() {
 
       <div className="mt-6">
         <Link
-          href="/dashboard"
+          href="/"
           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
         >
-          العودة إلى لوحة التحكم
+          العودة للرئيسية
         </Link>
       </div>
     </div>

@@ -27,7 +27,6 @@ export function RealtimeListener() {
   const { fetchTables } = useTableStore()
 
   const [toasts, setToasts] = React.useState<RealtimeToast[]>([])
-  const [isConnected, setIsConnected] = React.useState(false)
 
   const addToast = (toast: Omit<RealtimeToast, "id">) => {
     const id = Math.random().toString(36).substring(2, 9)
@@ -46,8 +45,6 @@ export function RealtimeListener() {
   React.useEffect(() => {
     const echo = getEcho()
     if (!echo) return
-
-    setIsConnected(true)
 
     // 1. الاستماع لقناة المطبخ (تذاكر الطلبات الجديدة)
     const kitchenChannel = echo.channel("kitchen-orders")

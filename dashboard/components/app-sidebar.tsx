@@ -95,7 +95,7 @@ const data = {
     },
 
     {
-      title: "مناديب التوصيل",
+      title: "التوصيل والديليفري",
       url: "/dashboard/delivery",
       icon: <TruckIcon />,
     },
@@ -180,9 +180,16 @@ export function AppSidebar({
           "/dashboard/pos",
           "/dashboard/tables",
           "/dashboard/orders",
+          "/dashboard/delivery",
           "/dashboard/customers",
           "/dashboard/registers",
         ].includes(item.url)
+      )
+    }
+
+    if (role === "delivery") {
+      return data.navMain.filter((item) =>
+        ["/dashboard/delivery"].includes(item.url)
       )
     }
 
@@ -190,8 +197,23 @@ export function AppSidebar({
     return data.navMain
   }, [role])
 
-  const defaultHomeUrl = role === "kitchen" ? "/dashboard/kitchen" : role === "cashier" ? "/dashboard/pos" : "/dashboard"
-  const roleLabel = role === "kitchen" ? "رئيس المطبخ (KDS)" : role === "cashier" ? "كاشير الصالة" : "إدارة المطعم"
+  const defaultHomeUrl =
+    role === "kitchen"
+      ? "/dashboard/kitchen"
+      : role === "cashier"
+      ? "/dashboard/pos"
+      : role === "delivery"
+      ? "/dashboard/delivery"
+      : "/dashboard"
+
+  const roleLabel =
+    role === "kitchen"
+      ? "رئيس المطبخ (KDS)"
+      : role === "cashier"
+      ? "كاشير الصالة"
+      : role === "delivery"
+      ? "كابتن التوصيل (Driver)"
+      : "إدارة المطعم"
 
   return (
     <Sidebar

@@ -5,6 +5,7 @@ export interface User {
   name: string
   email: string
   role: string
+  delivery_driver?: DeliveryDriver | null
 }
 
 export interface ApiResponse<T = unknown> {
@@ -1201,6 +1202,7 @@ export interface Customer {
 
 export interface DeliveryDriver {
   id: number
+  user_id?: number | null
   name: string
   phone: string
   vehicle_type: "motorcycle" | "car" | "bicycle" | "scooter"
@@ -2220,7 +2222,7 @@ export interface StaffUser {
   id: number
   name: string
   email: string
-  role: "admin" | "cashier" | "kitchen"
+  role: "admin" | "cashier" | "kitchen" | "delivery"
   created_at?: string
   updated_at?: string
 }
@@ -2229,14 +2231,14 @@ export interface CreateStaffUserPayload {
   name: string
   email: string
   password: string
-  role: "admin" | "cashier" | "kitchen"
+  role: "admin" | "cashier" | "kitchen" | "delivery"
 }
 
 export interface UpdateStaffUserPayload {
   name: string
   email: string
   password?: string
-  role: "admin" | "cashier" | "kitchen"
+  role: "admin" | "cashier" | "kitchen" | "delivery"
 }
 
 export async function getStaffUsersApi(params?: {

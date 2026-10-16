@@ -42,7 +42,7 @@ class AuthController extends Controller
             return $this->errorResponse('البريد الإلكتروني أو كلمة المرور غير صحيحة.', null, Response::HTTP_UNAUTHORIZED);
         }
 
-        $allowedRoles = ['admin', 'cashier', 'kitchen'];
+        $allowedRoles = ['admin', 'cashier', 'kitchen', 'delivery'];
         if (! in_array($user->role, $allowedRoles)) {
             RateLimiter::hit($throttleKey, 60);
 
@@ -53,6 +53,8 @@ class AuthController extends Controller
 
         $token = $user->createToken('admin-dashboard')->plainTextToken;
 
+        $driver = $user->isDelivery() ? $user->deliveryDriver : null;
+
         return $this->successResponse([
             'token' => $token,
             'token_type' => 'Bearer',
@@ -61,6 +63,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
+                'delivery_driver' => $driver,
             ],
         ], 'تم تسجيل الدخول بنجاح');
     }
@@ -81,12 +84,14 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
+        $driver = $user->isDelivery() ? $user->deliveryDriver : null;
 
         return $this->successResponse([
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'delivery_driver' => $driver,
         ], 'تم استرجاع بيانات المستخدم بنجاح');
     }
 

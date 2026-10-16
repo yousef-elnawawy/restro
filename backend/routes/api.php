@@ -79,19 +79,19 @@ Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
 });
 Route::delete('financial-transactions/{financial_transaction}', [FinancialTransactionController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
 
-// Delivery Drivers CRUD (Admin only)
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+// Delivery Drivers CRUD (Admin, Cashier, and Delivery Staff)
+Route::middleware(['auth:sanctum', 'role:admin,cashier,delivery'])->group(function () {
     Route::get('delivery-drivers', [DeliveryDriverController::class, 'index']);
     Route::get('delivery-drivers/{delivery_driver}', [DeliveryDriverController::class, 'show']);
     Route::post('delivery-drivers', [DeliveryDriverController::class, 'store']);
     Route::put('delivery-drivers/{delivery_driver}', [DeliveryDriverController::class, 'update']);
     Route::delete('delivery-drivers/{delivery_driver}', [DeliveryDriverController::class, 'destroy']);
     Route::patch('delivery-drivers/{delivery_driver}/status', [DeliveryDriverController::class, 'updateStatus']);
+});
 
-    // Settings update
+// Admin Only Settings & Reports
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::put('settings', [SettingController::class, 'update']);
-
-    // Dashboard Live Analytics & Reports
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('reports', [DashboardController::class, 'reports']);
 });

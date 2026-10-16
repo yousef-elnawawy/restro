@@ -14,8 +14,16 @@ const CASHIER_ALLOWED_PREFIXES = [
   "/dashboard/pos",
   "/dashboard/tables",
   "/dashboard/orders",
+  "/dashboard/delivery",
   "/dashboard/customers",
   "/dashboard/registers",
+  "/dashboard/profile",
+  "/dashboard/notifications",
+  "/dashboard/help",
+]
+
+const DELIVERY_ALLOWED_PREFIXES = [
+  "/dashboard/delivery",
   "/dashboard/profile",
   "/dashboard/notifications",
   "/dashboard/help",
@@ -43,6 +51,9 @@ export function middleware(request: NextRequest) {
     }
     if (role === "cashier") {
       return NextResponse.redirect(new URL("/dashboard/pos", request.url))
+    }
+    if (role === "delivery") {
+      return NextResponse.redirect(new URL("/dashboard/delivery", request.url))
     }
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
@@ -78,22 +89,25 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/dashboard/pos", request.url))
       }
     }
-  }
 
-  // 3. توجيه المستخدم المسجل بالفعل إذا حاول فتح صفحة تسجيل الدخول
-  if (pathname === "/login" && hasToken) {
-    if (role === "kitchen") {
-      return NextResponse.redirect(new URL("/dashboard/kitchen", request.url))
+    // تطبيق صلاحيات مسؤول التوصيل والديليفري (Delivery)
+    if (role === "delivery") {
+      if (pathname === "/dashboard" || pathname === "/dashboard/") {
+        return NextResponse.redirect(new URL("/dashboard/delivery", request.url))
+      }
+
+      const isAllowed = DELIVERY_ALLOWED_PREFIXES.some(
+        (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+      )
+      if (!isAllowed) {
+        return NextResponse.redirect(new URL("/dashboard/delivery", request.url))
+      }
     }
-    if (role === "cashier") {
-      return NextResponse.redirect(new URL("/dashboard/pos", request.url))
-    }
-    return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/"],
+  matcher: ["/dashboard/:path*", "/"],
 }

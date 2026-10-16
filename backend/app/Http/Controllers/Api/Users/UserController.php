@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Users;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeliveryDriver;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -51,7 +52,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:150', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
-            'role' => ['required', 'string', Rule::in(['admin', 'cashier', 'kitchen'])],
+            'role' => ['required', 'string', Rule::in(['cashier', 'kitchen', 'delivery'])],
         ], [
             'name.required' => 'اسم الموظف مطلوب.',
             'email.required' => 'البريد الإلكتروني مطلوب.',
@@ -60,7 +61,7 @@ class UserController extends Controller
             'password.required' => 'كلمة المرور مطلوبة.',
             'password.min' => 'يجب ألا تقل كلمة المرور عن 6 أحرف.',
             'role.required' => 'الدور / الصلاحية مطلوبة.',
-            'role.in' => 'الدور المحدد غير صالح. الأدوار المتاحة: مدير، كاشير، مطبخ.',
+            'role.in' => 'لا يمكن منح صلاحية المدير لأي حساب موظف جديد. الأدوار المتاحة لطاقم العمل هي: كاشير، مطبخ، أو توصيل فقط.',
         ]);
 
         $user = User::create([
@@ -69,6 +70,18 @@ class UserController extends Controller
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
         ]);
+
+        // إذا كان الموظف مسؤول توصيل، ننشئ له سجلاً في جدول السائقين تلقائياً لربطه
+        if ($user->role === 'delivery') {
+            DeliveryDriver::create([
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'phone' => '010' . str_pad((string) $user->id, 8, '0', STR_PAD_LEFT),
+                'vehicle_type' => 'motorcycle',
+                'status' => 'available',
+                'is_active' => true,
+            ]);
+        }
 
         return $this->successResponse($user, 'تم إضافة الموظف بنجاح.', Response::HTTP_CREATED);
     }
@@ -86,11 +99,16 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user): JsonResponse
     {
+        // حماية حساب المدير العام من أي تعديل من شاشة الموظفين
+        if ($user->isAdmin() || $user->role === 'admin') {
+            return $this->errorResponse('حساب المدير العام محمي بالكامل ولا يمكن تعديل بياناته من قائمة الموظفين نهائياً.', null, Response::HTTP_FORBIDDEN);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:6'],
-            'role' => ['required', 'string', Rule::in(['admin', 'cashier', 'kitchen'])],
+            'role' => ['required', 'string', Rule::in(['cashier', 'kitchen', 'delivery'])],
         ], [
             'name.required' => 'اسم الموظف مطلوب.',
             'email.required' => 'البريد الإلكتروني مطلوب.',
@@ -98,16 +116,8 @@ class UserController extends Controller
             'email.unique' => 'البريد الإلكتروني مسجل بالفعل لموظف آخر.',
             'password.min' => 'يجب ألا تقل كلمة المرور عن 6 أحرف.',
             'role.required' => 'الدور / الصلاحية مطلوبة.',
-            'role.in' => 'الدور المحدد غير صالح.',
+            'role.in' => 'لا يمكن ترقية أي موظف إلى صلاحية المدير. الأدوار المتاحة هي: كاشير، مطبخ، أو توصيل فقط.',
         ]);
-
-        // Prevent demoting the only admin
-        if ($user->isAdmin() && $validated['role'] !== 'admin') {
-            $adminCount = User::where('role', 'admin')->count();
-            if ($adminCount <= 1) {
-                return $this->errorResponse('لا يمكن تغيير صلاحية هذا المستخدم لأنه المدير الوحيد المسجل بالنظام.', null, Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
-        }
 
         $data = [
             'name' => $validated['name'],
@@ -121,6 +131,23 @@ class UserController extends Controller
 
         $user->update($data);
 
+        // تحديث أو إنشاء سجل السائق عند تعديل بيانات الموظف
+        if ($user->role === 'delivery') {
+            $driver = DeliveryDriver::where('user_id', $user->id)->first();
+            if ($driver) {
+                $driver->update(['name' => $user->name]);
+            } else {
+                DeliveryDriver::create([
+                    'user_id' => $user->id,
+                    'name' => $user->name,
+                    'phone' => '010' . str_pad((string) $user->id, 8, '0', STR_PAD_LEFT),
+                    'vehicle_type' => 'motorcycle',
+                    'status' => 'available',
+                    'is_active' => true,
+                ]);
+            }
+        }
+
         return $this->successResponse($user, 'تم تحديث بيانات الموظف بنجاح.');
     }
 
@@ -129,6 +156,11 @@ class UserController extends Controller
      */
     public function destroy(Request $request, User $user): JsonResponse
     {
+        // حماية حساب المدير العام من الحذف نهائياً
+        if ($user->isAdmin() || $user->role === 'admin') {
+            return $this->errorResponse('حساب المدير العام محمي بالكامل ولا يمكن حذفه نهائياً من النظام.', null, Response::HTTP_FORBIDDEN);
+        }
+
         $currentUser = $request->user();
 
         // Cannot delete oneself
@@ -136,12 +168,8 @@ class UserController extends Controller
             return $this->errorResponse('لا يمكنك حذف حسابك الشخصي الحالي أثناء تسجيل الدخول به.', null, Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        // Cannot delete the only admin
-        if ($user->isAdmin()) {
-            $adminCount = User::where('role', 'admin')->count();
-            if ($adminCount <= 1) {
-                return $this->errorResponse('لا يمكن حذف هذا المستخدم لأنه المدير الوحيد المسجل بالنظام.', null, Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
+        if ($user->role === 'delivery') {
+            DeliveryDriver::where('user_id', $user->id)->delete();
         }
 
         $user->tokens()->delete();

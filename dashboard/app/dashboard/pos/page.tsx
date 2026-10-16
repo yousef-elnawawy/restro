@@ -81,6 +81,67 @@ interface InvoiceItem {
   totalPrice: number
 }
 
+// مكوّن حقل إدخال الكمية المباشر (بالكتابة والأزرار)
+interface ItemQuantityInputProps {
+  value: number
+  onChange: (val: number) => void
+  min?: number
+  max?: number
+  className?: string
+  title?: string
+}
+
+function ItemQuantityInput({
+  value,
+  onChange,
+  min = 1,
+  max = 9999,
+  className = "",
+  title = "اضغط لتعديل الكمية بالكتابة مباشرة",
+}: ItemQuantityInputProps) {
+  const [localVal, setLocalVal] = React.useState(String(value))
+
+  React.useEffect(() => {
+    setLocalVal(String(value))
+  }, [value])
+
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      value={localVal}
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => {
+        const raw = e.target.value
+        setLocalVal(raw)
+        const parsed = parseInt(raw, 10)
+        if (!isNaN(parsed) && parsed >= min) {
+          onChange(Math.min(max, parsed))
+        }
+      }}
+      onBlur={() => {
+        const parsed = parseInt(localVal, 10)
+        if (isNaN(parsed) || parsed < min) {
+          setLocalVal(String(min))
+          onChange(min)
+        } else {
+          const bounded = Math.min(max, parsed)
+          setLocalVal(String(bounded))
+          onChange(bounded)
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.currentTarget.blur()
+        }
+      }}
+      className={`w-9 h-5 text-center font-bold font-mono text-xs bg-muted/40 hover:bg-muted/70 focus:bg-background focus:ring-1 focus:ring-primary border border-transparent focus:border-primary/50 rounded px-0.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors cursor-text ${className}`}
+      title={title}
+    />
+  )
+}
+
 function PosContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -465,6 +526,23 @@ function PosContent() {
         })
         .filter(Boolean) as InvoiceItem[]
     })
+  }
+
+  // تعديل كمية صنف بالفاتورة بالكتابة المباشرة
+  const handleSetItemQuantity = (itemId: string, targetQuantity: number) => {
+    const validQty = Math.max(1, Math.min(9999, Math.floor(targetQuantity) || 1))
+    setInvoiceItems((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            quantity: validQty,
+            totalPrice: item.unitPrice * validQty,
+          }
+        }
+        return item
+      })
+    )
   }
 
   // حذف صنف من الفاتورة
@@ -1272,16 +1350,19 @@ function PosContent() {
                         <button
                           type="button"
                           onClick={() => handleUpdateQuantity(item.id, -1)}
-                          className="size-4.5 rounded flex items-center justify-center hover:bg-muted text-muted-foreground cursor-pointer"
+                          className="size-4.5 rounded flex items-center justify-center hover:bg-muted text-muted-foreground cursor-pointer shrink-0"
                           title="إنقاص الكمية"
                         >
                           <MinusIcon className="size-2.5" />
                         </button>
-                        <span className="w-4 text-center font-bold text-xs">{item.quantity}</span>
+                        <ItemQuantityInput
+                          value={item.quantity}
+                          onChange={(val) => handleSetItemQuantity(item.id, val)}
+                        />
                         <button
                           type="button"
                           onClick={() => handleUpdateQuantity(item.id, 1)}
-                          className="size-4.5 rounded flex items-center justify-center hover:bg-muted text-muted-foreground cursor-pointer"
+                          className="size-4.5 rounded flex items-center justify-center hover:bg-muted text-muted-foreground cursor-pointer shrink-0"
                           title="زيادة الكمية"
                         >
                           <PlusIcon className="size-2.5" />
@@ -1681,15 +1762,21 @@ function PosContent() {
                 <button
                   type="button"
                   onClick={() => setItemQuantity((q) => Math.max(1, q - 1))}
-                  className="size-6 rounded flex items-center justify-center hover:bg-muted text-foreground"
+                  className="size-6 rounded flex items-center justify-center hover:bg-muted text-foreground cursor-pointer shrink-0"
+                  title="إنقاص الكمية"
                 >
                   <MinusIcon className="size-3" />
                 </button>
-                <span className="w-6 text-center font-bold">{itemQuantity}</span>
+                <ItemQuantityInput
+                  value={itemQuantity}
+                  onChange={(val) => setItemQuantity(val)}
+                  className="w-12 h-6 text-sm"
+                />
                 <button
                   type="button"
                   onClick={() => setItemQuantity((q) => q + 1)}
-                  className="size-6 rounded flex items-center justify-center hover:bg-muted text-foreground"
+                  className="size-6 rounded flex items-center justify-center hover:bg-muted text-foreground cursor-pointer shrink-0"
+                  title="زيادة الكمية"
                 >
                   <PlusIcon className="size-3" />
                 </button>

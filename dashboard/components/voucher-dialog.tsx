@@ -77,21 +77,23 @@ export function VoucherDialog({
   // مزامنة النوع المبدئي والخزنة الافتراضية وقائمة العملاء
   React.useEffect(() => {
     if (open) {
-      setType(initialType)
-      setError(null)
-      setAmount("")
-      setCustomerId("")
-      setRecipientOrPayer("")
-      setPaymentMethod("cash")
-      setDescription(
-        initialType === "expense"
-          ? "مصروفات تشغيلية"
-          : initialType === "receipt"
-          ? "سند قبض نقدي من عميل"
-          : "سند صرف / رد مبالغ لعميل"
-      )
-      setNotes("")
-      setDate(new Date().toISOString().split("T")[0])
+      const t = setTimeout(() => {
+        setType(initialType)
+        setError(null)
+        setAmount("")
+        setCustomerId("")
+        setRecipientOrPayer("")
+        setPaymentMethod("cash")
+        setDescription(
+          initialType === "expense"
+            ? "مصروفات تشغيلية"
+            : initialType === "receipt"
+            ? "سند قبض نقدي من عميل"
+            : "سند صرف / رد مبالغ لعميل"
+        )
+        setNotes("")
+        setDate(new Date().toISOString().split("T")[0])
+      }, 0)
 
       if (registers.length > 0 && cashRegisterId === 0) {
         const def = registers.find((r) => r.is_default) || registers[0]

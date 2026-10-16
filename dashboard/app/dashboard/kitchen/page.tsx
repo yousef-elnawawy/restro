@@ -34,7 +34,9 @@ import {
   UtensilsCrossedIcon,
   PanelLeftIcon,
   CheckIcon,
+  ClipboardListIcon,
 } from "lucide-react"
+import { useAuthStore } from "@/store/auth.store"
 
 // حساب الدقائق المنقضية منذ إنشاء الطلب
 function getElapsedMinutes(createdAt?: string, nowTime?: number): number {
@@ -93,18 +95,14 @@ export default function KitchenPage() {
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [completedItems, setCompletedItems] = React.useState<Set<string>>(new Set())
 
-  const { setOpen, open, toggleSidebar } = useSidebar()
+  const user = useAuthStore((state) => state.user)
+  const isChef = user?.role === "kitchen"
+  const { open, toggleSidebar } = useSidebar()
 
-  // طي القائمة الجانبية لمرة واحدة فقط عند الدخول لشاشة المطبخ في الشاشات المتوسطة لتوفير مساحة لتذاكر الأوردرات
-  const hasAutoCollapsedRef = React.useRef(false)
+  // تحديث عنوان الصفحة في المتصفح
   React.useEffect(() => {
-    if (!hasAutoCollapsedRef.current) {
-      hasAutoCollapsedRef.current = true
-      if (typeof window !== "undefined" && window.innerWidth < 1200) {
-        setOpen(false)
-      }
-    }
-  }, [setOpen])
+    document.title = "ريسترو | شاشة المطبخ (KDS)"
+  }, [])
 
   // تتبع الطلبات المعروفة لإطلاق الصوت فقط عند دخول طلب جديد
   const knownOrderIdsRef = React.useRef<Set<number>>(new Set())
@@ -491,19 +489,19 @@ export default function KitchenPage() {
             </button>
           </div>
 
-          {/* دليل ألوان التوقيت (مدمج ومرتب) */}
-          <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground font-medium shrink-0 px-1">
-            <span className="flex items-center gap-1">
+          {/* دليل ألوان التوقيت (مدمج ومرتب بدون رموز مقلوبة في RTL) */}
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-medium shrink-0 px-1">
+            <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-emerald-500" />
-              <span>&lt; ١٥ د</span>
+              <span>أقل من ١٥ د</span>
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-amber-500" />
               <span>١٥ - ٢٥ د</span>
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-rose-500 animate-pulse" />
-              <span>&gt; ٢٥ د</span>
+              <span>أكثر من ٢٥ د</span>
             </span>
           </div>
         </div>
@@ -780,12 +778,40 @@ export default function KitchenPage() {
               إعادة ضبط الفلاتر
             </Button>
           ) : (
-            <Link href="/dashboard/pos" className="mt-3">
-              <Button size="sm" className="text-xs h-8 rounded-lg font-bold gap-1.5 cursor-pointer">
-                <UtensilsCrossedIcon className="size-3.5" />
-                <span>الانتقال لنقطة البيع (الكاشير)</span>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+              <Button
+                size="sm"
+                onClick={() => fetchOrders()}
+                className="text-xs h-8.5 rounded-lg font-bold gap-1.5 cursor-pointer bg-primary text-primary-foreground shadow-xs hover:bg-primary/90"
+              >
+                <RefreshCwIcon className="size-3.5" />
+                <span>تحديث شاشة المطبخ</span>
               </Button>
-            </Link>
+
+              <Link href="/dashboard/orders">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-8.5 rounded-lg font-semibold gap-1.5 cursor-pointer"
+                >
+                  <ClipboardListIcon className="size-3.5" />
+                  <span>سجل الطلبات</span>
+                </Button>
+              </Link>
+
+              {!isChef && (
+                <Link href="/dashboard/pos">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs h-8.5 rounded-lg font-medium gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground"
+                  >
+                    <UtensilsCrossedIcon className="size-3.5" />
+                    <span>نقطة البيع (الكاشير)</span>
+                  </Button>
+                </Link>
+              )}
+            </div>
           )}
         </div>
       )}

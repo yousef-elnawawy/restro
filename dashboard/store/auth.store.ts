@@ -75,6 +75,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         clearAuthSession()
         set({ user: null, token: null })
         if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) {
+          window.dispatchEvent(new CustomEvent("page-loading:start"))
           window.location.replace("/login")
         }
       }

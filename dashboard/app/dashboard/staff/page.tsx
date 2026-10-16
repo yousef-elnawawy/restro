@@ -60,6 +60,7 @@ import {
   EyeOffIcon,
   DicesIcon,
   ClockIcon,
+  TruckIcon,
 } from "lucide-react"
 
 // بيانات توضيحية للأدوار
@@ -84,6 +85,13 @@ const ROLES_INFO = {
     icon: ChefHatIcon,
     badgeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
     borderActive: "border-amber-500 bg-amber-500/5",
+  },
+  delivery: {
+    label: "مسؤول التوصيل والديليفري",
+    sublabel: "شاشة توجيه ومتابعة طلبات التوصيل وأسطول المناديب والتوريد",
+    icon: TruckIcon,
+    badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    borderActive: "border-emerald-500 bg-emerald-500/5",
   },
 } as const
 
@@ -158,7 +166,8 @@ export default function StaffPage() {
     const admins = staffList.filter((s) => s.role === "admin").length
     const cashiers = staffList.filter((s) => s.role === "cashier").length
     const kitchen = staffList.filter((s) => s.role === "kitchen").length
-    return { total, admins, cashiers, kitchen }
+    const delivery = staffList.filter((s) => s.role === "delivery").length
+    return { total, admins, cashiers, kitchen, delivery }
   }, [staffList])
 
   // توليد كلمة مرور عشوائية قوية
@@ -179,6 +188,10 @@ export default function StaffPage() {
 
   // فتح نافذة التعديل
   const openEditModal = (staff: StaffUser) => {
+    if (staff.role === "admin") {
+      showToast("حساب المدير العام محمي بالكامل ولا يمكن تعديل بياناته من قائمة الموظفين.", "error")
+      return
+    }
     setSelectedStaff(staff)
     setEditStaffData({
       name: staff.name,
@@ -240,6 +253,12 @@ export default function StaffPage() {
   // معالجة الحذف
   const handleDeleteConfirm = async () => {
     if (!selectedStaff) return
+    if (selectedStaff.role === "admin") {
+      showToast("حساب المدير العام محمي بالكامل ولا يمكن حذفه نهائياً.", "error")
+      setDeleteConfirmOpen(false)
+      setSelectedStaff(null)
+      return
+    }
     const res = await deleteStaff(selectedStaff.id)
     if (res.success) {
       showToast(res.message, "success")
@@ -272,7 +291,7 @@ export default function StaffPage() {
       )}
 
       {/* بطاقات الإحصائيات العلوية */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <Card className="border-border/60 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-medium text-muted-foreground">إجمالي طاقم العمل</CardTitle>
@@ -314,6 +333,17 @@ export default function StaffPage() {
           <CardContent>
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.kitchen}</div>
             <p className="text-xs text-muted-foreground mt-1">شاشة المطبخ KDS</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-xs col-span-2 md:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-medium text-muted-foreground">التوصيل (Delivery)</CardTitle>
+            <TruckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.delivery}</div>
+            <p className="text-xs text-muted-foreground mt-1">شاشة أسطول التوصيل</p>
           </CardContent>
         </Card>
       </div>
@@ -390,6 +420,17 @@ export default function StaffPage() {
               }`}
             >
               المطبخ ({stats.kitchen})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleFilter("delivery")}
+              className={`px-3 py-1.5 rounded-md transition-all ${
+                roleFilter === "delivery"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              التوصيل ({stats.delivery})
             </button>
           </div>
 
@@ -490,29 +531,39 @@ export default function StaffPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-left">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditModal(staff)}
-                            title="تعديل الموظف وكلمة المرور"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        {staff.role === "admin" ? (
+                          <div
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-xs font-semibold select-none"
+                            title="حساب المدير العام محمي بالكامل ولا يمكن تعديله أو حذفه من قائمة الموظفين"
                           >
-                            <Edit2Icon className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedStaff(staff)
-                              setDeleteConfirmOpen(true)
-                            }}
-                            title="حذف الموظف"
-                            className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                          >
-                            <Trash2Icon className="w-4 h-4" />
-                          </Button>
-                        </div>
+                            <ShieldCheckIcon className="w-3.5 h-3.5" />
+                            <span>حساب محمي</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditModal(staff)}
+                              title="تعديل الموظف وكلمة المرور"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            >
+                              <Edit2Icon className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedStaff(staff)
+                                setDeleteConfirmOpen(true)
+                              }}
+                              title="حذف الموظف"
+                              className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                            >
+                              <Trash2Icon className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   )
@@ -603,7 +654,7 @@ export default function StaffPage() {
             <div className="space-y-2">
               <label className="text-xs font-medium text-foreground">الدور / الصلاحية *</label>
               <div className="grid grid-cols-1 gap-2">
-                {(["admin", "cashier", "kitchen"] as const).map((r) => {
+                {(["cashier", "kitchen", "delivery"] as const).map((r) => {
                   const roleConfig = ROLES_INFO[r]
                   const RoleIcon = roleConfig.icon
                   const isSelected = newStaffData.role === r
@@ -729,7 +780,7 @@ export default function StaffPage() {
             <div className="space-y-2">
               <label className="text-xs font-medium text-foreground">الدور / الصلاحية *</label>
               <div className="grid grid-cols-1 gap-2">
-                {(["admin", "cashier", "kitchen"] as const).map((r) => {
+                {(["cashier", "kitchen", "delivery"] as const).map((r) => {
                   const roleConfig = ROLES_INFO[r]
                   const RoleIcon = roleConfig.icon
                   const isSelected = editStaffData.role === r

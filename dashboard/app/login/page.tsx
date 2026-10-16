@@ -13,9 +13,26 @@ export default async function LoginPage() {
   )
 
   if (hasValidToken) {
-    if (role === "kitchen") redirect("/dashboard/kitchen")
-    if (role === "cashier") redirect("/dashboard/pos")
-    redirect("/dashboard")
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+      const res = await fetch(`${apiUrl}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      })
+
+      if (res.ok) {
+        const body = await res.json()
+        const userRole = body?.data?.role || role
+        if (userRole === "kitchen") redirect("/dashboard/kitchen")
+        if (userRole === "cashier") redirect("/dashboard/pos")
+        redirect("/dashboard")
+      }
+    } catch {
+      // إذا كان التوكن تالفاً أو تم حذف قاعدة البيانات (401)، نبقى في صفحة تسجيل الدخول بأمان
+    }
   }
 
   return (

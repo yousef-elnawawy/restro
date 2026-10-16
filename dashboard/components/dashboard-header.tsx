@@ -38,7 +38,7 @@ const routeNames: Record<string, string> = {
   options: "الإضافات والخيارات",
   tables: "إدارة الطاولات",
   customers: "العملاء",
-  delivery: "مناديب التوصيل",
+  delivery: "التوصيل والديليفري",
   registers: "الخزائن المالية",
   kitchen: "شاشة المطبخ (KDS)",
   reports: "تقارير المبيعات",
@@ -60,25 +60,72 @@ export function DashboardHeader() {
   const currentRole = user?.role || "admin"
 
   React.useEffect(() => {
-    setMounted(true)
+    const t = setTimeout(() => setMounted(true), 0)
+    return () => clearTimeout(t)
   }, [])
+
+  const userHome = currentRole === "kitchen" ? "/dashboard/kitchen" : currentRole === "cashier" ? "/dashboard/pos" : "/dashboard"
 
   // تفكيك المسار لإنشاء فتات الخبز ديناميكياً
   const segments = (pathname || "").split("/").filter(Boolean)
 
   const breadcrumbs = React.useMemo(() => {
+    // إذا كان الكاشير في صفحة نقطة البيع أو الشيف في المطبخ، نعرض عنصر فتات واحد فقط نظيف ومباشر
+    if (currentRole !== "admin" && (pathname === userHome || pathname === `${userHome}/`)) {
+      const homeLabel = currentRole === "kitchen" ? "شاشة المطبخ (KDS)" : "نقطة البيع (الكاشير)"
+      return [
+        {
+          label: homeLabel,
+          href: userHome,
+          isLast: true,
+        },
+      ]
+    }
+
     let currentPath = ""
-    return segments.map((seg, index) => {
+    const list: Array<{ label: string; href: string; isLast: boolean }> = []
+
+    segments.forEach((seg, index) => {
       currentPath += `/${seg}`
       const isLast = index === segments.length - 1
-      const label = routeNames[seg] || decodeURIComponent(seg)
-      return {
-        label,
-        href: currentPath,
-        isLast,
+      let label = routeNames[seg] || decodeURIComponent(seg)
+      let href = currentPath
+
+      // إذا كان المستخدم غير مدير والرابط يشير لـ /dashboard، نوجهه لقسمه المصرح به
+      if (href === "/dashboard" && currentRole !== "admin") {
+        href = userHome
+        label = currentRole === "kitchen" ? "شاشة المطبخ" : "نقطة البيع"
       }
+
+      list.push({
+        label,
+        href,
+        isLast,
+      })
     })
-  }, [segments])
+
+    // إزالة أي عناصر متكررة في الـ href حتى لا تظهر نفس الصفحة مرتين
+    const unique = list.filter((item, idx, arr) => {
+      const nextItem = arr[idx + 1]
+      return !nextItem || item.href !== nextItem.href
+    })
+
+    // التأكد من أن العنصر الأخير فقط يحمل isLast: true
+    return unique.map((item, idx) => ({
+      ...item,
+      isLast: idx === unique.length - 1,
+    }))
+  }, [segments, pathname, currentRole, userHome])
+
+  // تحديث عنوان نافذة المتصفح ديناميكياً ليعبر عن الصفحة الحالية
+  React.useEffect(() => {
+    if (breadcrumbs.length > 0) {
+      const activeTitle = breadcrumbs[breadcrumbs.length - 1].label
+      document.title = `ريسترو | ${activeTitle}`
+    } else {
+      document.title = "ريسترو | لوحة التحكم"
+    }
+  }, [breadcrumbs])
 
   const roleConfig = {
     admin: {
@@ -121,11 +168,13 @@ export function DashboardHeader() {
           <BreadcrumbList className="flex-nowrap">
             {breadcrumbs.length === 0 || (breadcrumbs.length === 1 && segments[0] === "dashboard") ? (
               <BreadcrumbItem>
-                <BreadcrumbPage className="truncate max-w-[150px] sm:max-w-none">لوحة التحكم</BreadcrumbPage>
+                <BreadcrumbPage className="truncate max-w-[150px] sm:max-w-none">
+                  {currentRole === "kitchen" ? "شاشة المطبخ (KDS)" : currentRole === "cashier" ? "نقطة البيع (الكاشير)" : "لوحة التحكم"}
+                </BreadcrumbPage>
               </BreadcrumbItem>
             ) : (
               breadcrumbs.map((crumb, idx) => (
-                <React.Fragment key={crumb.href}>
+                <React.Fragment key={`${crumb.href}-${idx}`}>
                   {idx > 0 && <BreadcrumbSeparator className="hidden lg:block" />}
                   <BreadcrumbItem className={!crumb.isLast ? "hidden lg:block" : "min-w-0"}>
                     {crumb.isLast ? (

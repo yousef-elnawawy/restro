@@ -36,6 +36,7 @@ class CheckRole
                 'admin' => 'مدير النظام',
                 'cashier' => 'الكاشير',
                 'kitchen' => 'المطبخ',
+                'delivery' => 'مسؤول التوصيل والديليفري',
             ];
             $allowedArabic = array_map(fn($r) => $roleNames[$r] ?? $r, $roles);
             $allowedStr = implode(' أو ', $allowedArabic);

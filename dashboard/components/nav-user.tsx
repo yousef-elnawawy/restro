@@ -150,14 +150,16 @@ export function NavUser({
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem
-                render={
-                  <Link href="/dashboard/settings" />
-                }
-              >
-                <SettingsIcon />
-                <span>إعدادات النظام</span>
-              </DropdownMenuItem>
+              {authUser?.role === "admin" && (
+                <DropdownMenuItem
+                  render={
+                    <Link href="/dashboard/settings" />
+                  }
+                >
+                  <SettingsIcon />
+                  <span>إعدادات النظام</span>
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuItem
                 render={

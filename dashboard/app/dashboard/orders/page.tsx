@@ -8,6 +8,7 @@ import { useOrderStore } from "@/store/order.store"
 import { useRegisterStore } from "@/store/register.store"
 import { useDeliveryDriverStore } from "@/store/delivery-driver.store"
 import { useSettingStore } from "@/store/setting.store"
+import { useAuthStore } from "@/store/auth.store"
 import { type Order, type OrderStatus, type PaymentStatus } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -167,6 +168,8 @@ export default function OrdersPage() {
   const { registers, fetchRegisters } = useRegisterStore()
   const { drivers, fetchDrivers } = useDeliveryDriverStore()
   const { settings, fetchSettings } = useSettingStore()
+  const user = useAuthStore((state) => state.user)
+  const isKitchen = user?.role === "kitchen"
 
   const [mounted, setMounted] = React.useState(false)
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null)
@@ -491,12 +494,21 @@ export default function OrdersPage() {
             <span>تحديث</span>
           </Button>
 
-          <Link href="/dashboard/pos">
-            <Button size="sm" className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-md text-xs font-semibold">
-              <ReceiptIcon className="size-4" />
-              <span>نقطة البيع (الكاشير)</span>
-            </Button>
-          </Link>
+          {isKitchen ? (
+            <Link href="/dashboard/kitchen">
+              <Button size="sm" className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-md text-xs font-semibold">
+                <ChefHatIcon className="size-4" />
+                <span>شاشة المطبخ (KDS)</span>
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/dashboard/pos">
+              <Button size="sm" className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-md text-xs font-semibold">
+                <ReceiptIcon className="size-4" />
+                <span>نقطة البيع (الكاشير)</span>
+              </Button>
+            </Link>
+          )}
         </div>
       }
     >
@@ -765,7 +777,7 @@ export default function OrdersPage() {
                               <span>تغيير الحالة يدوياً / السائق</span>
                             </DropdownMenuItem>
 
-                            {order.status !== "completed" && order.status !== "cancelled" && (
+                            {!isKitchen && order.status !== "completed" && order.status !== "cancelled" && (
                               <DropdownMenuItem
                                 onClick={() => router.push(`/dashboard/pos?orderId=${order.id}`)}
                                 className="gap-2 cursor-pointer text-xs font-semibold text-primary"
@@ -775,7 +787,7 @@ export default function OrdersPage() {
                               </DropdownMenuItem>
                             )}
 
-                            {order.payment_status !== "paid" && (
+                            {!isKitchen && order.payment_status !== "paid" && (
                               <DropdownMenuItem
                                 onClick={() => handleOpenQuickPay(order)}
                                 className="gap-2 cursor-pointer text-xs text-emerald-600 font-semibold"
@@ -785,7 +797,7 @@ export default function OrdersPage() {
                               </DropdownMenuItem>
                             )}
 
-                            {order.payment_status !== "paid" && (
+                            {!isKitchen && order.payment_status !== "paid" && (
                               <DropdownMenuItem
                                 onClick={() => handlePayInPos(order)}
                                 className="gap-2 cursor-pointer text-xs"
@@ -803,7 +815,7 @@ export default function OrdersPage() {
                               <span>طباعة إيصال حراري</span>
                             </DropdownMenuItem>
 
-                            {order.status !== "cancelled" && order.payment_status !== "paid" && (
+                            {!isKitchen && order.status !== "cancelled" && order.payment_status !== "paid" && (
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -865,7 +877,7 @@ export default function OrdersPage() {
               <span>طباعة ريسيت حراري</span>
             </Button>
 
-            {selectedOrder && selectedOrder.status !== "completed" && selectedOrder.status !== "cancelled" && (
+            {!isKitchen && selectedOrder && selectedOrder.status !== "completed" && selectedOrder.status !== "cancelled" && (
               <Button
                 type="button"
                 variant="outline"
@@ -881,7 +893,7 @@ export default function OrdersPage() {
               </Button>
             )}
 
-            {selectedOrder && selectedOrder.payment_status !== "paid" && (
+            {!isKitchen && selectedOrder && selectedOrder.payment_status !== "paid" && (
               <Button
                 type="button"
                 size="sm"

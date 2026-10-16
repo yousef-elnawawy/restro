@@ -43,6 +43,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Determine if the user has a delivery role.
+     */
+    public function isDelivery(): bool
+    {
+        return $this->role === 'delivery';
+    }
+
+    /**
+     * Get the delivery driver profile associated with the user.
+     */
+    public function deliveryDriver(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(DeliveryDriver::class, 'user_id');
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

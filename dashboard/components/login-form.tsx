@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/store/auth.store"
-import { AlertCircleIcon, EyeIcon, EyeOffIcon, Loader2Icon, LockIcon, MailIcon } from "lucide-react"
+import { AlertCircleIcon, CheckCircle2Icon, EyeIcon, EyeOffIcon, Loader2Icon, LockIcon, MailIcon } from "lucide-react"
+import { startPageLoading } from "@/components/top-progress-bar"
 
 export function LoginForm({
   className,
@@ -31,6 +32,7 @@ export function LoginForm({
   const [password, setPassword] = React.useState("")
   const [showPassword, setShowPassword] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
+  const [isRedirecting, setIsRedirecting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
 
   const login = useAuthStore((state) => state.login)
@@ -44,6 +46,9 @@ export function LoginForm({
       const res = await login(email, password)
 
       if (res.success) {
+        setIsRedirecting(true)
+        startPageLoading()
+
         const currentUser = useAuthStore.getState().user
         const role = currentUser?.role || "admin"
         const targetUrl =
@@ -51,22 +56,35 @@ export function LoginForm({
             ? "/dashboard/kitchen"
             : role === "cashier"
             ? "/dashboard/pos"
+            : role === "delivery"
+            ? "/dashboard/delivery"
             : "/dashboard"
 
         window.location.replace(targetUrl)
       } else {
         setErrorMessage(res.message)
+        setLoading(false)
       }
     } catch {
       setErrorMessage("تعذر الاتصال بالخادم. يرجى التأكد من تشغيل الباك إند.")
-    } finally {
       setLoading(false)
     }
   }
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="relative overflow-hidden">
+        {isRedirecting && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-background/95 p-6 text-center backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Loader2Icon className="size-6 animate-spin" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-bold text-sm text-foreground">تم تسجيل الدخول بنجاح</p>
+              <p className="text-xs text-muted-foreground font-medium">جاري الانتقال إلى لوحة التحكم...</p>
+            </div>
+          </div>
+        )}
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-xl">تسجيل الدخول</CardTitle>
           <CardDescription>
