@@ -67,6 +67,7 @@ class Order extends Model
         'customer_id',
         'delivery_driver_id',
         'customer_name',
+        'delivery_address',
         'status',
         'payment_status',
         'payment_method',
@@ -74,6 +75,7 @@ class Order extends Model
         'subtotal',
         'tax',
         'delivery_fee',
+        'delivery_distance',
         'total',
         'notes',
         'paid_at',
@@ -86,6 +88,7 @@ class Order extends Model
             'subtotal' => 'decimal:2',
             'tax' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
+            'delivery_distance' => 'decimal:2',
             'total' => 'decimal:2',
             'paid_at' => 'datetime',
         ];

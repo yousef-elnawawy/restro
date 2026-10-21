@@ -28,9 +28,16 @@ export function isValidToken(token: string | null | undefined): boolean {
   return t.length > 0 && t !== "undefined" && t !== "null"
 }
 
-// قراءة التوكن من الـ Cookies أو الـ localStorage
+// قراءة التوكن من الـ Cookies أو الـ localStorage مع التحقق من عدم انقضاء مهلة الـ 24 ساعة
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null
+
+  // إذا انتهت مهلة الـ 24 ساعة يتم مسح الجلسة فوراً وتسجيل الخروج
+  const expiresAt = Number(localStorage.getItem("auth_expires_at") || 0)
+  if (expiresAt > 0 && Date.now() > expiresAt) {
+    clearAuthSession()
+    return null
+  }
 
   // قراءة من localStorage أولاً
   const localToken = localStorage.getItem("auth_token")
@@ -44,8 +51,8 @@ export function getAuthToken(): string | null {
   return null
 }
 
-// حفظ التوكن وبيانات المستخدم في Cookies و localStorage
-export function setAuthSession(token: string, user: User) {
+// حفظ التوكن وبيانات المستخدم في Cookies و localStorage (جلسة تدوم يوماً واحداً = 24 ساعة بالضبط)
+export function setAuthSession(token: string, user: User, isNewLogin = false) {
   if (typeof window === "undefined") return
 
   const role = user?.role || "admin"
@@ -53,10 +60,18 @@ export function setAuthSession(token: string, user: User) {
   localStorage.setItem("auth_user", JSON.stringify(user))
   localStorage.setItem("auth_role", role)
 
-  // كوكيز لمدة 30 يوم
-  const maxAge = 60 * 60 * 24 * 30
-  document.cookie = `auth_token=${encodeURIComponent(token)}; path=/; max-age=${maxAge}; SameSite=Lax`
-  document.cookie = `auth_role=${encodeURIComponent(role)}; path=/; max-age=${maxAge}; SameSite=Lax`
+  // مدة الجلسة: يوم واحد (24 ساعة) تحسب من لحظة تسجيل الدخول
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000
+  let expiresAt = Number(localStorage.getItem("auth_expires_at") || 0)
+  if (isNewLogin || !expiresAt || expiresAt <= Date.now()) {
+    expiresAt = Date.now() + ONE_DAY_MS
+    localStorage.setItem("auth_expires_at", String(expiresAt))
+  }
+
+  // مدة الكوكيز بالمتبقي من مهلة الـ 24 ساعة
+  const remainingSeconds = Math.max(1, Math.floor((expiresAt - Date.now()) / 1000))
+  document.cookie = `auth_token=${encodeURIComponent(token)}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
+  document.cookie = `auth_role=${encodeURIComponent(role)}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
 }
 
 // مسح الجلسة والتوكن بصورة قطعية
@@ -66,6 +81,7 @@ export function clearAuthSession() {
   localStorage.removeItem("auth_token")
   localStorage.removeItem("auth_user")
   localStorage.removeItem("auth_role")
+  localStorage.removeItem("auth_expires_at")
 
   const pastDate = "Thu, 01 Jan 1970 00:00:00 GMT"
   document.cookie = `auth_token=; path=/; expires=${pastDate}; max-age=0; SameSite=Lax`
@@ -108,10 +124,10 @@ export async function loginApi(email: string, password: string): Promise<ApiResp
 }
 
 // جلب بيانات الحساب والتحقق من التوكن
-export async function getMeApi(): Promise<ApiResponse<User>> {
+export async function getMeApi(): Promise<ApiResponse<User> & { isUnauthorized?: boolean }> {
   const token = getAuthToken()
   if (!isValidToken(token)) {
-    return { success: false, message: "غير مسجل دخول." }
+    return { success: false, message: "غير مسجل دخول.", isUnauthorized: true }
   }
 
   try {
@@ -125,13 +141,17 @@ export async function getMeApi(): Promise<ApiResponse<User>> {
 
     if (res.status === 401) {
       handleUnauthorized()
-      return { success: false, message: "غير مسجل دخول أو انتهت صلاحية الجلسة." }
+      return { success: false, message: "غير مسجل دخول أو انتهت صلاحية الجلسة.", isUnauthorized: true }
+    }
+
+    if (!res.ok) {
+      return { success: false, message: "تعذر التحقق من الجلسة في الوقت الحالي.", isUnauthorized: false }
     }
 
     const data = await res.json()
     return data
   } catch {
-    return { success: false, message: "تعذر الاتصال بالخادم للتحقق من الجلسة." }
+    return { success: false, message: "تعذر الاتصال بالخادم للتحقق من الجلسة.", isUnauthorized: false }
   }
 }
 
@@ -1233,6 +1253,7 @@ export interface Order {
   customer_id?: number | null
   delivery_driver_id?: number | null
   customer_name?: string | null
+  delivery_address?: string | null
   status: OrderStatus
   payment_status: PaymentStatus
   payment_method?: string | null
@@ -1240,6 +1261,7 @@ export interface Order {
   subtotal: number
   tax: number
   delivery_fee?: number
+  delivery_distance?: number | null
   total: number
   notes?: string | null
   paid_at?: string | null
@@ -1259,6 +1281,7 @@ export interface CreateOrderPayload {
   customer_id?: number | null
   delivery_driver_id?: number | null
   customer_name?: string
+  delivery_address?: string
   notes?: string
   items: {
     product_id?: number
@@ -1273,6 +1296,7 @@ export interface CreateOrderPayload {
   subtotal?: number
   tax?: number
   delivery_fee?: number
+  delivery_distance?: number
   total?: number
 }
 
@@ -1975,6 +1999,8 @@ export interface RestaurantSettings {
   tax_enabled: boolean
   tax_number?: string | null
   delivery_fee: number
+  delivery_base_fee?: number
+  delivery_fee_per_km?: number
   receipt_header?: string | null
   receipt_footer?: string | null
   logo?: string | null

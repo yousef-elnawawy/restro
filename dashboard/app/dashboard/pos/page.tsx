@@ -65,6 +65,7 @@ import {
   ChevronRightIcon,
   SaveIcon,
   TruckIcon,
+  MapPinIcon,
 } from "lucide-react"
 
 // نوع الصنف داخل الفاتورة
@@ -178,6 +179,9 @@ function PosContent() {
   const [orderType, setOrderType] = React.useState<"dinein" | "takeaway" | "delivery">("dinein")
   const [selectedTableId, setSelectedTableId] = React.useState<number | null>(null)
   const [customerName, setCustomerName] = React.useState("")
+  const [deliveryAddress, setDeliveryAddress] = React.useState("")
+  const [deliveryDistance, setDeliveryDistance] = React.useState("")
+  const [customDeliveryFee, setCustomDeliveryFee] = React.useState<number | null>(null)
   const [orderNotes, setOrderNotes] = React.useState("")
 
   // العملاء (Customers)
@@ -294,6 +298,17 @@ function PosContent() {
         if (order.table_id) setSelectedTableId(order.table_id)
         if (order.customer_id) setSelectedCustomerId(order.customer_id)
         if (order.customer_name) setCustomerName(order.customer_name)
+        if (order.delivery_address) {
+          setDeliveryAddress(order.delivery_address)
+        } else if (order.customer?.address) {
+          setDeliveryAddress(order.customer.address)
+        }
+        if (order.delivery_distance) {
+          setDeliveryDistance(String(order.delivery_distance))
+        }
+        if (order.delivery_fee !== undefined && order.delivery_fee !== null) {
+          setCustomDeliveryFee(Number(order.delivery_fee))
+        }
         if (order.notes) setOrderNotes(order.notes)
 
         const items: InvoiceItem[] = order.items.map((it) => ({
@@ -378,8 +393,8 @@ function PosContent() {
     const found = customers.find((c) => c.id === cid)
     if (found) {
       setCustomerName(found.name)
-      if (orderType === "delivery" && found.address && !orderNotes) {
-        setOrderNotes(`العنوان: ${found.address}`)
+      if (found.address) {
+        setDeliveryAddress(found.address)
       }
     }
   }
@@ -398,8 +413,8 @@ function PosContent() {
       setCustomers((prev) => [res.data!, ...prev])
       setSelectedCustomerId(res.data.id)
       setCustomerName(res.data.name)
-      if (orderType === "delivery" && res.data.address) {
-        setOrderNotes(`العنوان: ${res.data.address}`)
+      if (res.data.address) {
+        setDeliveryAddress(res.data.address)
       }
       setQuickAddCustomerOpen(false)
       setNewCustomerName("")
@@ -558,6 +573,9 @@ function PosContent() {
     setLoadedOrderStatus(null)
     setSelectedCustomerId(null)
     setCustomerName("")
+    setDeliveryAddress("")
+    setDeliveryDistance("")
+    setCustomDeliveryFee(null)
     setOrderNotes("")
     if (paramOrderId || paramTableId) {
       router.replace("/dashboard/pos")
@@ -566,7 +584,15 @@ function PosContent() {
 
   // حساب الإجماليات
   const taxRate = settings.tax_enabled ? (Number(settings.tax_percentage || 0) / 100) : 0
-  const deliveryFee = orderType === "delivery" ? Number(settings.delivery_fee || 0) : 0
+  const baseDeliveryFee = Number(settings.delivery_base_fee ?? settings.delivery_fee ?? 15)
+  const deliveryFeePerKm = Number(settings.delivery_fee_per_km ?? 5)
+  const distanceKm = parseFloat(deliveryDistance) || 0
+  const calculatedDeliveryFee = distanceKm > 0
+    ? Math.round(baseDeliveryFee + (distanceKm * deliveryFeePerKm))
+    : baseDeliveryFee
+  const deliveryFee = orderType === "delivery"
+    ? (customDeliveryFee !== null ? customDeliveryFee : calculatedDeliveryFee)
+    : 0
   const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0)
   const vatTax = Math.round(subtotal * taxRate)
   const grandTotal = subtotal + vatTax + deliveryFee
@@ -627,6 +653,8 @@ function PosContent() {
       subtotal,
       tax: vatTax,
       delivery_fee: deliveryFee,
+      delivery_address: orderType === "delivery" ? (deliveryAddress.trim() || undefined) : undefined,
+      delivery_distance: orderType === "delivery" && distanceKm > 0 ? distanceKm : undefined,
       total: grandTotal,
     }
 
@@ -670,6 +698,8 @@ function PosContent() {
       subtotal,
       tax: vatTax,
       delivery_fee: deliveryFee,
+      delivery_address: orderType === "delivery" ? (deliveryAddress.trim() || undefined) : undefined,
+      delivery_distance: orderType === "delivery" && distanceKm > 0 ? distanceKm : undefined,
       total: grandTotal,
     }
 
@@ -728,6 +758,8 @@ function PosContent() {
         subtotal,
         tax: vatTax,
         delivery_fee: deliveryFee,
+        delivery_address: orderType === "delivery" ? (deliveryAddress.trim() || undefined) : undefined,
+        delivery_distance: orderType === "delivery" && distanceKm > 0 ? distanceKm : undefined,
         total: grandTotal,
       }
 
@@ -755,6 +787,8 @@ function PosContent() {
         subtotal,
         tax: vatTax,
         delivery_fee: deliveryFee,
+        delivery_address: orderType === "delivery" ? (deliveryAddress.trim() || undefined) : undefined,
+        delivery_distance: orderType === "delivery" && distanceKm > 0 ? distanceKm : undefined,
         total: grandTotal,
       }
 
@@ -965,6 +999,99 @@ function PosContent() {
                 </div>
               </div>
             </div>
+
+            {/* الصف 3 المخصص للديليفري: العنوان والمسافة ورسوم التوصيل المحسوبة */}
+            {orderType === "delivery" && (
+              <div className="p-2 sm:p-2.5 rounded-lg bg-primary/5 border border-primary/20 space-y-2 animate-in fade-in duration-150">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  {/* عنوان التوصيل */}
+                  <div className="sm:col-span-6 flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-1 shrink-0">
+                      <MapPinIcon className="size-3.5 text-rose-500 shrink-0" />
+                      <span>العنوان:</span>
+                    </span>
+                    <Input
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      placeholder="عنوان التوصيل بالتفصيل (المنطقة، الشارع، رقم المبنى)..."
+                      className="h-8 text-xs bg-background rounded-md"
+                    />
+                  </div>
+
+                  {/* المسافة بالكيلومتر */}
+                  <div className="sm:col-span-3 flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-foreground shrink-0 whitespace-nowrap">
+                      المسافة (كم):
+                    </span>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={deliveryDistance}
+                      onChange={(e) => {
+                        setDeliveryDistance(e.target.value)
+                        setCustomDeliveryFee(null)
+                      }}
+                      placeholder="مثال: 3"
+                      className="h-8 text-xs font-mono font-bold text-center bg-background rounded-md"
+                    />
+                  </div>
+
+                  {/* رسوم التوصيل المحسوبة + إمكانية التعديل */}
+                  <div className="sm:col-span-3 flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-foreground shrink-0 whitespace-nowrap">
+                      رسوم التوصيل:
+                    </span>
+                    <div className="relative flex-1 flex items-center">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={deliveryFee}
+                        onChange={(e) => setCustomDeliveryFee(parseFloat(e.target.value) || 0)}
+                        className="h-8 text-xs font-mono font-bold text-center bg-background rounded-md text-primary pe-7"
+                        title={
+                          customDeliveryFee !== null
+                            ? "تم تعديل الرسوم يدوياً"
+                            : `محسوبة تلقائياً: ${baseDeliveryFee} + (${distanceKm} × ${deliveryFeePerKm})`
+                        }
+                      />
+                      <span className="absolute end-2 text-[10px] text-muted-foreground pointer-events-none font-bold">
+                        {currency}
+                      </span>
+                    </div>
+                    {customDeliveryFee !== null && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomDeliveryFee(null)}
+                        className="text-[10px] text-primary hover:underline shrink-0 p-0.5"
+                        title="إعادة الحساب التلقائي حسب المسافة"
+                      >
+                        تلقائي
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* شريط توضيحي لطيف لطريقة الحساب */}
+                <div className="flex flex-wrap items-center justify-between text-[11px] text-muted-foreground pt-0.5 border-t border-primary/10">
+                  <div className="flex items-center gap-1.5">
+                    <SparklesIcon className="size-3 text-primary shrink-0" />
+                    <span>
+                      فتحة العداد: <b className="text-foreground font-mono">{baseDeliveryFee} {currency}</b>
+                      {deliveryFeePerKm > 0 && (
+                        <span> + (<b className="text-foreground font-mono">{deliveryFeePerKm} {currency}</b> لكل كم)</span>
+                      )}
+                    </span>
+                  </div>
+                  {distanceKm > 0 && (
+                    <span className="text-primary font-semibold font-mono">
+                      {baseDeliveryFee} + ({distanceKm} × {deliveryFeePerKm}) = {calculatedDeliveryFee} {currency}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* حقل البحث السريع + زرار نمط العرض (كروت / صفوف) للأصناف */}
             <div className="flex items-center gap-2 pt-1 border-t border-border/40">
@@ -1392,9 +1519,14 @@ function PosContent() {
                 <span>ضريبة القيمة المضافة ({settings.tax_enabled ? `${settings.tax_percentage}%` : "معفاة"}):</span>
                 <span className="font-semibold text-foreground">{vatTax} {currency}</span>
               </div>
-              {orderType === "delivery" && deliveryFee > 0 && (
+              {orderType === "delivery" && (
                 <div className="flex justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                  <span>رسوم التوصيل (دليفري):</span>
+                  <div className="flex items-center gap-1">
+                    <span>رسوم التوصيل (دليفري):</span>
+                    {distanceKm > 0 && (
+                      <span className="text-[10px] text-muted-foreground font-mono">({distanceKm} كم)</span>
+                    )}
+                  </div>
                   <span className="font-bold font-mono">+{deliveryFee} {currency}</span>
                 </div>
               )}

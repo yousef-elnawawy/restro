@@ -12,6 +12,7 @@ import { RegisterStatementDialog } from "@/components/register-statement-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { ComboboxSelect } from "@/components/ui/combobox-select"
 import {
   Table,
   TableHeader,
@@ -58,6 +59,7 @@ import {
   CalendarIcon,
   CreditCardIcon,
   FilterIcon,
+  XIcon,
 } from "lucide-react"
 
 export default function RegistersPage() {
@@ -313,7 +315,7 @@ export default function RegistersPage() {
             type="button"
             size="sm"
             onClick={() => handleOpenVoucher("receipt")}
-            className="rounded-md text-xs gap-1 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white"
             title="إصدار سند قبض نقدية"
           >
             <ArrowDownLeftIcon className="size-3.5" />
@@ -324,7 +326,7 @@ export default function RegistersPage() {
             type="button"
             size="sm"
             onClick={() => handleOpenVoucher("payment")}
-            className="h-8.5 rounded-lg text-xs gap-1 font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-sky-600 hover:bg-sky-700 text-white"
             title="إصدار سند صرف / دفع نقدية"
           >
             <ArrowUpRightIcon className="size-3.5" />
@@ -335,7 +337,7 @@ export default function RegistersPage() {
             type="button"
             size="sm"
             onClick={() => handleOpenVoucher("expense")}
-            className="h-8.5 rounded-lg text-xs gap-1 font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-amber-600 hover:bg-amber-700 text-white"
             title="تسجيل سند مصاريف تشغيلية"
           >
             <ShoppingBagIcon className="size-3.5" />
@@ -361,92 +363,93 @@ export default function RegistersPage() {
             <Button
               size="sm"
               onClick={handleOpenCreateRegister}
-              className="h-8.5 gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-semibold"
+              className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              <PlusIcon className="size-4" />
+              <PlusIcon className="size-3.5" />
               <span>خزنة جديدة</span>
             </Button>
           )}
         </div>
       }
     >
-      {/* إشعار العملية المنبثق */}
-      {bannerMessage && (
-        <div
-          className={`flex items-center justify-between gap-3 p-3.5 rounded-md text-sm font-medium transition-all duration-200 ${
-            bannerMessage.type === "success"
-              ? "bg-primary/10 text-primary border border-primary/20"
-              : "bg-destructive/10 text-destructive border border-destructive/20"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {bannerMessage.type === "success" ? (
-              <CheckCircle2Icon className="size-4 shrink-0" />
-            ) : (
-              <AlertCircleIcon className="size-4 shrink-0" />
-            )}
-            <span>{bannerMessage.text}</span>
-          </div>
-          <button
-            onClick={() => setBannerMessage(null)}
-            className="text-xs opacity-70 hover:opacity-100 p-1"
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* إشعار العملية المنبثق */}
+        {bannerMessage && (
+          <div
+            className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-lg border text-xs font-medium animate-in fade-in duration-150 ${
+              bannerMessage.type === "success"
+                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
+                : "bg-destructive/10 border-destructive/25 text-destructive"
+            }`}
           >
-            ✕
+            <div className="flex items-center gap-2">
+              {bannerMessage.type === "success" ? (
+                <CheckCircle2Icon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <AlertCircleIcon className="size-4 shrink-0 text-destructive" />
+              )}
+              <span>{bannerMessage.text}</span>
+            </div>
+            <button
+              onClick={() => setBannerMessage(null)}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1"
+            >
+              <XIcon className="size-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* شريط التبويبات الرئيسي الموحد */}
+        <div className="flex bg-muted/50 p-1 rounded-lg border border-border/60 text-xs font-medium w-fit">
+          <button
+            type="button"
+            onClick={() => setActiveTab("registers")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer font-semibold ${
+              activeTab === "registers"
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LandmarkIcon className="size-3.5" />
+            <span>الخزائن المالية ({registers.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("vouchers")
+              fetchTransactions()
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer font-semibold ${
+              activeTab === "vouchers"
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ReceiptIcon className="size-3.5" />
+            <span>السندات والمصاريف ({transactions.length})</span>
           </button>
         </div>
-      )}
 
-      {/* شريط التبويبات الرئيسي */}
-      <div className="flex items-center gap-1.5 border-b border-border/60 pb-1">
-        <button
-          type="button"
-          onClick={() => setActiveTab("registers")}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            activeTab === "registers"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          }`}
-        >
-          <LandmarkIcon className="size-3.5" />
-          <span>الخزائن المالية ({registers.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("vouchers")
-            fetchTransactions()
-          }}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            activeTab === "vouchers"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          }`}
-        >
-          <ReceiptIcon className="size-3.5" />
-          <span>السندات والمصاريف ({transactions.length})</span>
-        </button>
-      </div>
-
-      {/* =====================================================================
-          التبويب الأول: الخزائن المالية (الأرصدة)
-          ===================================================================== */}
-      {activeTab === "registers" && (
-        <div className="space-y-4">
-          {/* كروت الإحصائيات العلوية */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
-              <div className="flex size-9 sm:size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <LandmarkIcon className="size-4.5" />
+        {/* =====================================================================
+            التبويب الأول: الخزائن المالية (الأرصدة)
+            ===================================================================== */}
+        {activeTab === "registers" && (
+          <div className="space-y-3 sm:space-y-3.5">
+            {/* كروت الإحصائيات العلوية */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+              <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <LandmarkIcon className="size-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground truncate font-medium">إجمالي السيولة النقدية</p>
+                  <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">
+                    {totalBalance.toLocaleString("ar-EG")}{" "}
+                    <span className="text-[11px] font-normal text-muted-foreground">{currency}</span>
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground font-medium">إجمالي السيولة النقدية</p>
-                <p className="text-lg font-bold tracking-tight text-foreground font-mono">
-                  {totalBalance.toLocaleString("ar-EG")}{" "}
-                  <span className="text-[11px] font-normal text-muted-foreground">{currency}</span>
-                </p>
-              </div>
-            </div>
 
             <div className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
               <div className="flex size-9 sm:size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -779,18 +782,23 @@ export default function RegistersPage() {
                 مصاريف
               </Button>
 
-              <select
-                value={registerFilter}
-                onChange={(e) => setRegisterFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
-                className="h-7 text-xs bg-muted/30 border border-border/70 rounded-md px-2 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary [&>option]:bg-card [&>option]:text-foreground"
-              >
-                <option value="all">كل الخزائن</option>
-                {registers.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
+              <div className="w-52">
+                <ComboboxSelect
+                  options={[
+                    { value: "all", label: "كل الخزائن" },
+                    ...registers.map((r) => ({
+                      value: String(r.id),
+                      label: r.name,
+                      badge: `${Number(r.balance || 0).toLocaleString("ar-EG")} ${currency}`,
+                      badgeVariant: r.is_active ? ("outline" as const) : ("secondary" as const),
+                    })),
+                  ]}
+                  value={String(registerFilter)}
+                  onValueChange={(val) => setRegisterFilter(val === "all" ? "all" : Number(val))}
+                  placeholder="اختر الخزينة..."
+                  searchPlaceholder="بحث في الخزائن..."
+                />
+              </div>
             </div>
 
             <div className="relative w-full sm:w-64">
@@ -941,6 +949,7 @@ export default function RegistersPage() {
           </div>
         </div>
       )}
+      </div>
 
       {/* نافذة إضافة / تعديل الخزنة */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

@@ -152,14 +152,14 @@ export default function NotificationsPage() {
               variant="outline"
               size="sm"
               onClick={markAllAsRead}
-              className="gap-1.5 rounded-lg text-xs h-8.5 border-border/60"
+              className="h-8.5 rounded-lg text-xs gap-1.5 border-border/60"
             >
-              <CheckCheckIcon className="size-3.5 text-emerald-600" />
+              <CheckCheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>تحديد الكل كمقروء</span>
             </Button>
           )}
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => {
               fetchOrders()
@@ -167,7 +167,8 @@ export default function NotificationsPage() {
               fetchRegisters()
               fetchDrivers()
             }}
-            className="gap-1.5 rounded-lg text-xs h-8.5"
+            className="h-8.5 rounded-lg text-xs gap-1.5"
+            title="تحديث الإشعارات"
           >
             <RefreshCwIcon className="size-3.5 text-muted-foreground" />
             <span>تحديث</span>
@@ -175,41 +176,93 @@ export default function NotificationsPage() {
         </div>
       }
     >
-      {/* فلترة الإشعارات */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-          <TabsList className="bg-muted/80 p-1 rounded-lg h-9 flex-wrap sm:flex-nowrap">
-            <TabsTrigger value="all" className="rounded-lg gap-2 text-xs font-semibold">
-              <BellIcon className="size-3.5" />
-              <span>الكل ({notifications.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="order" className="rounded-lg gap-2 text-xs font-semibold">
-              <ShoppingBagIcon className="size-3.5 text-primary" />
-              <span>الطلبات</span>
-            </TabsTrigger>
-            <TabsTrigger value="table" className="rounded-lg gap-2 text-xs font-semibold">
-              <ArmchairIcon className="size-3.5 text-blue-500" />
-              <span>الصالة</span>
-            </TabsTrigger>
-            <TabsTrigger value="delivery" className="rounded-lg gap-2 text-xs font-semibold">
-              <TruckIcon className="size-3.5 text-emerald-500" />
-              <span>التوصيل</span>
-            </TabsTrigger>
-            <TabsTrigger value="register" className="rounded-lg gap-2 text-xs font-semibold">
-              <LandmarkIcon className="size-3.5 text-amber-500" />
-              <span>الخزائن</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* بطاقات الإحصائيات العلوية */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <BellIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">إجمالي التنبيهات</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">
+                {notifications.length}
+              </p>
+            </div>
+          </div>
 
-        <div className="text-xs text-muted-foreground font-medium">
-          {unreadCount > 0 ? (
-            <span className="text-primary font-bold">{unreadCount} إشعار جديد بحاجة للمتابعة</span>
-          ) : (
-            <span className="text-emerald-600 dark:text-emerald-400 font-bold">جميع التنبيهات مقروءة ومحدثة ✓</span>
-          )}
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <AlertCircleIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">غير مقروءة</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-rose-600 dark:text-rose-400 font-mono">
+                {unreadCount}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <ShoppingBagIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">تنبيهات الطلبات</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">
+                {notifications.filter((n) => n.type === "order").length}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <TruckIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">التوصيل والصالة</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                {notifications.filter((n) => n.type === "delivery" || n.type === "table").length}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* شريط فلترة الإشعارات */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+            <TabsList className="bg-muted/50 p-1 rounded-lg h-8.5 flex-wrap sm:flex-nowrap border border-border/60">
+              <TabsTrigger value="all" className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5">
+                <BellIcon className="size-3" />
+                <span>الكل ({notifications.length})</span>
+              </TabsTrigger>
+              <TabsTrigger value="order" className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5">
+                <ShoppingBagIcon className="size-3 text-primary" />
+                <span>الطلبات</span>
+              </TabsTrigger>
+              <TabsTrigger value="table" className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5">
+                <ArmchairIcon className="size-3 text-blue-500" />
+                <span>الصالة</span>
+              </TabsTrigger>
+              <TabsTrigger value="delivery" className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5">
+                <TruckIcon className="size-3 text-emerald-500" />
+                <span>التوصيل</span>
+              </TabsTrigger>
+              <TabsTrigger value="register" className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5">
+                <LandmarkIcon className="size-3 text-amber-500" />
+                <span>الخزائن</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="text-xs font-medium px-1">
+            {unreadCount > 0 ? (
+              <span className="text-primary font-bold">{unreadCount} إشعار جديد بحاجة للمتابعة</span>
+            ) : (
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">جميع التنبيهات مقروءة ومحدثة ✓</span>
+            )}
+          </div>
+        </div>
 
       {/* قائمة الإشعارات */}
       <div className="space-y-3">
@@ -304,6 +357,7 @@ export default function NotificationsPage() {
             <p className="text-xs text-muted-foreground mt-1">النظام هادئ وجميع العمليات تسير بسلاسة</p>
           </div>
         )}
+      </div>
       </div>
     </PageContainer>
   )

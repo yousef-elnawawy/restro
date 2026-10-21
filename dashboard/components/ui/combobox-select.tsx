@@ -24,6 +24,7 @@ export interface ComboboxSelectProps {
   onValueChange: (value: string) => void
   options: ComboboxOption[]
   placeholder?: string
+  searchPlaceholder?: string
   emptyText?: string
   disabled?: boolean
   className?: string
@@ -36,6 +37,7 @@ export function ComboboxSelect({
   onValueChange,
   options,
   placeholder = "اختر...",
+  searchPlaceholder,
   emptyText = "لا توجد نتائج مطابقة",
   disabled = false,
   className,

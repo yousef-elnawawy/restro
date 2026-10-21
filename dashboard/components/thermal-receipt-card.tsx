@@ -102,6 +102,18 @@ export function ThermalReceiptCard({
             <span>{data.customer_name}</span>
           </div>
         )}
+        {data.order_type === "delivery" && data.delivery_address && (
+          <div className="flex justify-between items-center text-neutral-800">
+            <span className="font-bold">العنوان:</span>
+            <span className="font-semibold text-black">{data.delivery_address}</span>
+          </div>
+        )}
+        {data.order_type === "delivery" && data.delivery_distance && (
+          <div className="flex justify-between items-center text-neutral-800">
+            <span>المسافة:</span>
+            <span className="font-mono">{data.delivery_distance} كم</span>
+          </div>
+        )}
         {data.cash_register && (
           <div className="flex justify-between items-center text-neutral-800">
             <span>الخزينة:</span>
@@ -177,6 +189,12 @@ export function ThermalReceiptCard({
           <span>ضريبة القيمة المضافة ({activeTaxRate}%):</span>
           <span>{Number(data.tax).toFixed(2)} {activeCurrency}</span>
         </div>
+        {data.order_type === "delivery" && Number(data.delivery_fee || 0) > 0 && (
+          <div className="flex justify-between text-neutral-900 font-bold">
+            <span>رسوم التوصيل{data.delivery_distance ? ` (${data.delivery_distance} كم)` : ""}:</span>
+            <span className="font-mono">+{Number(data.delivery_fee).toFixed(2)} {activeCurrency}</span>
+          </div>
+        )}
       </div>
 
       {/* فاصل مزدوج */}

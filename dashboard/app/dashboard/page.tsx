@@ -124,7 +124,6 @@ export default function DashboardPage() {
     <PageContainer
       title="لوحة المتابعة التشغيلية"
       description="متابعة فورية ومباشرة للمبيعات، الطاولات، طلبات المطبخ، وأسطول التوصيل"
-      className="gap-4 pb-6"
       action={
         <div className="flex items-center gap-2">
           <Button
@@ -132,18 +131,18 @@ export default function DashboardPage() {
             size="sm"
             onClick={() => loadStats(true)}
             disabled={isRefreshing || isLoading}
-            className="gap-1.5 h-8.5 px-3 rounded-lg border-border/60 hover:bg-muted text-xs"
+            className="h-8.5 rounded-lg text-xs gap-1.5"
             title="تحديث البيانات اللحظية"
           >
             <RefreshCwIcon className={`size-3.5 ${isRefreshing ? "animate-spin text-primary" : "text-muted-foreground"}`} />
-            <span className="hidden sm:inline">تحديث</span>
+            <span>تحديث</span>
           </Button>
 
           <Link href="/dashboard/kitchen">
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 h-8.5 px-3 rounded-lg border-border/60 hover:bg-muted text-xs font-medium"
+              className="h-8.5 rounded-lg text-xs gap-1.5"
             >
               <ChefHatIcon className="size-3.5 text-amber-500" />
               <span>شاشة المطبخ</span>
@@ -153,7 +152,7 @@ export default function DashboardPage() {
           <Link href="/dashboard/pos">
             <Button
               size="sm"
-              className="gap-1.5 h-8.5 px-3.5 font-semibold shadow-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs"
+              className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
             >
               <ReceiptIcon className="size-3.5" />
               <span>الكاشير (POS)</span>
@@ -162,8 +161,9 @@ export default function DashboardPage() {
         </div>
       }
     >
-      {/* ===================== كروت المؤشرات العلوية (KPIs) ===================== */}
-      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* ===================== كروت المؤشرات العلوية (KPIs) ===================== */}
+        <div className="grid gap-2.5 sm:gap-3 grid-cols-2 lg:grid-cols-4">
         {/* مبيعات اليوم */}
         <Card className="p-4 sm:p-4.5 transition-all hover:bg-card/80 rounded-xl border-border/60 shadow-xs">
           <div className="flex items-center justify-between">
@@ -822,6 +822,7 @@ export default function DashboardPage() {
           )}
         </TabsContent>
       </Tabs>
+      </div>
     </PageContainer>
   )
 }

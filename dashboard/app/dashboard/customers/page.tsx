@@ -53,6 +53,7 @@ import {
   MessageCircleIcon,
   FileTextIcon,
   Receipt as ReceiptIcon,
+  XIcon,
 } from "lucide-react"
 
 export default function CustomersPage() {
@@ -233,7 +234,7 @@ export default function CustomersPage() {
             size="sm"
             onClick={() => fetchCustomers()}
             disabled={isLoading}
-            className="h-8.5 rounded-md text-xs gap-1.5"
+            className="h-8.5 rounded-lg text-xs gap-1.5"
             title="تحديث القائمة"
           >
             <RefreshCwIcon className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />
@@ -244,7 +245,7 @@ export default function CustomersPage() {
             type="button"
             size="sm"
             onClick={handleOpenAdd}
-            className="h-8.5 px-3 rounded-md text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <PlusIcon className="size-3.5" />
             <span>إضافة عميل</span>
@@ -256,7 +257,7 @@ export default function CustomersPage() {
         {/* إشعار النجاح / الخطأ */}
         {bannerMessage && (
           <div
-            className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-md border text-xs font-medium animate-in fade-in duration-150 ${
+            className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-lg border text-xs font-medium animate-in fade-in duration-150 ${
               bannerMessage.type === "success"
                 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
                 : "bg-destructive/10 border-destructive/25 text-destructive"
@@ -272,9 +273,9 @@ export default function CustomersPage() {
             </div>
             <button
               onClick={() => setBannerMessage(null)}
-              className="text-xs opacity-70 hover:opacity-100 p-0.5"
+              className="text-muted-foreground hover:text-foreground transition-colors p-1"
             >
-              ✕
+              <XIcon className="size-3.5" />
             </button>
           </div>
         )}
@@ -334,23 +335,23 @@ export default function CustomersPage() {
         {/* شريط البحث والفلترة */}
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between p-2.5 sm:p-3 rounded-xl bg-card border border-border/60 shadow-xs">
           <div className="relative flex-1 w-full sm:max-w-md">
-            <SearchIcon className="absolute start-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ابحث بالاسم أو رقم الهاتف أو العنوان..."
-              className="ps-8 h-8.5 text-xs bg-muted/40 rounded-lg border-border/60"
+              className="ps-9 h-8.5 text-xs bg-muted/40 rounded-lg border-border/60"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none text-xs">
+          <div className="flex bg-muted/50 p-1 rounded-lg border border-border/60 text-xs font-medium">
             <button
               type="button"
               onClick={() => setStatusFilter("all")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                 statusFilter === "all"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "bg-muted/70 hover:bg-muted text-muted-foreground"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               الكل ({customers.length})
@@ -358,10 +359,10 @@ export default function CustomersPage() {
             <button
               type="button"
               onClick={() => setStatusFilter("active")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                 statusFilter === "active"
-                  ? "bg-emerald-600 text-white shadow-xs"
-                  : "bg-muted/70 hover:bg-muted text-muted-foreground"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               نشط ({customers.filter((c) => c.is_active).length})
@@ -369,10 +370,10 @@ export default function CustomersPage() {
             <button
               type="button"
               onClick={() => setStatusFilter("inactive")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                 statusFilter === "inactive"
-                  ? "bg-destructive text-destructive-foreground shadow-xs"
-                  : "bg-muted/70 hover:bg-muted text-muted-foreground"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               معطل ({customers.filter((c) => !c.is_active).length})

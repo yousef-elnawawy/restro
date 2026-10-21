@@ -23,6 +23,7 @@ import {
   ShieldCheckIcon,
   ReceiptIcon,
   ChefHatIcon,
+  TruckIcon,
 } from "lucide-react"
 
 // قاموس لأسماء المسارات بالعربية لتوليد مسار التنقل (Breadcrumbs) تلقائياً
@@ -64,15 +65,27 @@ export function DashboardHeader() {
     return () => clearTimeout(t)
   }, [])
 
-  const userHome = currentRole === "kitchen" ? "/dashboard/kitchen" : currentRole === "cashier" ? "/dashboard/pos" : "/dashboard"
+  const userHome =
+    currentRole === "kitchen"
+      ? "/dashboard/kitchen"
+      : currentRole === "cashier"
+      ? "/dashboard/pos"
+      : currentRole === "delivery"
+      ? "/dashboard/delivery"
+      : "/dashboard"
 
   // تفكيك المسار لإنشاء فتات الخبز ديناميكياً
   const segments = (pathname || "").split("/").filter(Boolean)
 
   const breadcrumbs = React.useMemo(() => {
-    // إذا كان الكاشير في صفحة نقطة البيع أو الشيف في المطبخ، نعرض عنصر فتات واحد فقط نظيف ومباشر
+    // إذا كان الكاشير أو الشيف أو المندوب في صفحته المباشرة، نعرض عنصر فتات واحد فقط نظيف ومباشر
     if (currentRole !== "admin" && (pathname === userHome || pathname === `${userHome}/`)) {
-      const homeLabel = currentRole === "kitchen" ? "شاشة المطبخ (KDS)" : "نقطة البيع (الكاشير)"
+      const homeLabel =
+        currentRole === "kitchen"
+          ? "شاشة المطبخ (KDS)"
+          : currentRole === "cashier"
+          ? "نقطة البيع (الكاشير)"
+          : "التوصيل والديليفري"
       return [
         {
           label: homeLabel,
@@ -94,7 +107,12 @@ export function DashboardHeader() {
       // إذا كان المستخدم غير مدير والرابط يشير لـ /dashboard، نوجهه لقسمه المصرح به
       if (href === "/dashboard" && currentRole !== "admin") {
         href = userHome
-        label = currentRole === "kitchen" ? "شاشة المطبخ" : "نقطة البيع"
+        label =
+          currentRole === "kitchen"
+            ? "شاشة المطبخ"
+            : currentRole === "cashier"
+            ? "نقطة البيع"
+            : "التوصيل والديليفري"
       }
 
       list.push({
@@ -146,7 +164,13 @@ export function DashboardHeader() {
       icon: ChefHatIcon,
       color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
     },
-  }[currentRole as "admin" | "cashier" | "kitchen"] || {
+    delivery: {
+      label: "كابتن التوصيل",
+      subLabel: "التوصيل والديليفري",
+      icon: TruckIcon,
+      color: "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/25",
+    },
+  }[currentRole as "admin" | "cashier" | "kitchen" | "delivery"] || {
     label: "مدير النظام",
     subLabel: "صلاحيات كاملة",
     icon: ShieldCheckIcon,

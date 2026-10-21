@@ -500,132 +500,133 @@ export default function ProductsPage() {
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 rounded-xl border-primary/20 text-primary hover:bg-primary/10 shadow-xs"
+              className="h-8.5 rounded-lg text-xs gap-1.5"
             >
-              <ReceiptIcon className="size-4" />
+              <ReceiptIcon className="size-3.5" />
               <span className="hidden sm:inline">نقطة البيع (الكاشير)</span>
             </Button>
           </Link>
 
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => fetchProducts({ page })}
             disabled={isLoading}
-            className="text-muted-foreground hover:text-foreground rounded-xl"
+            className="h-8.5 rounded-lg text-xs gap-1.5"
             title="تحديث القائمة"
           >
-            <RefreshCwIcon className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">تحديث</span>
+            <RefreshCwIcon className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />
+            <span>تحديث</span>
           </Button>
 
           <Button
             size="sm"
             onClick={handleOpenCreate}
-            className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <PlusIcon className="size-4" />
+            <PlusIcon className="size-3.5" />
             <span>إضافة طبق جديد</span>
           </Button>
         </div>
       }
     >
-      {/* إشعار العملية (Alert Banner) */}
-      {bannerMessage && (
-        <div
-          className={`flex items-center justify-between gap-3 p-4 rounded-xl shadow-xs text-sm font-medium transition-all duration-200 border ${
-            bannerMessage.type === "success"
-              ? "bg-primary/10 border-primary/20 text-primary"
-              : "bg-destructive/10 border-destructive/20 text-destructive"
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            {bannerMessage.type === "success" ? (
-              <CheckCircle2Icon className="size-5 shrink-0" />
-            ) : (
-              <AlertCircleIcon className="size-5 shrink-0" />
-            )}
-            <span>{bannerMessage.text}</span>
-          </div>
-          <button
-            onClick={() => setBannerMessage(null)}
-            className="text-xs opacity-70 hover:opacity-100 transition-opacity p-1"
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* إشعار العملية (Alert Banner) */}
+        {bannerMessage && (
+          <div
+            className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-lg border text-xs font-medium animate-in fade-in duration-150 ${
+              bannerMessage.type === "success"
+                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
+                : "bg-destructive/10 border-destructive/25 text-destructive"
+            }`}
           >
-            <XIcon className="size-4" />
-          </button>
-        </div>
-      )}
-
-      {/* كروت الإحصائيات العلوية */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl bg-card border border-border/60 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex size-9 sm:size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <UtensilsCrossedIcon className="size-4.5 sm:size-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">إجمالي الأطباق</p>
-            <p className="text-xl font-bold tracking-tight text-foreground font-mono">{totalCount}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl bg-card border border-border/60 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex size-9 sm:size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2Icon className="size-4.5 sm:size-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">الأطباق المتوفرة</p>
-            <p className="text-xl font-bold tracking-tight text-foreground font-mono">{activeCount}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl bg-card border border-border/60 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex size-9 sm:size-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <XCircleIcon className="size-4.5 sm:size-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">غير المتوفرة حالياً</p>
-            <p className="text-xl font-bold tracking-tight text-foreground font-mono">{inactiveCount}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* شريط البحث والفلترة وتبديل طريقة العرض */}
-      <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
-        <div className="flex flex-col lg:flex-row gap-2.5 lg:items-center lg:justify-between">
-          {/* حقل البحث */}
-          <div className="relative flex-1 w-full lg:max-w-md">
-            <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="البحث عن اسم منتج أو وصف..."
-              className="ps-9 pe-8 bg-muted/30 hover:bg-muted/50 focus:bg-background rounded-lg text-xs h-8.5 border-border/60"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <XIcon className="size-4" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 justify-between lg:justify-end">
-            {/* فلتر الأقسام */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">القسم:</span>
-              <ComboboxSelect
-                value={selectedCategory === "all" ? "all" : String(selectedCategory)}
-                onValueChange={(val) => {
-                  setSelectedCategory(val === "all" || !val ? "all" : Number(val))
-                }}
-                options={categoryFilterOptions}
-                placeholder="كل الأقسام"
-                className="w-full sm:w-52 text-xs sm:text-sm h-10 bg-muted/30 hover:bg-muted/50 text-foreground rounded-xl border border-border/60"
-              />
+            <div className="flex items-center gap-2">
+              {bannerMessage.type === "success" ? (
+                <CheckCircle2Icon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <AlertCircleIcon className="size-4 shrink-0 text-destructive" />
+              )}
+              <span>{bannerMessage.text}</span>
             </div>
+            <button
+              onClick={() => setBannerMessage(null)}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1"
+            >
+              <XIcon className="size-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* كروت الإحصائيات العلوية */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <UtensilsCrossedIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">إجمالي الأطباق</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">{totalCount}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2Icon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">الأطباق المتوفرة</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">{activeCount}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <XCircleIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">غير المتوفرة حالياً</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">{inactiveCount}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* شريط البحث والفلترة وتبديل طريقة العرض */}
+        <div className="flex flex-col gap-2.5 p-2.5 sm:p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="flex flex-col lg:flex-row gap-2.5 lg:items-center lg:justify-between">
+            {/* حقل البحث */}
+            <div className="relative flex-1 w-full lg:max-w-md">
+              <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="البحث عن اسم منتج أو وصف..."
+                className="ps-9 pe-8 bg-muted/40 rounded-lg text-xs h-8.5 border-border/60"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <XIcon className="size-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 justify-between lg:justify-end">
+              {/* فلتر الأقسام */}
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">القسم:</span>
+                <ComboboxSelect
+                  value={selectedCategory === "all" ? "all" : String(selectedCategory)}
+                  onValueChange={(val) => {
+                    setSelectedCategory(val === "all" || !val ? "all" : Number(val))
+                  }}
+                  options={categoryFilterOptions}
+                  placeholder="كل الأقسام"
+                  className="w-full sm:w-48 text-xs h-8.5 bg-muted/40 text-foreground rounded-lg border border-border/60"
+                />
+              </div>
 
             {/* أزرار فلتر الحالة */}
             <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/40">
@@ -1135,20 +1136,25 @@ export default function ProductsPage() {
             {/* محدد عدد العناصر بالصفحة */}
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-muted-foreground">لكل صفحة:</span>
-              <select
-                value={perPage}
-                onChange={(e) => {
-                  setPerPage(Number(e.target.value))
-                  window.scrollTo({ top: 0, behavior: "smooth" })
-                }}
-                className="bg-muted/40 hover:bg-muted/70 text-foreground text-xs font-semibold rounded-lg px-2 py-1 border border-border/50 outline-none cursor-pointer transition-colors"
-                title="عدد الأصناف المعروضة في كل صفحة"
-              >
-                <option value={8}>8</option>
-                <option value={12}>12</option>
-                <option value={24}>24</option>
-                <option value={48}>48</option>
-              </select>
+              <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/50 border border-border/50">
+                {[8, 12, 24, 48].map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => {
+                      setPerPage(count)
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }}
+                    className={`px-2 py-0.5 text-xs font-bold font-mono rounded-md transition-all ${
+                      perPage === count
+                        ? "bg-card text-foreground shadow-xs border border-border/70"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1281,6 +1287,7 @@ export default function ProductsPage() {
           )}
         </div>
       )}
+      </div>
 
       {/* نافذة إضافة / تعديل منتج الشاملة (Modal) */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

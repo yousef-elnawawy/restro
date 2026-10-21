@@ -51,7 +51,12 @@ class AuthController extends Controller
 
         RateLimiter::clear($throttleKey);
 
-        $token = $user->createToken('admin-dashboard')->plainTextToken;
+        // إنشاء توكن دخول صالح لمدة يوم واحد فقط (24 ساعة) ثم تنتهي الجلسة تلقائياً
+        $token = $user->createToken(
+            'admin-dashboard',
+            ['*'],
+            now()->addDay()
+        )->plainTextToken;
 
         $driver = $user->isDelivery() ? $user->deliveryDriver : null;
 

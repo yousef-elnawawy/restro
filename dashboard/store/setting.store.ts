@@ -15,6 +15,8 @@ export const defaultSettings: RestaurantSettings = {
   tax_enabled: true,
   tax_number: "",
   delivery_fee: 20,
+  delivery_base_fee: 15,
+  delivery_fee_per_km: 5,
   receipt_header: "",
   receipt_footer: "شكراً لزيارتكم! نسعد بخدمتكم دائماً.",
   logo: null,

@@ -129,6 +129,8 @@ class OrderController extends Controller
             'subtotal' => ['nullable', 'numeric', 'min:0'],
             'tax' => ['nullable', 'numeric', 'min:0'],
             'delivery_fee' => ['nullable', 'numeric', 'min:0'],
+            'delivery_distance' => ['nullable', 'numeric', 'min:0'],
+            'delivery_address' => ['nullable', 'string', 'max:500'],
             'total' => ['nullable', 'numeric', 'min:0'],
         ], [
             'order_type.required' => 'نوع الطلب مطلوب.',
@@ -156,8 +158,19 @@ class OrderController extends Controller
 
         $setting = Setting::instance();
         $deliveryFee = 0.00;
+        $deliveryDistance = isset($validated['delivery_distance']) ? (float) $validated['delivery_distance'] : null;
+        $deliveryAddress = $validated['delivery_address'] ?? null;
+
         if ($validated['order_type'] === 'delivery') {
-            $deliveryFee = isset($validated['delivery_fee']) ? (float) $validated['delivery_fee'] : (float) $setting->delivery_fee;
+            if (isset($validated['delivery_fee'])) {
+                $deliveryFee = (float) $validated['delivery_fee'];
+            } elseif ($deliveryDistance !== null && $deliveryDistance > 0) {
+                $baseFee = (float) ($setting->delivery_base_fee ?? $setting->delivery_fee ?? 0);
+                $perKm = (float) ($setting->delivery_fee_per_km ?? 0);
+                $deliveryFee = round($baseFee + ($deliveryDistance * $perKm), 2);
+            } else {
+                $deliveryFee = (float) ($setting->delivery_base_fee ?? $setting->delivery_fee ?? 0);
+            }
         }
 
         // Calculate totals if not provided or to ensure integrity
@@ -171,7 +184,7 @@ class OrderController extends Controller
         $tax = isset($validated['tax']) ? (float) $validated['tax'] : $calculatedTax;
         $total = isset($validated['total']) ? (float) $validated['total'] : round($subtotal + $tax + $deliveryFee, 2);
 
-        $order = DB::transaction(function () use ($validated, $table, $subtotal, $tax, $deliveryFee, $total, $request) {
+        $order = DB::transaction(function () use ($validated, $table, $subtotal, $tax, $deliveryFee, $deliveryDistance, $deliveryAddress, $total, $request) {
             // Generate unique human-readable order number
             $todayCount = Order::whereDate('created_at', today())->count();
             $orderNumber = 'ORD-'.date('Ymd').'-'.str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
@@ -181,6 +194,9 @@ class OrderController extends Controller
                 $cust = Customer::find($validated['customer_id']);
                 if ($cust) {
                     $customerName = $cust->name;
+                    if (! $deliveryAddress && ! empty($cust->address)) {
+                        $deliveryAddress = $cust->address;
+                    }
                 }
             }
 
@@ -192,11 +208,13 @@ class OrderController extends Controller
                 'customer_id' => $validated['customer_id'] ?? null,
                 'delivery_driver_id' => $validated['delivery_driver_id'] ?? null,
                 'customer_name' => $customerName ?? ($table ? $table->name : null),
+                'delivery_address' => $deliveryAddress,
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
                 'subtotal' => $subtotal,
                 'tax' => $tax,
                 'delivery_fee' => $deliveryFee,
+                'delivery_distance' => $deliveryDistance,
                 'total' => $total,
                 'notes' => $validated['notes'] ?? null,
                 'user_id' => $request->user()?->id,
@@ -293,6 +311,8 @@ class OrderController extends Controller
             'subtotal' => ['nullable', 'numeric'],
             'tax' => ['nullable', 'numeric'],
             'delivery_fee' => ['nullable', 'numeric', 'min:0'],
+            'delivery_distance' => ['nullable', 'numeric', 'min:0'],
+            'delivery_address' => ['nullable', 'string', 'max:500'],
             'total' => ['nullable', 'numeric'],
         ], [
             'items.required' => 'يجب أن يحتوي الطلب على صنف واحد على الأقل.',
@@ -301,11 +321,20 @@ class OrderController extends Controller
 
         $setting = Setting::instance();
         $newOrderType = $validated['order_type'] ?? $order->order_type;
+        $deliveryDistance = array_key_exists('delivery_distance', $validated) ? $validated['delivery_distance'] : $order->delivery_distance;
+        $deliveryAddress = array_key_exists('delivery_address', $validated) ? $validated['delivery_address'] : $order->delivery_address;
         $deliveryFee = 0.00;
+
         if ($newOrderType === 'delivery') {
-            $deliveryFee = isset($validated['delivery_fee'])
-                ? (float) $validated['delivery_fee']
-                : ((float) $order->delivery_fee > 0 ? (float) $order->delivery_fee : (float) $setting->delivery_fee);
+            if (isset($validated['delivery_fee'])) {
+                $deliveryFee = (float) $validated['delivery_fee'];
+            } elseif ($deliveryDistance !== null && (float) $deliveryDistance > 0) {
+                $baseFee = (float) ($setting->delivery_base_fee ?? $setting->delivery_fee ?? 0);
+                $perKm = (float) ($setting->delivery_fee_per_km ?? 0);
+                $deliveryFee = round($baseFee + ((float) $deliveryDistance * $perKm), 2);
+            } else {
+                $deliveryFee = ((float) $order->delivery_fee > 0 ? (float) $order->delivery_fee : (float) ($setting->delivery_base_fee ?? $setting->delivery_fee ?? 0));
+            }
         }
 
         // Calculate totals
@@ -320,7 +349,7 @@ class OrderController extends Controller
         $tax = isset($validated['tax']) ? (float) $validated['tax'] : $calculatedTax;
         $total = isset($validated['total']) ? (float) $validated['total'] : round($subtotal + $tax + $deliveryFee, 2);
 
-        $order = DB::transaction(function () use ($order, $validated, $newOrderType, $subtotal, $tax, $deliveryFee, $total) {
+        $order = DB::transaction(function () use ($order, $validated, $newOrderType, $subtotal, $tax, $deliveryFee, $deliveryDistance, $deliveryAddress, $total) {
             $oldTableId = $order->table_id;
             $newTableId = $newOrderType === 'dinein' ? ($validated['table_id'] ?? $order->table_id) : null;
 
@@ -346,6 +375,9 @@ class OrderController extends Controller
                 $cust = Customer::find($validated['customer_id']);
                 if ($cust) {
                     $customerName = $cust->name;
+                    if (! $deliveryAddress && ! empty($cust->address)) {
+                        $deliveryAddress = $cust->address;
+                    }
                 }
             }
 
@@ -356,9 +388,11 @@ class OrderController extends Controller
                 'customer_id' => array_key_exists('customer_id', $validated) ? $validated['customer_id'] : $order->customer_id,
                 'delivery_driver_id' => array_key_exists('delivery_driver_id', $validated) ? $validated['delivery_driver_id'] : $order->delivery_driver_id,
                 'customer_name' => $customerName,
+                'delivery_address' => $deliveryAddress,
                 'subtotal' => $subtotal,
                 'tax' => $tax,
                 'delivery_fee' => $deliveryFee,
+                'delivery_distance' => $deliveryDistance,
                 'total' => $total,
                 'notes' => array_key_exists('notes', $validated) ? $validated['notes'] : $order->notes,
             ]);

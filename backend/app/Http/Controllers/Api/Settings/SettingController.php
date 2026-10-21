@@ -35,7 +35,9 @@ class SettingController extends Controller
             'tax_percentage' => ['required', 'numeric', 'min:0', 'max:100'],
             'tax_enabled' => ['boolean'],
             'tax_number' => ['nullable', 'string', 'max:100'],
-            'delivery_fee' => ['required', 'numeric', 'min:0'],
+            'delivery_fee' => ['nullable', 'numeric', 'min:0'],
+            'delivery_base_fee' => ['nullable', 'numeric', 'min:0'],
+            'delivery_fee_per_km' => ['nullable', 'numeric', 'min:0'],
             'receipt_header' => ['nullable', 'string', 'max:500'],
             'receipt_footer' => ['nullable', 'string', 'max:500'],
             'logo' => ['nullable', 'string'],
@@ -46,10 +48,14 @@ class SettingController extends Controller
             'restaurant_name.required' => 'اسم المطعم مطلوب.',
             'currency.required' => 'العملة مطلوبة.',
             'tax_percentage.required' => 'نسبة الضريبة مطلوبة.',
-            'delivery_fee.required' => 'رسوم التوصيل مطلوبة.',
         ]);
 
         $setting = Setting::instance();
+        if (isset($validated['delivery_base_fee']) && ! isset($validated['delivery_fee'])) {
+            $validated['delivery_fee'] = $validated['delivery_base_fee'];
+        } elseif (isset($validated['delivery_fee']) && ! isset($validated['delivery_base_fee'])) {
+            $validated['delivery_base_fee'] = $validated['delivery_fee'];
+        }
         $setting->update($validated);
 
         return $this->successResponse($setting, 'تم حفظ إعدادات المطعم بنجاح.');

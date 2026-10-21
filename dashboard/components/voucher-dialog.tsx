@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ComboboxSelect, type ComboboxOption } from "@/components/ui/combobox-select"
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
@@ -28,6 +29,10 @@ import {
   AlertCircleIcon,
   Loader2Icon,
   UserIcon,
+  BanknoteIcon,
+  CreditCardIcon,
+  LandmarkIcon,
+  TagIcon,
 } from "lucide-react"
 
 interface VoucherDialogProps {
@@ -188,6 +193,37 @@ export function VoucherDialog({
     }
   }
 
+  // خيارات الخزائن المالية بنمط ComboboxSelect الموحد
+  const registerOptions: ComboboxOption[] = React.useMemo(() => {
+    return registers.map((r) => ({
+      value: String(r.id),
+      label: `${r.name} ${r.is_default ? "(الرئيسية)" : ""}`,
+      badge: `${Number(r.balance || 0).toLocaleString("ar-EG")} ${currency}`,
+      badgeVariant: "success" as const,
+    }))
+  }, [registers, currency])
+
+  // خيارات تصنيفات المصروفات
+  const categoryOptions: ComboboxOption[] = React.useMemo(() => {
+    return EXPENSE_CATEGORIES.map((cat) => ({
+      value: cat,
+      label: cat,
+    }))
+  }, [])
+
+  // خيارات العملاء
+  const customerOptions: ComboboxOption[] = React.useMemo(() => {
+    return [
+      { value: "", label: "-- اختر العميل من القائمة --" },
+      ...customers.map((c) => ({
+        value: String(c.id),
+        label: `${c.name} (${c.phone || "بدون هاتف"})`,
+        badge: `${Number(c.balance || 0).toLocaleString("ar-EG")} ${currency}`,
+        badgeVariant: Number(c.balance || 0) < 0 ? ("destructive" as const) : ("success" as const),
+      })),
+    ]
+  }, [customers, currency])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl border border-border/80 bg-card">
@@ -281,18 +317,14 @@ export function VoucherDialog({
                     </span>
                   )}
                 </label>
-                <select
-                  value={cashRegisterId}
-                  onChange={(e) => setCashRegisterId(Number(e.target.value))}
-                  className="w-full h-9 text-xs bg-card border border-border/70 rounded-lg px-2.5 text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary [&>option]:bg-card [&>option]:text-foreground"
-                  required
-                >
-                  {registers.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} {r.is_default ? "(الرئيسية)" : ""} - الرصيد: {Number(r.balance).toLocaleString("ar-EG")} {currency}
-                    </option>
-                  ))}
-                </select>
+                <ComboboxSelect
+                  value={cashRegisterId ? String(cashRegisterId) : ""}
+                  onValueChange={(val) => setCashRegisterId(Number(val))}
+                  options={registerOptions}
+                  placeholder="اختر الخزنة المالية..."
+                  emptyText="لا توجد خزائن"
+                  className="h-9 rounded-lg"
+                />
               </div>
 
               <div className="space-y-1">
@@ -306,35 +338,34 @@ export function VoucherDialog({
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="h-9 text-xs font-mono font-bold"
+                  className="h-9 text-xs font-mono font-bold rounded-lg"
                   required
                 />
               </div>
             </div>
 
-            {/* في حال المصاريف: فقط تصنيف المصروف (بدون مدفوع له وبدون نوع دفع) */}
+            {/* في حال المصاريف: فقط تصنيف المصروف */}
             {type === "expense" && (
               <div className="space-y-1">
-                <label className="font-semibold text-foreground">تصنيف المصروف <span className="text-destructive">*</span></label>
-                <select
+                <label className="font-semibold text-foreground flex items-center gap-1.5">
+                  <TagIcon className="size-3.5 text-primary" />
+                  <span>تصنيف المصروف <span className="text-destructive">*</span></span>
+                </label>
+                <ComboboxSelect
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-9 text-xs bg-card border border-border/70 rounded-lg px-2.5 text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary [&>option]:bg-card [&>option]:text-foreground"
-                  required
-                >
-                  {EXPENSE_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(val) => setCategory(val)}
+                  options={categoryOptions}
+                  placeholder="اختر تصنيف المصروف..."
+                  emptyText="لا يوجد تصنيف مطابق"
+                  className="h-9 rounded-lg"
+                />
               </div>
             )}
 
             {/* في حال سند القبض أو الصرف: للعملاء فقط وطريقة التحصيل/الصرف */}
             {(type === "receipt" || type === "payment") && (
               <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-3">
                   {/* اختيار العميل */}
                   <div className="space-y-1">
                     <label className="font-semibold text-foreground flex items-center justify-between">
@@ -346,10 +377,9 @@ export function VoucherDialog({
                       </span>
                       <span className="text-[10px] text-muted-foreground">حسابات العملاء فقط</span>
                     </label>
-                    <select
+                    <ComboboxSelect
                       value={customerId}
-                      onChange={(e) => {
-                        const cId = e.target.value
+                      onValueChange={(cId) => {
                         setCustomerId(cId)
                         if (cId) {
                           const c = customers.find((cust) => cust.id === Number(cId))
@@ -365,32 +395,58 @@ export function VoucherDialog({
                           setRecipientOrPayer("")
                         }
                       }}
-                      className="w-full h-9 text-xs bg-card border border-border/70 rounded-lg px-2.5 text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary [&>option]:bg-card [&>option]:text-foreground"
-                      required
-                    >
-                      <option value="">-- اختر العميل من القائمة --</option>
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({c.phone || "بدون هاتف"}) - الرصيد: {Number(c.balance || 0).toLocaleString("ar-EG")} {currency}
-                        </option>
-                      ))}
-                    </select>
+                      options={customerOptions}
+                      placeholder="ابحث واختر العميل..."
+                      emptyText="لا يوجد عملاء مطابقون"
+                      className="h-9 rounded-lg"
+                    />
                   </div>
 
-                  {/* طريقة التحصيل / الصرف */}
-                  <div className="space-y-1">
+                  {/* طريقة التحصيل / الصرف بنمط أزرار تفاعلية راقية */}
+                  <div className="space-y-1.5">
                     <label className="font-semibold text-foreground">
                       {type === "receipt" ? "طريقة التحصيل / القبض *" : "طريقة الصرف والدفع *"}
                     </label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value as "cash" | "card" | "transfer")}
-                      className="w-full h-9 text-xs bg-card border border-border/70 rounded-lg px-2.5 text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary [&>option]:bg-card [&>option]:text-foreground"
-                    >
-                      <option value="cash">نقدي (كاش الخزينة)</option>
-                      <option value="card">بطاقة بنكية / شبكة</option>
-                      <option value="transfer">تحويل بنكي / محفظة</option>
-                    </select>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("cash")}
+                        className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                          paymentMethod === "cash"
+                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                            : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <BanknoteIcon className="size-4 shrink-0" />
+                        <span>نقدي (كاش)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("card")}
+                        className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                          paymentMethod === "card"
+                            ? "border-primary bg-primary/10 text-primary shadow-xs"
+                            : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <CreditCardIcon className="size-4 shrink-0" />
+                        <span>بطاقة / شبكة</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("transfer")}
+                        className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                          paymentMethod === "transfer"
+                            ? "border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-xs"
+                            : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <LandmarkIcon className="size-4 shrink-0" />
+                        <span>تحويل بنكي</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 

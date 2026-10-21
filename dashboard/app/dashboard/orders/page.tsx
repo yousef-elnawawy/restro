@@ -62,6 +62,7 @@ import {
   AlertCircleIcon,
   UserIcon,
   Edit2Icon,
+  BanknoteIcon,
 } from "lucide-react"
 
 // خريطة تفاصيل حالات الطلب
@@ -487,7 +488,7 @@ export default function OrdersPage() {
             size="sm"
             onClick={() => fetchOrders()}
             disabled={isLoading}
-            className="rounded-md text-xs gap-1.5"
+            className="h-8.5 rounded-lg text-xs gap-1.5"
             title="تحديث القائمة"
           >
             <RefreshCwIcon className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />
@@ -496,15 +497,15 @@ export default function OrdersPage() {
 
           {isKitchen ? (
             <Link href="/dashboard/kitchen">
-              <Button size="sm" className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-md text-xs font-semibold">
-                <ChefHatIcon className="size-4" />
+              <Button size="sm" className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90">
+                <ChefHatIcon className="size-3.5" />
                 <span>شاشة المطبخ (KDS)</span>
               </Button>
             </Link>
           ) : (
             <Link href="/dashboard/pos">
-              <Button size="sm" className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-md text-xs font-semibold">
-                <ReceiptIcon className="size-4" />
+              <Button size="sm" className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90">
+                <ReceiptIcon className="size-3.5" />
                 <span>نقطة البيع (الكاشير)</span>
               </Button>
             </Link>
@@ -512,111 +513,113 @@ export default function OrdersPage() {
         </div>
       }
     >
-      {/* كروت الإحصائيات العلوية */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
-          <div className="flex size-8.5 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <ShoppingBagIcon className="size-4" />
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* كروت الإحصائيات العلوية */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <ShoppingBagIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">إجمالي الطلبات</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">{mounted ? totalCount : 0}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] font-medium text-muted-foreground">إجمالي الطلبات</p>
-            <p className="text-base font-bold tracking-tight text-foreground">{mounted ? totalCount : 0}</p>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <ChefHatIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">قيد التحضير</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
+                {mounted ? activeCount : 0}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2Icon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">المسدد بالكامل</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                {mounted ? paidCount : 0}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <ClockIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">قيد السداد</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-rose-600 dark:text-rose-400 font-mono">
+                {mounted ? unpaidCount : 0}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs col-span-2 sm:col-span-1">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <LandmarkIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">المحصل</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono truncate">
+                {mounted ? totalRevenue.toLocaleString("ar-EG") : 0}{" "}
+                <span className="text-[11px] font-normal text-muted-foreground">{activeCurrency}</span>
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
-          <div className="flex size-8.5 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <ChefHatIcon className="size-4" />
+        {/* شريط البحث والفلاتر */}
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between p-2.5 sm:p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="relative flex-1 w-full sm:max-w-md">
+            <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ابحث برقم الطلب، العميل، الطاولة، أو الطيار..."
+              className="ps-9 bg-muted/40 rounded-lg text-xs h-8.5 border-border/60"
+            />
           </div>
-          <div>
-            <p className="text-[11px] font-medium text-muted-foreground">قيد التحضير</p>
-            <p className="text-base font-bold tracking-tight text-amber-600 dark:text-amber-400">
-              {mounted ? activeCount : 0}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
-          <div className="flex size-8.5 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2Icon className="size-4" />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-muted-foreground">المسدد بالكامل</p>
-            <p className="text-base font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-              {mounted ? paidCount : 0}
-            </p>
-          </div>
-        </div>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto text-xs">
+            {/* نوع الطلب */}
+            <ComboboxSelect
+              value={orderTypeFilter}
+              onValueChange={(val) => setOrderTypeFilter(val as any)}
+              options={orderTypeOptions}
+              placeholder="نوع الطلب"
+              className="w-full sm:w-36 text-xs h-8.5 bg-muted/40 border border-border/60 rounded-lg"
+            />
 
-        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
-          <div className="flex size-8.5 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
-            <ClockIcon className="size-4" />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-muted-foreground">قيد السداد</p>
-            <p className="text-base font-bold tracking-tight text-rose-600 dark:text-rose-400">
-              {mounted ? unpaidCount : 0}
-            </p>
-          </div>
-        </div>
+            {/* حالة الطلب */}
+            <ComboboxSelect
+              value={statusFilter}
+              onValueChange={(val) => setStatusFilter(val as any)}
+              options={statusOptions}
+              placeholder="حالة الطلب"
+              className="w-full sm:w-44 text-xs h-8.5 bg-muted/40 border border-border/60 rounded-lg"
+            />
 
-        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-card border border-border/60 shadow-xs col-span-2 sm:col-span-1">
-          <div className="flex size-8.5 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-            <LandmarkIcon className="size-4" />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-muted-foreground">المحصل</p>
-            <p className="text-base font-bold tracking-tight text-foreground truncate">
-              {mounted ? totalRevenue.toLocaleString("ar-EG") : 0} {activeCurrency}
-            </p>
+            {/* حالة السداد */}
+            <ComboboxSelect
+              value={paymentFilter}
+              onValueChange={(val) => setPaymentFilter(val as any)}
+              options={paymentOptions}
+              placeholder="حالة السداد"
+              className="w-full sm:w-36 text-xs h-8.5 bg-muted/40 border border-border/60 rounded-lg"
+            />
           </div>
         </div>
-      </div>
 
-      {/* شريط البحث والفلاتر */}
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between p-3 rounded-xl bg-card border border-border/60 shadow-xs">
-        <div className="relative flex-1 w-full sm:max-w-md">
-          <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ابحث برقم الطلب، العميل، الطاولة، أو الطيار..."
-            className="ps-9 bg-muted/40 rounded-lg text-xs h-8.5 border-border/60"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 p-1 rounded-lg bg-muted/40 w-full sm:w-auto text-xs">
-          {/* نوع الطلب */}
-          <ComboboxSelect
-            value={orderTypeFilter}
-            onValueChange={(val) => setOrderTypeFilter(val as any)}
-            options={orderTypeOptions}
-            placeholder="نوع الطلب"
-            className="w-full sm:w-36 text-xs sm:text-sm h-9 bg-card border border-border/60 rounded-lg"
-          />
-
-          {/* حالة الطلب */}
-          <ComboboxSelect
-            value={statusFilter}
-            onValueChange={(val) => setStatusFilter(val as any)}
-            options={statusOptions}
-            placeholder="حالة الطلب"
-            className="w-full sm:w-44 text-xs sm:text-sm h-9 bg-card border border-border/60 rounded-lg"
-          />
-
-          {/* حالة السداد */}
-          <ComboboxSelect
-            value={paymentFilter}
-            onValueChange={(val) => setPaymentFilter(val as any)}
-            options={paymentOptions}
-            placeholder="حالة السداد"
-            className="w-full sm:w-36 text-xs sm:text-sm h-9 bg-card border border-border/60 rounded-lg"
-          />
-        </div>
-      </div>
-
-      {/* جدول الطلبات الشامل */}
-      <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
+        {/* جدول الطلبات الشامل */}
+        <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
@@ -843,6 +846,7 @@ export default function OrdersPage() {
           </TableBody>
         </Table>
       </div>
+      </div>
 
       {/* نافذة عرض وطباعة الفاتورة */}
       <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
@@ -960,25 +964,58 @@ export default function OrdersPage() {
               </div>
 
               {/* اختيار الخزينة */}
-              <div className="space-y-1">
-                <label className="font-bold text-foreground">الخزينة المستلمة:</label>
-                <select
-                  value={payForm.registerId}
-                  onChange={(e) => setPayForm({ ...payForm, registerId: Number(e.target.value) })}
-                  className="w-full h-9.5 px-3 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary"
-                >
-                  {registers.map((reg) => (
-                    <option key={reg.id} value={reg.id}>
-                      {reg.name} {reg.is_active ? "(نشطة)" : "(غير نشطة)"} - رصيد: {reg.balance} {activeCurrency}
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                  <span>الخزينة المستلمة:</span>
+                  <span className="text-[11px] text-muted-foreground font-normal">تودع الدفعة فيها مباشرة</span>
+                </label>
+                <ComboboxSelect
+                  options={registers.map((reg) => ({
+                    value: String(reg.id),
+                    label: reg.name,
+                    badge: `${Number(reg.balance || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} ${activeCurrency}`,
+                    badgeVariant: reg.is_active ? "outline" : "secondary",
+                  }))}
+                  value={String(payForm.registerId)}
+                  onValueChange={(val) => setPayForm({ ...payForm, registerId: Number(val) })}
+                  placeholder="اختر الخزينة..."
+                  searchPlaceholder="ابحث باسم الخزينة..."
+                />
               </div>
 
               {/* المبلغ وطريقة السداد */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-bold text-foreground">مبلغ الدفع ({activeCurrency}):</label>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">طريقة الدفع:</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: "cash", label: "نقدي (كاش)", icon: BanknoteIcon, color: "text-emerald-600 dark:text-emerald-400" },
+                      { id: "card", label: "بطاقة / فيزا", icon: CreditCardIcon, color: "text-blue-600 dark:text-blue-400" },
+                      { id: "transfer", label: "تحويل بنكي", icon: LandmarkIcon, color: "text-purple-600 dark:text-purple-400" },
+                    ].map((pm) => {
+                      const Icon = pm.icon
+                      const active = payForm.paymentMethod === pm.id
+                      return (
+                        <button
+                          key={pm.id}
+                          type="button"
+                          onClick={() => setPayForm({ ...payForm, paymentMethod: pm.id })}
+                          className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
+                            active
+                              ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
+                              : "border-border/70 bg-card hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Icon className={`size-4 ${active ? "text-primary" : pm.color}`} />
+                          <span className="text-[11px] text-center leading-tight">{pm.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">مبلغ الدفع ({activeCurrency}):</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -987,19 +1024,6 @@ export default function OrdersPage() {
                     onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
                     className="h-9.5 text-xs font-mono font-bold"
                   />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-foreground">طريقة الدفع:</label>
-                  <select
-                    value={payForm.paymentMethod}
-                    onChange={(e) => setPayForm({ ...payForm, paymentMethod: e.target.value })}
-                    className="w-full h-9.5 px-3 rounded-md bg-muted/40 border border-border/80 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary"
-                  >
-                    <option value="cash">نقدي (كاش)</option>
-                    <option value="card">بطاقة بنكية / فيزا</option>
-                    <option value="transfer">تحويل محفظة / بنك</option>
-                  </select>
                 </div>
               </div>
 
@@ -1090,52 +1114,60 @@ export default function OrdersPage() {
               </div>
 
               {/* اختيار الحالة الجديدة */}
-              <div className="space-y-1">
-                <label className="font-bold text-foreground">اختر الحالة التشغيلية الجديدة:</label>
-                <select
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground">اختر الحالة التشغيلية الجديدة:</label>
+                <ComboboxSelect
+                  options={[
+                    { value: "pending", label: "جديد (بانتظار البدء)", badge: "جديد", badgeVariant: "secondary" },
+                    { value: "preparing", label: "جاري التحضير بالمطبخ", badge: "تحضير", badgeVariant: "outline" },
+                    ...(selectedOrder.order_type === "dinein"
+                      ? [{ value: "served", label: "تم التقديم على السفرة", badge: "صالة", badgeVariant: "default" as const }]
+                      : []),
+                    ...(selectedOrder.order_type !== "dinein"
+                      ? [{ value: "ready", label: "جاهز للاستلام / للتسليم", badge: "جاهز", badgeVariant: "success" as const }]
+                      : []),
+                    ...(selectedOrder.order_type === "delivery"
+                      ? [{ value: "out_for_delivery", label: "خرج للتوصيل مع الطيار", badge: "بالطريق", badgeVariant: "default" as const }]
+                      : []),
+                    { value: "completed", label: "مكتمل ومغلق ✓", badge: "مكتمل", badgeVariant: "success" },
+                    { value: "cancelled", label: "ملغي ✕", badge: "ملغي", badgeVariant: "destructive" },
+                  ]}
                   value={statusForm.status}
-                  onChange={(e) =>
-                    setStatusForm({ ...statusForm, status: e.target.value as OrderStatus })
+                  onValueChange={(val) =>
+                    setStatusForm({ ...statusForm, status: val as OrderStatus })
                   }
-                  className="w-full h-9.5 px-3 rounded-md bg-muted/40 border border-border/80 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary font-medium"
-                >
-                  <option value="pending">جديد (بانتظار البدء)</option>
-                  <option value="preparing">جاري التحضير بالمطبخ</option>
-                  {selectedOrder.order_type === "dinein" && (
-                    <option value="served">تم التقديم على السفرة</option>
-                  )}
-                  {selectedOrder.order_type !== "dinein" && (
-                    <option value="ready">جاهز للاستلام / للتسليم</option>
-                  )}
-                  {selectedOrder.order_type === "delivery" && (
-                    <option value="out_for_delivery">خرج للتوصيل مع الطيار</option>
-                  )}
-                  <option value="completed">مكتمل ومغلق ✓</option>
-                  <option value="cancelled">ملغي ✕</option>
-                </select>
+                  placeholder="اختر الحالة..."
+                  searchPlaceholder="ابحث عن الحالة..."
+                />
               </div>
 
               {/* إذا كان ديليفري: اختيار سائق التوصيل */}
               {selectedOrder.order_type === "delivery" && (
-                <div className="space-y-1">
-                  <label className="font-bold text-foreground flex items-center gap-1.5">
-                    <BikeIcon className="size-4 text-blue-600" />
-                    <span>سائق التوصيل (الطيار):</span>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <BikeIcon className="size-4 text-primary" />
+                      <span>سائق التوصيل (الطيار):</span>
+                    </span>
+                    <span className="text-[11px] text-muted-foreground font-normal">تحديد الطيار المكلف</span>
                   </label>
-                  <select
-                    value={statusForm.driverId}
-                    onChange={(e) =>
-                      setStatusForm({ ...statusForm, driverId: Number(e.target.value) })
+                  <ComboboxSelect
+                    options={[
+                      { value: "0", label: "-- لم يتم تعيين سائق بعد --" },
+                      ...drivers.map((drv) => ({
+                        value: String(drv.id),
+                        label: `${drv.name} (${drv.phone})`,
+                        badge: drv.status === "available" ? "متاح" : "في مهمة",
+                        badgeVariant: drv.status === "available" ? ("success" as const) : ("secondary" as const),
+                      })),
+                    ]}
+                    value={String(statusForm.driverId)}
+                    onValueChange={(val) =>
+                      setStatusForm({ ...statusForm, driverId: Number(val) })
                     }
-                    className="w-full h-9.5 px-3 rounded-md bg-muted/40 border border-border/80 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary"
-                  >
-                    <option value={0}>-- لم يتم تعيين سائق بعد --</option>
-                    {drivers.map((drv) => (
-                      <option key={drv.id} value={drv.id}>
-                        {drv.name} ({drv.phone}) - {drv.status === "available" ? "متاح" : "في مهمة"}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="اختر السائق..."
+                    searchPlaceholder="ابحث باسم السائق أو الهاتف..."
+                  />
                 </div>
               )}
 

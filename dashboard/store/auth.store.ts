@@ -57,12 +57,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       return
     }
 
-    // تهيئة فورية من الذاكرة المحلية حتى تفتح الواجهة بسلاسة بدون شاشات تحميل مزعجة
+    // تهيئة فورية من الذاكرة المحلية وتجديد الكوكيز لـ 30 يوماً
     set({ user: storedUser, token: storedToken, isInitialized: true })
-    if (typeof document !== "undefined") {
-      const maxAge = 60 * 60 * 24 * 30
-      document.cookie = `auth_role=${encodeURIComponent(storedUser.role || "admin")}; path=/; max-age=${maxAge}; SameSite=Lax`
-    }
+    setAuthSession(storedToken, storedUser)
 
     // التحقق الصامت في الخلفية من صلاحية التوكن لدى الباك إند
     try {
@@ -70,17 +67,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (res.success && res.data) {
         set({ user: res.data })
         setAuthSession(storedToken, res.data)
-      } else {
-        // إذا كان التوكن غير صالح أو أُعيد تعيين قاعدة البيانات (401)
+      } else if (res.isUnauthorized) {
+        // فقط إذا كان الرد 401 صريحاً (التوكن منتهي أو محذوف من قاعدة البيانات)
         clearAuthSession()
         set({ user: null, token: null })
         if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) {
           window.dispatchEvent(new CustomEvent("page-loading:start"))
           window.location.replace("/login")
         }
+      } else {
+        // في حال تعذر الاتصال أو خطأ سيرفر مؤقت، نحافظ على الجلسة المحلية بدون طرد المستخدم
+        setAuthSession(storedToken, storedUser)
       }
     } catch {
-      // في حال انقطاع الشبكة نبقي على البيانات المحلية
+      // في حال انقطاع الشبكة نبقي على الجلسة المحلية بأمان
+      setAuthSession(storedToken, storedUser)
     }
   },
 
@@ -89,7 +90,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       const res = await loginApi(email, password)
       if (res.success && res.data) {
-        setAuthSession(res.data.token, res.data.user)
+        setAuthSession(res.data.token, res.data.user, true)
         set({
           user: res.data.user,
           token: res.data.token,

@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ComboboxSelect } from "@/components/ui/combobox-select"
 import {
   Table,
   TableBody,
@@ -200,90 +201,77 @@ export default function ReportsPage() {
 
             <div className="flex items-center gap-1.5 text-xs">
               <span className="text-muted-foreground whitespace-nowrap">الخزنة:</span>
-              <select
-                value={selectedRegisterId}
-                onChange={(e) => setSelectedRegisterId(e.target.value === "all" ? "all" : Number(e.target.value))}
-                className="h-8 text-xs rounded-lg border border-input bg-background px-2.5 text-foreground"
-              >
-                <option value="all">جميع الخزائن</option>
-                {registers.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
+              <div className="w-48">
+                <ComboboxSelect
+                  options={[
+                    { value: "all", label: "جميع الخزائن" },
+                    ...registers.map((r) => ({
+                      value: String(r.id),
+                      label: r.name,
+                      badge: `${Number(r.balance || 0).toLocaleString()} ${currency}`,
+                      badgeVariant: r.is_active ? ("outline" as const) : ("secondary" as const),
+                    })),
+                  ]}
+                  value={String(selectedRegisterId)}
+                  onValueChange={(val) => setSelectedRegisterId(val === "all" ? "all" : Number(val))}
+                  placeholder="اختر الخزينة..."
+                  searchPlaceholder="بحث في الخزائن..."
+                />
+              </div>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* المؤشرات المالية الإجمالية للفترة */}
-      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-4 sm:p-4.5 rounded-xl border-border/60 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground">إجمالي مبيعات الفترة</span>
-            <div className="flex size-8.5 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <DollarSignIcon className="size-4.5" />
-            </div>
+      {/* المؤشرات المالية الإجمالية للفترة الموحدة */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <DollarSignIcon className="size-4.5" />
           </div>
-          <div className="mt-2.5">
-            <span className="text-xl sm:text-2xl font-bold tracking-tight">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">إجمالي مبيعات الفترة</p>
+            <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">
               {(summary?.total_sales ?? 0).toLocaleString()} {currency}
-            </span>
-            <div className="text-[11px] text-muted-foreground mt-1 truncate">
-              صافي المبيعات: {(summary?.total_subtotal ?? 0).toLocaleString()} {currency}
-            </div>
+            </p>
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-4 sm:p-4.5 rounded-xl border-border/60 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground">الطلبات المكتملة</span>
-            <div className="flex size-8.5 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <ShoppingBagIcon className="size-4.5" />
-            </div>
+        <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            <ShoppingBagIcon className="size-4.5" />
           </div>
-          <div className="mt-2.5">
-            <span className="text-xl sm:text-2xl font-bold tracking-tight">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">الطلبات المكتملة</p>
+            <p className="text-lg sm:text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400 font-mono">
               {summary?.orders_count ?? 0} طلب
-            </span>
-            <div className="text-[11px] text-muted-foreground mt-1 truncate">
-              الملغية: {summary?.cancelled_orders_count ?? 0} طلب
-            </div>
+            </p>
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-4 sm:p-4.5 rounded-xl border-border/60 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground">الضرائب المحصلة</span>
-            <div className="flex size-8.5 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <ReceiptIcon className="size-4.5" />
-            </div>
+        <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <ReceiptIcon className="size-4.5" />
           </div>
-          <div className="mt-2.5">
-            <span className="text-xl sm:text-2xl font-bold tracking-tight">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">الضرائب المحسوبة</p>
+            <p className="text-lg sm:text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
               {(summary?.total_tax ?? 0).toLocaleString()} {currency}
-            </span>
-            <div className="text-[11px] text-muted-foreground mt-1 truncate">
-              ضريبة القيمة المضافة المحسوبة
-            </div>
+            </p>
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-4 sm:p-4.5 rounded-xl border-border/60 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground">رسوم التوصيل المحصلة</span>
-            <div className="flex size-8.5 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <TruckIcon className="size-4.5" />
-            </div>
+        <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <TruckIcon className="size-4.5" />
           </div>
-          <div className="mt-2.5">
-            <span className="text-xl sm:text-2xl font-bold tracking-tight">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">رسوم التوصيل</p>
+            <p className="text-lg sm:text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
               {(summary?.total_delivery_fees ?? 0).toLocaleString()} {currency}
-            </span>
-            <div className="text-[11px] text-muted-foreground mt-1 truncate">
-              إيرادات خدمة التوصيل بالدليفري
-            </div>
+            </p>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* تفاصيل طرق الدفع وأنواع الطلبات */}

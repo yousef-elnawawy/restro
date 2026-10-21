@@ -28,6 +28,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table"
+import { ComboboxSelect, type ComboboxOption } from "@/components/ui/combobox-select"
 import {
   ReceiptIcon,
   PlusIcon,
@@ -41,6 +42,7 @@ import {
   CalendarIcon,
   CreditCardIcon,
   LandmarkIcon,
+  BanknoteIcon,
 } from "lucide-react"
 
 interface CustomerStatementDialogProps {
@@ -320,25 +322,27 @@ export function CustomerStatementDialog({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div className="space-y-1">
+              {/* الخزنة والمبلغ وطريقة الدفع بنمط راقي */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                <div className="sm:col-span-5 space-y-1">
                   <label className="text-[11px] font-semibold text-foreground">الخزنة المستلمة *</label>
-                  <select
-                    value={voucherData.cash_register_id}
-                    onChange={(e) => setVoucherData({ ...voucherData, cash_register_id: Number(e.target.value) })}
-                    className="w-full h-8 text-xs bg-muted/30 border border-border/70 rounded-md px-2 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary [&>option]:bg-card [&>option]:text-foreground"
-                    required
-                  >
-                    {registers.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} {r.is_default ? "(الرئيسية)" : ""} ({Number(r.balance).toLocaleString("ar-EG")} {currency})
-                      </option>
-                    ))}
-                  </select>
+                  <ComboboxSelect
+                    value={voucherData.cash_register_id ? String(voucherData.cash_register_id) : ""}
+                    onValueChange={(val) => setVoucherData({ ...voucherData, cash_register_id: Number(val) })}
+                    options={registers.map((r) => ({
+                      value: String(r.id),
+                      label: `${r.name} ${r.is_default ? "(الرئيسية)" : ""}`,
+                      badge: `${Number(r.balance || 0).toLocaleString("ar-EG")} ${currency}`,
+                      badgeVariant: "success" as const,
+                    }))}
+                    placeholder="اختر الخزنة..."
+                    emptyText="لا توجد خزائن"
+                    className="h-8 text-xs rounded-md"
+                  />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-foreground">المبلغ المدفوع ({currency}) *</label>
+                <div className="sm:col-span-3 space-y-1">
+                  <label className="text-[11px] font-semibold text-foreground">المبلغ ({currency}) *</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -346,27 +350,53 @@ export function CustomerStatementDialog({
                     value={voucherData.amount}
                     onChange={(e) => setVoucherData({ ...voucherData, amount: e.target.value })}
                     placeholder="0.00"
-                    className="h-8 text-xs font-mono font-bold"
+                    className="h-8 text-xs font-mono font-bold rounded-md"
                     required
                   />
                 </div>
 
-                <div className="space-y-1">
+                <div className="sm:col-span-4 space-y-1">
                   <label className="text-[11px] font-semibold text-foreground">طريقة الدفع *</label>
-                  <select
-                    value={voucherData.payment_method}
-                    onChange={(e) =>
-                      setVoucherData({
-                        ...voucherData,
-                        payment_method: e.target.value as "cash" | "card" | "transfer",
-                      })
-                    }
-                    className="w-full h-8 text-xs bg-muted/30 border border-border/70 rounded-md px-2 text-foreground font-medium outline-none focus:ring-1 focus:ring-primary [&>option]:bg-card [&>option]:text-foreground"
-                  >
-                    <option value="cash">نقدي (كاش)</option>
-                    <option value="card">بطاقة بنكية / شبكة</option>
-                    <option value="transfer">تحويل بنكي / محفظة</option>
-                  </select>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setVoucherData({ ...voucherData, payment_method: "cash" })}
+                      className={`flex items-center justify-center gap-1 h-8 rounded-md border text-[11px] font-bold transition-all cursor-pointer ${
+                        voucherData.payment_method === "cash"
+                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                          : "border-border/60 hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <BanknoteIcon className="size-3.5 shrink-0" />
+                      <span>كاش</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setVoucherData({ ...voucherData, payment_method: "card" })}
+                      className={`flex items-center justify-center gap-1 h-8 rounded-md border text-[11px] font-bold transition-all cursor-pointer ${
+                        voucherData.payment_method === "card"
+                          ? "border-primary bg-primary/10 text-primary shadow-xs"
+                          : "border-border/60 hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <CreditCardIcon className="size-3.5 shrink-0" />
+                      <span>شبكة</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setVoucherData({ ...voucherData, payment_method: "transfer" })}
+                      className={`flex items-center justify-center gap-1 h-8 rounded-md border text-[11px] font-bold transition-all cursor-pointer ${
+                        voucherData.payment_method === "transfer"
+                          ? "border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-xs"
+                          : "border-border/60 hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <LandmarkIcon className="size-3.5 shrink-0" />
+                      <span>تحويل</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
+import { useSettingStore } from "@/store/setting.store"
 
 import {
   Sidebar,
@@ -166,6 +167,7 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar>) {
   const user = useAuthStore((state) => state.user)
   const role = user?.role || "admin"
+  const settings = useSettingStore((state) => state.settings)
 
   const filteredNavMain = React.useMemo(() => {
     if (role === "kitchen") {
@@ -229,13 +231,17 @@ export function AppSidebar({
               size="lg"
               render={<Link href={defaultHomeUrl} />}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <UtensilsIcon className="size-4" />
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground overflow-hidden">
+                {settings?.logo ? (
+                  <img src={settings.logo} alt="شعار المطعم" className="size-full object-contain p-0.5" />
+                ) : (
+                  <UtensilsIcon className="size-4" />
+                )}
               </div>
 
               <div className="grid flex-1 text-right text-sm leading-tight">
                 <span className="truncate font-medium">
-                  ريسترو
+                  {settings?.restaurant_name || "ريسترو"}
                 </span>
 
                 <span className="truncate text-xs text-muted-foreground">

@@ -7,7 +7,6 @@ import { useOrderStore } from "@/store/order.store"
 import { useDeliveryDriverStore } from "@/store/delivery-driver.store"
 import { useRegisterStore } from "@/store/register.store"
 import { useSettingStore } from "@/store/setting.store"
-import { DriverPortalView } from "@/components/delivery/driver-portal-view"
 import { getEcho } from "@/lib/echo"
 import { playNewOrderSound, playOrderReadySound } from "@/lib/sound"
 import {
@@ -15,12 +14,19 @@ import {
   type OrderStatus,
   type DeliveryDriver,
   type CreateDeliveryDriverPayload,
-  type CashRegister,
 } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
+import { ComboboxSelect, type ComboboxOption } from "@/components/ui/combobox-select"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -40,14 +46,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table"
-import {
   TruckIcon,
   PlusIcon,
   SearchIcon,
@@ -59,87 +57,67 @@ import {
   CarIcon,
   Edit2Icon,
   Trash2Icon,
-  ShieldCheckIcon,
   ClockIcon,
   MessageCircleIcon,
   ChefHatIcon,
-  CheckIcon,
-  XIcon,
-  ArrowRightIcon,
-  MapPinIcon,
-  UserIcon,
-  LandmarkIcon,
-  ReceiptIcon,
-  DollarSignIcon,
-  SendIcon,
   EyeIcon,
   BanknoteIcon,
   CreditCardIcon,
   SparklesIcon,
-  LayersIcon,
-  SlidersHorizontalIcon,
+  MapPinIcon,
+  ReceiptIcon,
+  UserIcon,
+  CheckIcon,
+  SendIcon,
 } from "lucide-react"
 
-// تصنيفات أعمدة كانبان التوصيل
-type DeliveryColumnKey = "pending" | "preparing" | "ready" | "out_for_delivery" | "completed"
-
-interface DeliveryColumnDef {
-  key: DeliveryColumnKey
-  title: string
-  subtitle: string
-  statuses: OrderStatus[]
-  badgeClass: string
-  headerBg: string
-  icon: React.ElementType
+// تفاصيل حالات طلب التوصيل الموحدة مع النظام
+function getDeliveryStatusBadge(status: OrderStatus) {
+  switch (status) {
+    case "pending":
+      return {
+        label: "جديد (بانتظار التأكيد)",
+        className: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30",
+        icon: ClockIcon,
+      }
+    case "preparing":
+      return {
+        label: "جاري التحضير بالمطبخ",
+        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30",
+        icon: ChefHatIcon,
+      }
+    case "ready":
+      return {
+        label: "جاهز للتسليم للطيار",
+        className: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30 animate-pulse",
+        icon: SparklesIcon,
+      }
+    case "out_for_delivery":
+      return {
+        label: "في الطريق مع المندوب",
+        className: "bg-blue-600/10 text-blue-700 dark:text-blue-400 border-blue-500/30",
+        icon: BikeIcon,
+      }
+    case "completed":
+      return {
+        label: "تم التسليم بنجاح ✓",
+        className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+        icon: CheckCircle2Icon,
+      }
+    case "cancelled":
+      return {
+        label: "ملغي ✕",
+        className: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30",
+        icon: AlertCircleIcon,
+      }
+    default:
+      return {
+        label: status,
+        className: "bg-muted text-muted-foreground border-border",
+        icon: ClockIcon,
+      }
+  }
 }
-
-const DELIVERY_COLUMNS: DeliveryColumnDef[] = [
-  {
-    key: "pending",
-    title: "طلبات جديدة",
-    subtitle: "بانتظار التأكيد والإرسال للمطبخ",
-    statuses: ["pending"],
-    badgeClass: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/25",
-    headerBg: "border-t-4 border-t-blue-500",
-    icon: ClockIcon,
-  },
-  {
-    key: "preparing",
-    title: "في المطبخ",
-    subtitle: "جاري تجهيز وطهي الأطباق",
-    statuses: ["preparing"],
-    badgeClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25",
-    headerBg: "border-t-4 border-t-amber-500",
-    icon: ChefHatIcon,
-  },
-  {
-    key: "ready",
-    title: "جاهزة وبانتظار طيار",
-    subtitle: "الوجبة ساخنة ومحتاجة مندوب",
-    statuses: ["ready"],
-    badgeClass: "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/25 animate-pulse",
-    headerBg: "border-t-4 border-t-orange-500",
-    icon: SparklesIcon,
-  },
-  {
-    key: "out_for_delivery",
-    title: "في الطريق مع الطيار",
-    subtitle: "خرجت للتوصيل إلى عنوان العميل",
-    statuses: ["out_for_delivery"],
-    badgeClass: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/25",
-    headerBg: "border-t-4 border-t-purple-500",
-    icon: TruckIcon,
-  },
-  {
-    key: "completed",
-    title: "تم التسليم والتوريد",
-    subtitle: "طلبات سلمت للعملاء وسُددت اليوم",
-    statuses: ["completed"],
-    badgeClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25",
-    headerBg: "border-t-4 border-t-emerald-500",
-    icon: CheckCircle2Icon,
-  },
-]
 
 export default function DeliveryOperationsPage() {
   const authUser = useAuthStore((state) => state.user)
@@ -167,38 +145,40 @@ export default function DeliveryOperationsPage() {
 
   const { registers, fetchRegisters } = useRegisterStore()
   const { settings, fetchSettings } = useSettingStore()
-  const currency = settings.currency || "ج.م"
+  const currency = settings?.currency || "ج.م"
 
-  // السائق المربوط بهذا المستخدم
+  const [mounted, setMounted] = React.useState(false)
+
+  // السائق التابع للمستخدم الحالي إن وجد
   const myDriver = React.useMemo(() => {
     return drivers.find((d) => d.user_id === authUser?.id) || authUser?.delivery_driver || null
   }, [drivers, authUser])
 
-  // التبديل بين شاشة الكانبان اللحظية وأسطول المناديب ومعاينة المندوب
-  const [activeTab, setActiveTab] = React.useState<"dispatch" | "fleet" | "driver_preview">(
-    isDriver ? "driver_preview" : "dispatch"
-  )
+  // التبويب النشط
+  const [activeTab, setActiveTab] = React.useState<"orders" | "fleet">("orders")
 
   // الفلاتر والبحث
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [selectedDriverFilter, setSelectedDriverFilter] = React.useState<number | "all">("all")
+  const [statusFilter, setStatusFilter] = React.useState<string>("all")
+  const [driverFilter, setDriverFilter] = React.useState<string>(isDriver && myDriver ? String(myDriver.id) : "all")
 
-  // إشعار العملية المنبثق
+  // إشعار العملية
   const [toastMessage, setToastMessage] = React.useState<{ text: string; type: "success" | "error" } | null>(null)
   const showToast = (text: string, type: "success" | "error" = "success") => {
     setToastMessage({ text, type })
     setTimeout(() => setToastMessage(null), 3500)
   }
 
-  // تحميل البيانات الأولية
+  // تحميل البيانات
   React.useEffect(() => {
+    setMounted(true)
     fetchOrders()
     fetchDrivers()
     fetchRegisters()
     fetchSettings()
   }, [fetchOrders, fetchDrivers, fetchRegisters, fetchSettings])
 
-  // الاستماع اللحظي للأحداث عبر WebSocket (Laravel Reverb)
+  // الاستماع اللحظي للطلبات عبر WebSockets
   React.useEffect(() => {
     const echo = getEcho()
     if (!echo) return
@@ -239,17 +219,18 @@ export default function DeliveryOperationsPage() {
     }
   }, [fetchOrders, fetchDrivers])
 
-  // فلترة طلبات التوصيل فقط
+  // تصفية طلبات التوصيل
   const deliveryOrders = React.useMemo(() => {
     return orders.filter((o) => {
       if (o.order_type !== "delivery") return false
-      if (selectedDriverFilter !== "all" && o.delivery_driver_id !== selectedDriverFilter) return false
+      if (statusFilter !== "all" && o.status !== statusFilter) return false
+      if (driverFilter !== "all" && String(o.delivery_driver_id) !== driverFilter) return false
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase()
         const orderNum = o.order_number?.toLowerCase() || ""
         const custName = (o.customer?.name || o.customer_name || "").toLowerCase()
         const custPhone = (o.customer?.phone || "").toLowerCase()
-        const custAddress = (o.customer?.address || "").toLowerCase()
+        const custAddress = (o.customer?.address || o.notes || "").toLowerCase()
         const driverName = (o.deliveryDriver?.name || "").toLowerCase()
         return (
           orderNum.includes(q) ||
@@ -261,56 +242,40 @@ export default function DeliveryOperationsPage() {
       }
       return true
     })
-  }, [orders, searchQuery, selectedDriverFilter])
+  }, [orders, statusFilter, driverFilter, searchQuery])
 
-  // حساب الإحصائيات السريعة للشريط العلوي
+  // حساب الإحصائيات الموحدة
   const stats = React.useMemo(() => {
-    const active = deliveryOrders.filter((o) => o.status !== "completed" && o.status !== "cancelled")
-    const pending = deliveryOrders.filter((o) => o.status === "pending")
-    const preparing = deliveryOrders.filter((o) => o.status === "preparing")
-    const ready = deliveryOrders.filter((o) => o.status === "ready")
-    const outForDelivery = deliveryOrders.filter((o) => o.status === "out_for_delivery")
-    const completedToday = deliveryOrders.filter((o) => o.status === "completed")
+    const allDelivery = orders.filter((o) => o.order_type === "delivery")
+    const total = allDelivery.length
+    const preparing = allDelivery.filter((o) => o.status === "preparing").length
+    const ready = allDelivery.filter((o) => o.status === "ready").length
+    const outForDelivery = allDelivery.filter((o) => o.status === "out_for_delivery").length
+    const completed = allDelivery.filter((o) => o.status === "completed").length
 
-    // المناديب
-    const totalDrivers = drivers.length
-    const availableDrivers = drivers.filter((d) => d.status === "available" && d.is_active).length
-    const onDeliveryDrivers = drivers.filter((d) => d.status === "on_delivery" && d.is_active).length
-
-    // إجمالي المبالغ المعلقة مع الطيارين في الطريق
-    const pendingCashInTransit = outForDelivery
-      .filter((o) => o.payment_status !== "paid")
+    // إجمالي مبالغ الكاش في الطريق مع المناديب
+    const cashInTransit = allDelivery
+      .filter((o) => o.status === "out_for_delivery" && o.payment_status !== "paid")
       .reduce((sum, o) => sum + Number(o.total || 0), 0)
 
-    return {
-      activeCount: active.length,
-      pendingCount: pending.length,
-      preparingCount: preparing.length,
-      readyCount: ready.length,
-      outCount: outForDelivery.length,
-      completedTodayCount: completedToday.length,
-      totalDrivers,
-      availableDrivers,
-      onDeliveryDrivers,
-      pendingCashInTransit,
-    }
-  }, [deliveryOrders, drivers])
+    const availableDrivers = drivers.filter((d) => d.status === "available" && d.is_active).length
 
-  // تفاصيل الطلب المعروض في نافذة منبثقة
+    return { total, preparing, ready, outForDelivery, completed, cashInTransit, availableDrivers }
+  }, [orders, drivers])
+
+  // حالة النوافذ المنبثقة
   const [inspectingOrder, setInspectingOrder] = React.useState<Order | null>(null)
-
-  // تعيين سائق سريع
-  const [assigningOrderId, setAssigningOrderId] = React.useState<number | null>(null)
+  const [actionLoadingId, setActionLoadingId] = React.useState<number | null>(null)
   const [selectedDriverForOrder, setSelectedDriverForOrder] = React.useState<Record<number, number>>({})
 
-  // نافذة توريد وسداد النقدية للمندوب (Cash Settlement)
+  // نافذة توريد وسداد النقدية
   const [settlementOrder, setSettlementOrder] = React.useState<Order | null>(null)
   const [settlementRegisterId, setSettlementRegisterId] = React.useState<number>(0)
   const [settlementMethod, setSettlementMethod] = React.useState<"cash" | "card">("cash")
   const [settlementNotes, setSettlementNotes] = React.useState("")
   const [isSettling, setIsSettling] = React.useState(false)
 
-  // نافذة إضافة / تعديل مندوب جديد
+  // نافذة إضافة / تعديل مندوب
   const [driverModalOpen, setDriverModalOpen] = React.useState(false)
   const [editingDriver, setEditingDriver] = React.useState<DeliveryDriver | null>(null)
   const [driverFormData, setDriverFormData] = React.useState<CreateDeliveryDriverPayload>({
@@ -327,47 +292,51 @@ export default function DeliveryOperationsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false)
   const [driverToDelete, setDriverToDelete] = React.useState<DeliveryDriver | null>(null)
 
-  // معالجة تغيير حالة الطلب
-  const handleMoveStatus = async (
-    order: Order,
-    newStatus: OrderStatus,
-    driverId?: number
-  ) => {
-    const res = await updateOrderStatus(order.id, {
-      status: newStatus,
-      delivery_driver_id: driverId || order.delivery_driver_id || undefined,
-    })
-    if (res.success) {
-      showToast(`تم تحديث حالة الطلب #${order.order_number} بنجاح.`, "success")
-      fetchOrders()
-      fetchDrivers()
-    } else {
-      showToast(res.message, "error")
+  // ترقية حالة الطلب
+  const handleMoveStatus = async (order: Order, newStatus: OrderStatus, driverId?: number) => {
+    setActionLoadingId(order.id)
+    try {
+      const res = await updateOrderStatus(order.id, {
+        status: newStatus,
+        delivery_driver_id: driverId || order.delivery_driver_id || undefined,
+      })
+      if (res.success) {
+        showToast(`تم تحديث حالة الطلب #${order.order_number} بنجاح.`, "success")
+        fetchOrders()
+        fetchDrivers()
+      } else {
+        showToast(res.message, "error")
+      }
+    } finally {
+      setActionLoadingId(null)
     }
   }
 
-  // معالجة تعيين السائق وخروجه للتوصيل
+  // تعيين السائق وخروج الطلب للتوصيل
   const handleAssignAndDispatch = async (order: Order) => {
     const driverId = selectedDriverForOrder[order.id] || order.delivery_driver_id
     if (!driverId) {
-      showToast("يرجى اختيار سائق التوصيل أولاً قبل الإخراج للتوصيل.", "error")
+      showToast("يرجى اختيار مندوب التوصيل أولاً قبل الإخراج.", "error")
       return
     }
 
-    // 1. تعيين السائق
-    await assignDriver(order.id, driverId)
-    // 2. تحديث الحالة إلى out_for_delivery
-    const res = await updateOrderStatus(order.id, {
-      status: "out_for_delivery",
-      delivery_driver_id: driverId,
-    })
+    setActionLoadingId(order.id)
+    try {
+      await assignDriver(order.id, driverId)
+      const res = await updateOrderStatus(order.id, {
+        status: "out_for_delivery",
+        delivery_driver_id: driverId,
+      })
 
-    if (res.success) {
-      showToast(`خرج الطلب #${order.order_number} للتوصيل الآن 🛵`, "success")
-      fetchOrders()
-      fetchDrivers()
-    } else {
-      showToast(res.message, "error")
+      if (res.success) {
+        showToast(`خرج الطلب #${order.order_number} للتوصيل الآن.`, "success")
+        fetchOrders()
+        fetchDrivers()
+      } else {
+        showToast(res.message, "error")
+      }
+    } finally {
+      setActionLoadingId(null)
     }
   }
 
@@ -375,24 +344,23 @@ export default function DeliveryOperationsPage() {
   const handleOpenSettlement = (order: Order) => {
     setSettlementOrder(order)
     setSettlementMethod("cash")
-    setSettlementNotes(`توريد نقدية الطلب دليفري #${order.order_number} من المندوب`)
+    setSettlementNotes(`توريد نقدية طلب التوصيل #${order.order_number}`)
     const defReg = registers.find((r) => r.is_default && r.is_active) || registers[0]
     if (defReg) {
       setSettlementRegisterId(defReg.id)
     }
   }
 
-  // تأكيد توريد النقدية والخزينة
+  // تأكيد توريد النقدية بالخزينة
   const handleConfirmSettlement = async () => {
     if (!settlementOrder) return
     if (!settlementRegisterId) {
-      showToast("يرجى اختيار الخزينة النقدية المستلمة.", "error")
+      showToast("يرجى اختيار الخزينة المستلمة للنقدية.", "error")
       return
     }
 
     setIsSettling(true)
     try {
-      // 1. تسجيل السداد في الخزنة
       const payRes = await payOrder(settlementOrder.id, {
         cash_register_id: settlementRegisterId,
         payment_method: settlementMethod,
@@ -402,16 +370,14 @@ export default function DeliveryOperationsPage() {
 
       if (!payRes.success) {
         showToast(payRes.message, "error")
-        setIsSettling(false)
         return
       }
 
-      // 2. تحديث الحالة لمكتمل إن لم تكن مكتملة
       if (settlementOrder.status !== "completed") {
         await updateOrderStatus(settlementOrder.id, { status: "completed" })
       }
 
-      showToast(`تم توريد مبلغ ${settlementOrder.total} ${currency} للخزينة بنجاح!`, "success")
+      showToast(`تم إيداع مبلغ ${settlementOrder.total} ${currency} بالخزينة بنجاح.`, "success")
       setSettlementOrder(null)
       fetchOrders()
       fetchDrivers()
@@ -421,11 +387,11 @@ export default function DeliveryOperationsPage() {
     }
   }
 
-  // حفظ المندوب (إضافة أو تعديل)
+  // حفظ بيانات المندوب
   const handleSaveDriver = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!driverFormData.name.trim() || !driverFormData.phone.trim()) {
-      showToast("يرجى ملء اسم المندوب ورقم هاتفه.", "error")
+      showToast("يرجى إدخال اسم المندوب ورقم هاتفه.", "error")
       return
     }
 
@@ -441,7 +407,7 @@ export default function DeliveryOperationsPage() {
     } else {
       const res = await createDriver(driverFormData)
       if (res.success) {
-        showToast("تم إضافة المندوب لأسطول التوصيل بنجاح.", "success")
+        showToast("تمت إضافة المندوب بنجاح.", "success")
         setDriverModalOpen(false)
         setDriverFormData({
           name: "",
@@ -463,7 +429,7 @@ export default function DeliveryOperationsPage() {
     if (!driverToDelete) return
     const res = await deleteDriver(driverToDelete.id)
     if (res.success) {
-      showToast("تم حذف المندوب من الأسطول.", "success")
+      showToast("تم حذف المندوب من النظام.", "success")
       setDeleteConfirmOpen(false)
       setDriverToDelete(null)
     } else {
@@ -471,24 +437,13 @@ export default function DeliveryOperationsPage() {
     }
   }
 
-  // تنسيق الوقت النسبي
-  const formatTimePassed = (dateStr: string) => {
-    const diffMin = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 60000)
-    if (diffMin < 1) return "الآن"
-    if (diffMin < 60) return `منذ ${diffMin} دقيقة`
-    const hours = Math.floor(diffMin / 60)
-    return `منذ ${hours} ساعة`
-  }
-
-  // تبديل حالة تفرغ واستراحة المندوب
+  // تبديل حالة تفرغ واستراحة السائق
   const handleToggleDriverDuty = async (newStatus: "available" | "off_duty") => {
     if (!myDriver) return
     const res = await updateDriverStatus(myDriver.id, newStatus)
     if (res.success) {
       showToast(
-        newStatus === "available"
-          ? "أنت الآن متاح وجاهز لاستلام الطلبات 🟢"
-          : "أنت الآن في استراحة ☕",
+        newStatus === "available" ? "تم تعيين حالتك إلى: متاح للتوصيل" : "تم تعيين حالتك إلى: في استراحة",
         "success"
       )
       fetchDrivers()
@@ -497,134 +452,52 @@ export default function DeliveryOperationsPage() {
     }
   }
 
-  // إذا كان المستخدم هو كابتن التوصيل، نعرض له شاشة الكابتن المخصصة والنقية فوراً
-  if (isDriver) {
-    return (
-      <PageContainer>
-        {/* إشعار العملية العائم */}
-        {toastMessage && (
-          <div
-            className={`fixed top-4 left-1/2 -translate-x-1/2 z-[999999] flex items-center gap-2 px-4 py-2.5 rounded-full shadow-2xl text-xs font-semibold backdrop-blur-md border animate-in fade-in slide-in-from-top-4 duration-200 select-none ${
-              toastMessage.type === "success"
-                ? "bg-emerald-500/95 text-white border-emerald-400/40"
-                : "bg-destructive/95 text-destructive-foreground border-destructive/40"
-            }`}
-          >
-            {toastMessage.type === "success" ? (
-              <CheckCircle2Icon className="size-4" />
-            ) : (
-              <AlertCircleIcon className="size-4" />
-            )}
-            <span>{toastMessage.text}</span>
-          </div>
-        )}
-
-        <DriverPortalView
-          orders={orders}
-          myDriver={myDriver}
-          driverName={authUser?.name || "الكابتن"}
-          currency={currency}
-          isLoading={ordersLoading}
-          onRefresh={() => {
-            fetchOrders()
-            fetchDrivers()
-            showToast("تم تحديث الطلبات لحظياً", "success")
-          }}
-          onUpdateStatus={async (order, newStatus) => {
-            await handleMoveStatus(order, newStatus, myDriver?.id)
-          }}
-          onToggleDriverDuty={handleToggleDriverDuty}
-        />
-      </PageContainer>
-    )
-  }
-
   return (
-    <PageContainer>
-      {/* إشعار العملية العائم */}
-      {toastMessage && (
-        <div
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[999999] flex items-center gap-2 px-4 py-2.5 rounded-full shadow-2xl text-xs font-semibold backdrop-blur-md border animate-in fade-in slide-in-from-top-4 duration-200 select-none ${
-            toastMessage.type === "success"
-              ? "bg-emerald-500/95 text-white border-emerald-400/40"
-              : "bg-destructive/95 text-destructive-foreground border-destructive/40"
-          }`}
-        >
-          {toastMessage.type === "success" ? (
-            <CheckCircle2Icon className="size-4" />
-          ) : (
-            <AlertCircleIcon className="size-4" />
+    <PageContainer
+      title="إدارة التوصيل والديليفري"
+      description="متابعة وتوجيه طلبات الديليفري اللحظية، إدارة أسطول المناديب، وتسوية العهد والتوريد النقدي"
+      action={
+        <div className="flex flex-wrap items-center gap-2">
+          {/* زر تبديل حالة المندوب إن كان المستخدم سائقاً */}
+          {myDriver && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                handleToggleDriverDuty(myDriver.status === "available" ? "off_duty" : "available")
+              }
+              className="h-8.5 rounded-lg text-xs gap-1.5 font-bold"
+            >
+              <span
+                className={`size-2 rounded-full ${
+                  myDriver.status === "available" ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"
+                }`}
+              />
+              <span>{myDriver.status === "available" ? "متاح للطلبات" : "في استراحة"}</span>
+            </Button>
           )}
-          <span>{toastMessage.text}</span>
-        </div>
-      )}
-
-      {/* الترويسة وأزرار التحكم العليا */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-              <TruckIcon className="size-5" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
-                التوصيل والديليفري
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                توجيه ومتابعة طلبات الدليفري اللحظية، وتوزيع الطلبات على مناديب الأسطول
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* أزرار التبديل وإضافة مندوب وتحديث */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* تبويبات العرض (الكانبان vs الأسطول) */}
-          <div className="flex bg-muted/80 p-1 rounded-xl border border-border/60 text-xs font-semibold shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveTab("dispatch")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                activeTab === "dispatch"
-                  ? "bg-background text-foreground shadow-xs font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <LayersIcon className="size-3.5 text-primary" />
-              <span>لوحة التوجيه اللحظية</span>
-              {stats.activeCount > 0 && (
-                <span className="flex size-4.5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
-                  {stats.activeCount}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("fleet")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                activeTab === "fleet"
-                  ? "bg-background text-foreground shadow-xs font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <BikeIcon className="size-3.5" />
-              <span>أسطول المناديب ({stats.totalDrivers})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("driver_preview")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                activeTab === "driver_preview"
-                  ? "bg-background text-foreground shadow-xs font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <TruckIcon className="size-3.5 text-emerald-500" />
-              <span>معاينة شاشة الكابتن</span>
-            </button>
-          </div>
 
           <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetchOrders()
+              fetchDrivers()
+              fetchRegisters()
+              showToast("تم تحديث البيانات لحظياً", "success")
+            }}
+            disabled={ordersLoading || driversLoading}
+            className="h-8.5 rounded-lg text-xs gap-1.5"
+            title="تحديث البيانات"
+          >
+            <RefreshCwIcon className={`size-3.5 ${ordersLoading || driversLoading ? "animate-spin" : ""}`} />
+            <span>تحديث</span>
+          </Button>
+
+          <Button
+            type="button"
             size="sm"
             onClick={() => {
               setEditingDriver(null)
@@ -639,467 +512,464 @@ export default function DeliveryOperationsPage() {
               })
               setDriverModalOpen(true)
             }}
-            className="rounded-xl gap-1.5 h-9 shrink-0 text-xs font-semibold"
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <PlusIcon className="size-4" />
-            <span className="hidden sm:inline">إضافة مندوب</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => {
-              fetchOrders()
-              fetchDrivers()
-              showToast("تم تحديث البيانات لحظياً", "success")
-            }}
-            disabled={ordersLoading || driversLoading}
-            title="تحديث البيانات"
-            className="rounded-xl h-9 w-9 shrink-0"
-          >
-            <RefreshCwIcon className={`size-4 ${ordersLoading ? "animate-spin text-primary" : ""}`} />
+            <PlusIcon className="size-3.5" />
+            <span>إضافة مندوب</span>
           </Button>
         </div>
-      </div>
-
-      {/* كروت المؤشرات السريعة (KPIs) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4">
-        <Card className="border-border/60 shadow-xs bg-card/60 backdrop-blur-xs">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium">
-              <span>طلبات جارية</span>
-              <TruckIcon className="size-3.5 text-primary" />
+      }
+    >
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* إشعار العملية المنبثق */}
+        {toastMessage && (
+          <div
+            className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-md border text-xs font-medium animate-in fade-in duration-150 ${
+              toastMessage.type === "success"
+                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
+                : "bg-destructive/10 border-destructive/25 text-destructive"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {toastMessage.type === "success" ? (
+                <CheckCircle2Icon className="size-4 shrink-0" />
+              ) : (
+                <AlertCircleIcon className="size-4 shrink-0" />
+              )}
+              <span>{toastMessage.text}</span>
             </div>
-            <div className="text-xl font-bold font-mono mt-1 text-foreground">
-              {stats.activeCount}
-            </div>
-            <p className="text-[10px] text-muted-foreground">نشطة بالمطعم والتوصيل</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-xs bg-card/60 backdrop-blur-xs">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium">
-              <span>في المطبخ</span>
-              <ChefHatIcon className="size-3.5 text-amber-500" />
-            </div>
-            <div className="text-xl font-bold font-mono mt-1 text-amber-600 dark:text-amber-400">
-              {stats.preparingCount}
-            </div>
-            <p className="text-[10px] text-muted-foreground">جاري طهيها الآن</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-xs bg-card/60 backdrop-blur-xs">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium">
-              <span>جاهزة للطيار</span>
-              <SparklesIcon className="size-3.5 text-orange-500" />
-            </div>
-            <div className="text-xl font-bold font-mono mt-1 text-orange-600 dark:text-orange-400">
-              {stats.readyCount}
-            </div>
-            <p className="text-[10px] text-muted-foreground">تنتظر تعيين وخروج</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-xs bg-card/60 backdrop-blur-xs">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium">
-              <span>في الطريق 🛵</span>
-              <BikeIcon className="size-3.5 text-purple-500" />
-            </div>
-            <div className="text-xl font-bold font-mono mt-1 text-purple-600 dark:text-purple-400">
-              {stats.outCount}
-            </div>
-            <p className="text-[10px] text-muted-foreground">مع المناديب للعملاء</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-xs bg-card/60 backdrop-blur-xs">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium">
-              <span>المناديب المتاحين</span>
-              <span className="flex size-2 rounded-full bg-emerald-500 animate-ping" />
-            </div>
-            <div className="text-xl font-bold font-mono mt-1 text-emerald-600 dark:text-emerald-400">
-              {stats.availableDrivers} <span className="text-xs text-muted-foreground font-normal">/ {stats.totalDrivers}</span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">جاهزون للاستلام فوراً</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-xs bg-card/60 backdrop-blur-xs">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium">
-              <span>نقدية مع المناديب</span>
-              <BanknoteIcon className="size-3.5 text-emerald-600" />
-            </div>
-            <div className="text-lg font-bold font-mono mt-1 text-foreground">
-              {stats.pendingCashInTransit} <span className="text-[11px] font-sans font-medium text-muted-foreground">{currency}</span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">بانتظار توريدها للخزينة</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* شريط البحث وتصفية المناديب */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-4 bg-card/40 p-2 rounded-xl border border-border/50">
-        <div className="relative flex-1 max-w-md">
-          <SearchIcon className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="بحث برقم الطلب، اسم العميل، الهاتف، العنوان، أو المندوب..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-9 h-9 text-xs rounded-lg"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium shrink-0">
-            <SlidersHorizontalIcon className="size-3.5 text-primary" />
-            <span>تصفية بمندوب:</span>
+            <button
+              onClick={() => setToastMessage(null)}
+              className="text-xs opacity-70 hover:opacity-100 p-0.5 cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
-          <select
-            value={selectedDriverFilter}
-            onChange={(e) => setSelectedDriverFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
-            className="h-9 text-xs rounded-lg border border-border/60 bg-background px-2.5 font-medium outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="all">كل المناديب</option>
-            {drivers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} ({d.status === "available" ? "متاح" : d.status === "on_delivery" ? "في الطريق" : "غير متاح"})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+        )}
 
-      {/* =========================================================
-          التبويب 1: لوحة التوجيه والمتابعة اللحظية (Kanban Board)
-          ========================================================= */}
-      {activeTab === "dispatch" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 overflow-x-auto pb-6">
-          {DELIVERY_COLUMNS.map((col) => {
-            const ColumnIcon = col.icon
-            const colOrders = deliveryOrders.filter((o) => col.statuses.includes(o.status))
-
-            return (
-              <div
-                key={col.key}
-                className="flex flex-col bg-muted/25 rounded-2xl border border-border/60 min-w-[270px] max-w-full overflow-hidden shadow-xs"
-              >
-                {/* رأس العمود */}
-                <div className={`p-3 bg-card/80 border-b border-border/50 ${col.headerBg}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-muted text-foreground">
-                        <ColumnIcon className="size-4 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-foreground leading-tight">{col.title}</h3>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{col.subtitle}</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className={`font-mono text-xs px-2 py-0.5 font-bold ${col.badgeClass}`}>
-                      {colOrders.length}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* جسم العمود وقائمة الكروت */}
-                <div className="p-2 space-y-2.5 flex-1 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar">
-                  {colOrders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground/60 border border-dashed border-border/40 rounded-xl my-4">
-                      <ColumnIcon className="size-7 opacity-30 mb-2" />
-                      <span className="text-xs font-medium">لا توجد طلبات هنا</span>
-                    </div>
-                  ) : (
-                    colOrders.map((order) => {
-                      const customerName = order.customer?.name || order.customer_name || "عميل بدون اسم"
-                      const customerPhone = order.customer?.phone || ""
-                      const customerAddress = order.customer?.address || order.notes || "العنوان غير مسجل"
-                      const currentDriver = order.deliveryDriver
-                      const isPaid = order.payment_status === "paid"
-
-                      return (
-                        <div
-                          key={order.id}
-                          className="group relative rounded-xl border border-border/70 bg-card p-3 shadow-xs hover:border-primary/40 hover:shadow-md transition-all duration-200"
-                        >
-                          {/* رأس الكارت: رقم الطلب + التوقيت + معاينة الفاتورة */}
-                          <div className="flex items-start justify-between gap-1.5 pb-2 border-b border-border/40">
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-extrabold font-mono text-sm text-foreground">
-                                  #{order.order_number}
-                                </span>
-                                <Badge
-                                  variant="secondary"
-                                  className={`text-[9px] px-1.5 py-0 font-medium ${
-                                    isPaid
-                                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                                  }`}
-                                >
-                                  {isPaid ? "مسدد ✅" : "كاش عند الاستلام"}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
-                                <ClockIcon className="size-3" />
-                                <span>{formatTimePassed(order.created_at)}</span>
-                              </div>
-                            </div>
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setInspectingOrder(order)}
-                              title="عرض تفاصيل الفاتورة"
-                              className="size-7 text-muted-foreground hover:text-foreground"
-                            >
-                              <EyeIcon className="size-3.5" />
-                            </Button>
-                          </div>
-
-                          {/* بيانات العميل والتواصل الفوري */}
-                          <div className="py-2 space-y-1.5 text-xs">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5 font-semibold text-foreground truncate">
-                                <UserIcon className="size-3 text-muted-foreground shrink-0" />
-                                <span className="truncate">{customerName}</span>
-                              </div>
-
-                              {/* أزرار الاتصال وواتساب */}
-                              {customerPhone && (
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <a
-                                    href={`tel:${customerPhone}`}
-                                    title="اتصال هاتفي بالعميل"
-                                    className="p-1 rounded-md bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
-                                  >
-                                    <PhoneIcon className="size-3" />
-                                  </a>
-                                  <a
-                                    href={`https://wa.me/${customerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                                      `مرحباً ${customerName}، بخصوص طلبكم رقم #${order.order_number} من مطعم ريسترو.`
-                                    )}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    title="مراسلة واتساب فورية"
-                                    className="p-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-600 dark:text-emerald-400 transition-colors"
-                                  >
-                                    <MessageCircleIcon className="size-3" />
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* العنوان وملاحظة التوصيل */}
-                            <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground bg-muted/30 p-1.5 rounded-lg border border-border/30">
-                              <MapPinIcon className="size-3.5 text-rose-500 shrink-0 mt-0.5" />
-                              <span className="line-clamp-2 leading-relaxed" title={customerAddress}>
-                                {customerAddress}
-                              </span>
-                            </div>
-
-                            {/* ملخص الأصناف */}
-                            {order.items && order.items.length > 0 && (
-                              <div className="text-[10px] text-muted-foreground/80 line-clamp-1 border-t border-border/20 pt-1">
-                                {order.items.map((it) => `${it.quantity}x ${it.product?.name || ""}`).join(" • ")}
-                              </div>
-                            )}
-
-                            {/* الإجمالي ورسوم التوصيل */}
-                            <div className="flex items-center justify-between pt-1 font-mono text-xs">
-                              <span className="text-muted-foreground text-[10px]">
-                                توصيل: +{order.delivery_fee || 0} {currency}
-                              </span>
-                              <span className="font-extrabold text-foreground text-sm">
-                                {order.total_amount} {currency}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* المندوب المعين حالياً إن وجد */}
-                          {currentDriver && (
-                            <div className="mt-1 mb-2 p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-1.5 truncate">
-                                <BikeIcon className="size-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
-                                <span className="font-semibold text-purple-700 dark:text-purple-300 truncate">
-                                  {currentDriver.name}
-                                </span>
-                              </div>
-                              {currentDriver.phone && (
-                                <a
-                                  href={`tel:${currentDriver.phone}`}
-                                  title="اتصال بالطيار"
-                                  className="p-0.5 text-purple-600 hover:text-purple-800 dark:hover:text-purple-300"
-                                >
-                                  <PhoneIcon className="size-3" />
-                                </a>
-                              )}
-                            </div>
-                          )}
-
-                          {/* أزرار الإجراءات التفاعلية حسب المرحلة */}
-                          <div className="pt-2 border-t border-border/40 flex flex-col gap-1.5">
-                            {/* 1. عمود جديد: زر إرسال للمطبخ */}
-                            {col.key === "pending" && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleMoveStatus(order, "preparing")}
-                                className="w-full h-8 text-xs font-bold rounded-lg gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
-                              >
-                                <ChefHatIcon className="size-3.5" />
-                                <span>إرسال للتحضير بالمطبخ</span>
-                              </Button>
-                            )}
-
-                            {/* 2. عمود في المطبخ: زر جاهز للتسليم */}
-                            {col.key === "preparing" && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleMoveStatus(order, "ready")}
-                                className="w-full h-8 text-xs font-bold rounded-lg gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
-                              >
-                                <CheckIcon className="size-3.5" />
-                                <span>الوجبة جاهزة للتسليم</span>
-                              </Button>
-                            )}
-
-                            {/* 3. عمود جاهز للتسليم: تعيين السائق والخروج فوراً */}
-                            {col.key === "ready" && (
-                              <div className="space-y-1.5">
-                                <select
-                                  value={selectedDriverForOrder[order.id] || order.delivery_driver_id || ""}
-                                  onChange={(e) =>
-                                    setSelectedDriverForOrder((prev) => ({
-                                      ...prev,
-                                      [order.id]: Number(e.target.value),
-                                    }))
-                                  }
-                                  className="w-full h-8 text-xs rounded-lg border border-border/80 bg-background px-2 font-medium"
-                                >
-                                  <option value="">-- اختر طيار التوصيل --</option>
-                                  {drivers
-                                    .filter((d) => d.is_active)
-                                    .map((d) => (
-                                      <option key={d.id} value={d.id}>
-                                        {d.name} ({d.status === "available" ? "🟢 متاح" : "🟡 في الطريق"})
-                                      </option>
-                                    ))}
-                                </select>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleAssignAndDispatch(order)}
-                                  className="w-full h-8 text-xs font-bold rounded-lg gap-1.5 bg-orange-600 hover:bg-orange-700 text-white shadow-xs"
-                                >
-                                  <SendIcon className="size-3.5" />
-                                  <span>خروج مع المندوب للتوصيل 🛵</span>
-                                </Button>
-                              </div>
-                            )}
-
-                            {/* 4. عمود في الطريق: تم التسليم وتوريد الكاش */}
-                            {col.key === "out_for_delivery" && (
-                              <div className="flex gap-1.5">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleOpenSettlement(order)}
-                                  className="flex-1 h-8 text-xs font-bold rounded-lg gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                                >
-                                  <CheckCircle2Icon className="size-3.5" />
-                                  <span>تم التسليم والتوريد</span>
-                                </Button>
-                              </div>
-                            )}
-
-                            {/* 5. عمود تم التسليم: إذا كان كاش ولم يُسدد بعد بالخزنة */}
-                            {col.key === "completed" && !isPaid && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenSettlement(order)}
-                                className="w-full h-7 text-[11px] font-bold rounded-lg gap-1 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
-                              >
-                                <BanknoteIcon className="size-3" />
-                                <span>توريد الكاش للخزينة</span>
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* =========================================================
-          التبويب 3: معاينة شاشة الكابتن للمدير
-          ========================================================= */}
-      {activeTab === "driver_preview" && (
-        <DriverPortalView
-          orders={orders}
-          myDriver={drivers[0] || null}
-          driverName={authUser?.name || "المدير (معاينة)"}
-          currency={currency}
-          isLoading={ordersLoading}
-          onRefresh={() => {
-            fetchOrders()
-            fetchDrivers()
-            showToast("تم تحديث الطلبات لحظياً", "success")
-          }}
-          onUpdateStatus={async (order, newStatus) => {
-            await handleMoveStatus(order, newStatus)
-          }}
-          isAdminPreview={true}
-        />
-      )}
-
-      {/* =========================================================
-          التبويب 2: أسطول مناديب التوصيل (Drivers Management)
-          ========================================================= */}
-      {activeTab === "fleet" && (
-        <div className="bg-card rounded-2xl border border-border/60 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-muted/10">
-            <div>
-              <h2 className="text-base font-bold text-foreground">طاقم أسطول التوصيل (الطيارون)</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                إدارة السائقين، أرقام الهواتف، لوحات المركبات، وحالات التفرغ اللحظية
+        {/* بطاقات الإحصائيات العلوية الموحدة */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <TruckIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">إجمالي طلبات التوصيل</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">
+                {mounted ? stats.total : 0}
               </p>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <ChefHatIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">بالمطبخ / جاهزة</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
+                {mounted ? stats.preparing + stats.ready : 0}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <BikeIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">في الطريق مع المندوب</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400 font-mono">
+                {mounted ? stats.outForDelivery : 0}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2Icon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">تم التسليم بنجاح</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                {mounted ? stats.completed : 0}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* شريط التبويبات الموحد */}
+        <div className="flex items-center gap-1.5 border-b border-border/60 pb-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("orders")}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "orders"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            <TruckIcon className="size-3.5" />
+            <span>طلبات التوصيل ({deliveryOrders.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("fleet")}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "fleet"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            <BikeIcon className="size-3.5" />
+            <span>أسطول المناديب ({drivers.length})</span>
+          </button>
+        </div>
+
+        {/* =========================================================================
+            التبويب الأول: قائمة طلبات التوصيل
+            ========================================================================= */}
+        {activeTab === "orders" && (
+          <div className="space-y-3">
+            {/* شريط البحث والفلاتر الموحد */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+              <div className="relative flex-1 w-full sm:max-w-md">
+                <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="ابحث برقم الطلب، العميل، الهاتف، العنوان، أو المندوب..."
+                  className="ps-9 bg-muted/40 rounded-lg text-xs h-8.5 border-border/60"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto text-xs">
+                {/* فلتر حالة الطلب */}
+                <div className="w-36 sm:w-40">
+                  <ComboboxSelect
+                    value={statusFilter}
+                    onValueChange={(val) => setStatusFilter(val || "all")}
+                    options={[
+                      { value: "all", label: "كل الحالات" },
+                      { value: "pending", label: "جديد" },
+                      { value: "preparing", label: "في المطبخ" },
+                      { value: "ready", label: "جاهز للتسليم" },
+                      { value: "out_for_delivery", label: "في الطريق" },
+                      { value: "completed", label: "تم التسليم ✓" },
+                      { value: "cancelled", label: "ملغي ✕" },
+                    ]}
+                    placeholder="حالة الطلب..."
+                    className="h-8.5 text-xs bg-muted/40 rounded-lg"
+                  />
+                </div>
+
+                {/* فلتر المندوب */}
+                <div className="w-40 sm:w-44">
+                  <ComboboxSelect
+                    value={driverFilter}
+                    onValueChange={(val) => setDriverFilter(val || "all")}
+                    options={[
+                      { value: "all", label: "كل المناديب" },
+                      ...drivers.map((d) => ({
+                        value: String(d.id),
+                        label: d.name,
+                        badge: d.status === "available" ? "متاح" : "في الطريق",
+                        badgeVariant: d.status === "available" ? ("success" as const) : ("secondary" as const),
+                      })),
+                    ]}
+                    placeholder="المندوب..."
+                    className="h-8.5 text-xs bg-muted/40 rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* جدول طلبات التوصيل الموحد */}
+            <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="text-right">رقم الطلب</TableHead>
+                    <TableHead className="text-right">العميل والتواصل</TableHead>
+                    <TableHead className="text-right">عنوان التوصيل</TableHead>
+                    <TableHead className="text-right">الأصناف</TableHead>
+                    <TableHead className="text-right">الإجمالي</TableHead>
+                    <TableHead className="text-right">حالة السداد</TableHead>
+                    <TableHead className="text-right">المندوب المكلف</TableHead>
+                    <TableHead className="text-right">حالة الطلب</TableHead>
+                    <TableHead className="text-center min-w-[150px]">الإجراءات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {deliveryOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-32 text-center text-muted-foreground text-xs">
+                        لا توجد طلبات توصيل مسجلة مطابقة للبحث أو الفلتر المحدد.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    deliveryOrders.map((order) => {
+                      const customerName = order.customer?.name || order.customer_name || "عميل بدون اسم"
+                      const customerPhone = order.customer?.phone || ""
+                      const customerAddress = order.delivery_address || order.customer?.address || order.notes || "العنوان غير مسجل"
+                      const deliveryDistance = order.delivery_distance
+                      const currentDriver = order.deliveryDriver
+                      const isPaid = order.payment_status === "paid"
+                      const statusInfo = getDeliveryStatusBadge(order.status)
+                      const StatusIcon = statusInfo.icon
+                      const isCurrentActionLoading = actionLoadingId === order.id
+
+                      return (
+                        <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                          {/* رقم الطلب */}
+                          <TableCell className="font-mono font-bold text-xs text-foreground">
+                            #{order.order_number}
+                          </TableCell>
+
+                          {/* العميل ورقم الهاتف مع أزرار الاتصال وواتساب */}
+                          <TableCell className="text-xs">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-semibold text-foreground">{customerName}</span>
+                              {customerPhone ? (
+                                <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
+                                  <a
+                                    href={`tel:${customerPhone}`}
+                                    className="hover:text-primary transition-colors flex items-center gap-1"
+                                    title="اتصال هاتفي"
+                                  >
+                                    <PhoneIcon className="size-3" />
+                                    <span>{customerPhone}</span>
+                                  </a>
+                                  <a
+                                    href={`https://wa.me/${customerPhone.replace(/[^0-9]/g, "")}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-emerald-600 hover:text-emerald-700 p-0.5"
+                                    title="مراسلة واتساب"
+                                  >
+                                    <MessageCircleIcon className="size-3" />
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground">بدون هاتف</span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* عنوان التوصيل */}
+                          <TableCell className="text-xs max-w-[200px]">
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-start gap-1 text-muted-foreground truncate" title={customerAddress}>
+                                <MapPinIcon className="size-3.5 text-rose-500 shrink-0 mt-0.5" />
+                                <span className="truncate">{customerAddress}</span>
+                              </div>
+                              {deliveryDistance && (
+                                <span className="text-[10px] text-primary font-mono font-bold ps-4.5">
+                                  {deliveryDistance} كم
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* الأصناف */}
+                          <TableCell className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">{order.items?.length || 0}</span> صنف
+                          </TableCell>
+
+                          {/* الإجمالي */}
+                          <TableCell className="text-xs">
+                            <div className="font-mono font-bold text-foreground">
+                              {order.total} {currency}
+                            </div>
+                            {Number(order.delivery_fee || 0) > 0 && (
+                              <div className="text-[10px] text-muted-foreground font-mono">
+                                توصيل: +{order.delivery_fee} {currency}
+                                {deliveryDistance && ` (${deliveryDistance} كم)`}
+                              </div>
+                            )}
+                          </TableCell>
+
+                          {/* حالة السداد */}
+                          <TableCell className="text-xs">
+                            <Badge
+                              variant="secondary"
+                              className={`text-[10px] px-2 py-0.5 font-medium ${
+                                isPaid
+                                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25"
+                                  : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25"
+                              }`}
+                            >
+                              {isPaid ? "مدفوع بالكامل ✓" : "كاش عند الاستلام"}
+                            </Badge>
+                          </TableCell>
+
+                          {/* المندوب المكلف */}
+                          <TableCell className="text-xs">
+                            {currentDriver ? (
+                              <div className="flex items-center gap-1 text-foreground font-medium">
+                                <BikeIcon className="size-3.5 text-primary" />
+                                <span>{currentDriver.name}</span>
+                              </div>
+                            ) : order.status === "ready" ? (
+                              <div className="w-36">
+                                <ComboboxSelect
+                                  value={selectedDriverForOrder[order.id] ? String(selectedDriverForOrder[order.id]) : ""}
+                                  onValueChange={(val) =>
+                                    setSelectedDriverForOrder((prev) => ({
+                                      ...prev,
+                                      [order.id]: Number(val),
+                                    }))
+                                  }
+                                  options={drivers
+                                    .filter((d) => d.is_active)
+                                    .map((d) => ({
+                                      value: String(d.id),
+                                      label: d.name,
+                                      badge: d.status === "available" ? "متاح" : "مشغول",
+                                      badgeVariant: d.status === "available" ? ("success" as const) : ("secondary" as const),
+                                    }))}
+                                  placeholder="اختر مندوب..."
+                                  emptyText="لا يوجد مناديب"
+                                  className="h-7 text-[11px]"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-[11px]">غير معين</span>
+                            )}
+                          </TableCell>
+
+                          {/* حالة الطلب */}
+                          <TableCell className="text-xs">
+                            <Badge
+                              variant="outline"
+                              className={`gap-1 text-[11px] font-medium ${statusInfo.className}`}
+                            >
+                              <StatusIcon className="size-3" />
+                              <span>{statusInfo.label}</span>
+                            </Badge>
+                          </TableCell>
+
+                          {/* الإجراءات */}
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* زر المرحلة التالية الذكية */}
+                              {order.status === "pending" && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={isCurrentActionLoading}
+                                  onClick={() => handleMoveStatus(order, "preparing")}
+                                  className="h-7 px-2.5 text-[11px] font-bold rounded-md gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                >
+                                  <ChefHatIcon className={`size-3 ${isCurrentActionLoading ? "animate-spin" : ""}`} />
+                                  <span>للمطبخ</span>
+                                </Button>
+                              )}
+
+                              {order.status === "preparing" && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={isCurrentActionLoading}
+                                  onClick={() => handleMoveStatus(order, "ready")}
+                                  className="h-7 px-2.5 text-[11px] font-bold rounded-md gap-1 bg-amber-600 hover:bg-amber-700 text-white"
+                                >
+                                  <CheckIcon className={`size-3 ${isCurrentActionLoading ? "animate-spin" : ""}`} />
+                                  <span>جاهز للتسليم</span>
+                                </Button>
+                              )}
+
+                              {order.status === "ready" && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={isCurrentActionLoading}
+                                  onClick={() => handleAssignAndDispatch(order)}
+                                  className="h-7 px-2.5 text-[11px] font-bold rounded-md gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+                                >
+                                  <SendIcon className={`size-3 ${isCurrentActionLoading ? "animate-spin" : ""}`} />
+                                  <span>خروج مع المندوب</span>
+                                </Button>
+                              )}
+
+                              {order.status === "out_for_delivery" && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={isCurrentActionLoading}
+                                  onClick={() => handleOpenSettlement(order)}
+                                  className="h-7 px-2.5 text-[11px] font-bold rounded-md gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                >
+                                  <CheckCircle2Icon className={`size-3 ${isCurrentActionLoading ? "animate-spin" : ""}`} />
+                                  <span>تم التسليم والتوريد</span>
+                                </Button>
+                              )}
+
+                              {order.status === "completed" && !isPaid && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleOpenSettlement(order)}
+                                  className="h-7 px-2.5 text-[11px] font-bold rounded-md gap-1 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"
+                                >
+                                  <BanknoteIcon className="size-3" />
+                                  <span>توريد الكاش</span>
+                                </Button>
+                              )}
+
+                              {/* زر عرض تفاصيل الطلب */}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setInspectingOrder(order)}
+                                className="size-7 text-muted-foreground hover:text-foreground"
+                                title="عرض تفاصيل الفاتورة"
+                              >
+                                <EyeIcon className="size-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            التبويب الثاني: إدارة أسطول المناديب
+            ========================================================================= */}
+        {activeTab === "fleet" && (
+          <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
             <Table>
               <TableHeader>
-                <TableRow className="hover:bg-transparent">
+                <TableRow className="bg-muted/30">
                   <TableHead className="w-12 font-bold text-foreground">#</TableHead>
                   <TableHead className="font-bold text-foreground">المندوب</TableHead>
                   <TableHead className="font-bold text-foreground">رقم الهاتف</TableHead>
                   <TableHead className="font-bold text-foreground">المركبة واللوحة</TableHead>
-                  <TableHead className="font-bold text-foreground">الحالة اللحظية</TableHead>
-                  <TableHead className="font-bold text-foreground">النشاط</TableHead>
+                  <TableHead className="font-bold text-foreground">الحالة التشغيلية</TableHead>
+                  <TableHead className="font-bold text-foreground">الحساب</TableHead>
                   <TableHead className="text-left font-bold text-foreground">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {drivers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground text-xs">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <BikeIcon className="size-8 opacity-30" />
                         <span>لم يتم تسجيل أي مندوب توصيل حتى الآن.</span>
                         <Button
                           size="sm"
                           onClick={() => setDriverModalOpen(true)}
-                          className="mt-1 text-xs rounded-xl"
+                          className="mt-1 text-xs rounded-lg"
                         >
                           إضافة أول مندوب
                         </Button>
@@ -1108,7 +978,7 @@ export default function DeliveryOperationsPage() {
                   </TableRow>
                 ) : (
                   drivers.map((driver, idx) => (
-                    <TableRow key={driver.id} className="hover:bg-muted/30 transition-colors">
+                    <TableRow key={driver.id} className="hover:bg-muted/20 transition-colors">
                       <TableCell className="font-mono text-xs text-muted-foreground">{idx + 1}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
@@ -1117,7 +987,9 @@ export default function DeliveryOperationsPage() {
                           </div>
                           <div>
                             <div className="font-semibold text-foreground text-sm">{driver.name}</div>
-                            <div className="text-[10px] text-muted-foreground font-mono">ID: #{driver.id}</div>
+                            {driver.notes && (
+                              <div className="text-[10px] text-muted-foreground line-clamp-1">{driver.notes}</div>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -1152,23 +1024,20 @@ export default function DeliveryOperationsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <select
-                          value={driver.status}
-                          onChange={(e) =>
-                            updateDriverStatus(driver.id, e.target.value as "available" | "on_delivery" | "off_duty")
-                          }
-                          className={`text-xs font-semibold px-2 py-1 rounded-lg border outline-none cursor-pointer ${
-                            driver.status === "available"
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
-                              : driver.status === "on_delivery"
-                              ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25"
-                              : "bg-muted text-muted-foreground border-border/60"
-                          }`}
-                        >
-                          <option value="available">🟢 متاح للطلبات</option>
-                          <option value="on_delivery">🛵 في الطريق لتوصيل</option>
-                          <option value="off_duty">⚪️ غير متفرغ / خارج الدوام</option>
-                        </select>
+                        <div className="w-40">
+                          <ComboboxSelect
+                            value={driver.status}
+                            onValueChange={(val) =>
+                              val && updateDriverStatus(driver.id, val as "available" | "on_delivery" | "off_duty")
+                            }
+                            options={[
+                              { value: "available", label: "متاح للتوصيل", badge: "متاح", badgeVariant: "success" },
+                              { value: "on_delivery", label: "في الطريق لتوصيل", badge: "مشغول", badgeVariant: "secondary" },
+                              { value: "off_duty", label: "في استراحة / خارج الدوام", badge: "استراحة", badgeVariant: "destructive" },
+                            ]}
+                            className="h-7 text-[11px]"
+                          />
+                        </div>
                       </TableCell>
                       <TableCell>
                         <span
@@ -1200,9 +1069,9 @@ export default function DeliveryOperationsPage() {
                               setDriverModalOpen(true)
                             }}
                             title="تعديل بيانات المندوب"
-                            className="size-8 text-muted-foreground hover:text-foreground"
+                            className="size-7 text-muted-foreground hover:text-foreground"
                           >
-                            <Edit2Icon className="size-4" />
+                            <Edit2Icon className="size-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -1212,9 +1081,9 @@ export default function DeliveryOperationsPage() {
                               setDeleteConfirmOpen(true)
                             }}
                             title="حذف المندوب"
-                            className="size-8 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                            className="size-7 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
                           >
-                            <Trash2Icon className="size-4" />
+                            <Trash2Icon className="size-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -1224,28 +1093,28 @@ export default function DeliveryOperationsPage() {
               </TableBody>
             </Table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* =========================================================
-          نافذة تفاصيل الطلب والفاتورة الكاملة (Order Details Modal)
-          ========================================================= */}
+      {/* =========================================================================
+          نافذة تفاصيل الطلب والفاتورة
+          ========================================================================= */}
       <Dialog open={Boolean(inspectingOrder)} onOpenChange={(open) => !open && setInspectingOrder(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <ReceiptIcon className="size-5 text-primary" />
+              <ReceiptIcon className="size-4.5 text-primary" />
               <span>تفاصيل طلب التوصيل #{inspectingOrder?.order_number}</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
-              البيانات الكاملة للأصناف، العميل، وموقع التوصيل
+              بيانات العميل، أصناف الوجبة، وتفاصيل الحساب المالي
             </DialogDescription>
           </DialogHeader>
 
           {inspectingOrder && (
             <div className="space-y-3 py-2 text-xs">
-              {/* بطاقة العميل */}
-              <div className="p-3 rounded-xl bg-muted/40 border border-border/50 space-y-1.5">
+              {/* بيانات العميل */}
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/50 space-y-1">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-foreground text-sm">
                     {inspectingOrder.customer?.name || inspectingOrder.customer_name || "عميل بدون اسم"}
@@ -1253,21 +1122,26 @@ export default function DeliveryOperationsPage() {
                   <span className="font-mono text-muted-foreground">{inspectingOrder.customer?.phone}</span>
                 </div>
                 <div className="flex items-start gap-1.5 text-muted-foreground pt-1">
-                  <MapPinIcon className="size-4 text-rose-500 shrink-0 mt-0.5" />
-                  <span>{inspectingOrder.customer?.address || inspectingOrder.notes || "العنوان غير محدد"}</span>
+                  <MapPinIcon className="size-3.5 text-rose-500 shrink-0 mt-0.5" />
+                  <span>{inspectingOrder.delivery_address || inspectingOrder.customer?.address || inspectingOrder.notes || "العنوان غير محدد"}</span>
                 </div>
+                {inspectingOrder.delivery_distance && (
+                  <div className="text-xs text-primary font-mono font-semibold pt-0.5 ps-5">
+                    مسافة التوصيل: {inspectingOrder.delivery_distance} كم
+                  </div>
+                )}
               </div>
 
               {/* بنود الأصناف */}
-              <div className="space-y-1.5 border rounded-xl p-2.5 bg-card">
+              <div className="space-y-1 border border-border/60 rounded-lg p-2.5 bg-card">
                 <div className="text-[11px] font-bold text-muted-foreground mb-1">الأصناف المطلوبة:</div>
                 {inspectingOrder.items?.map((it, idx) => (
                   <div key={idx} className="flex justify-between items-center py-1 border-b border-border/30 last:border-0">
                     <div>
                       <span className="font-bold font-mono ml-2 text-primary">{it.quantity}x</span>
-                      <span className="font-semibold text-foreground">{it.product?.name || "صنف"}</span>
-                      {it.selected_size && (
-                        <span className="text-[10px] text-muted-foreground mr-1">({it.selected_size.name})</span>
+                      <span className="font-medium text-foreground">{it.product_name || "صنف"}</span>
+                      {it.size_name && (
+                        <span className="text-[10px] text-muted-foreground mr-1">({it.size_name})</span>
                       )}
                     </div>
                     <span className="font-mono font-bold">{it.total_price} {currency}</span>
@@ -1276,43 +1150,56 @@ export default function DeliveryOperationsPage() {
               </div>
 
               {/* الحسابات */}
-              <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-1 text-muted-foreground">
+              <div className="p-3 rounded-lg bg-muted/20 border border-border/50 space-y-1 text-muted-foreground">
                 <div className="flex justify-between text-xs">
                   <span>المجموع الفرعي:</span>
                   <span className="font-mono">{inspectingOrder.subtotal} {currency}</span>
                 </div>
-                <div className="flex justify-between text-xs text-emerald-600 font-medium">
-                  <span>رسوم التوصيل:</span>
-                  <span className="font-mono">+{inspectingOrder.delivery_fee || 0} {currency}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span>الضريبة:</span>
-                  <span className="font-mono">{inspectingOrder.tax_amount || 0} {currency}</span>
-                </div>
+                {Number(inspectingOrder.delivery_fee || 0) > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-600 font-medium">
+                    <span>
+                      رسوم التوصيل
+                      {inspectingOrder.delivery_distance ? ` (${inspectingOrder.delivery_distance} كم)` : ""}:
+                    </span>
+                    <span className="font-mono">+{inspectingOrder.delivery_fee} {currency}</span>
+                  </div>
+                )}
+                {Number(inspectingOrder.tax || 0) > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span>الضريبة:</span>
+                    <span className="font-mono">{inspectingOrder.tax} {currency}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm font-extrabold text-foreground pt-1 border-t border-border/40">
                   <span>الإجمالي المطلوب:</span>
-                  <span className="font-mono text-primary">{inspectingOrder.total_amount} {currency}</span>
+                  <span className="font-mono text-primary">{inspectingOrder.total} {currency}</span>
                 </div>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setInspectingOrder(null)} className="rounded-xl text-xs">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setInspectingOrder(null)}
+              className="text-xs rounded-lg"
+            >
               إغلاق
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* =========================================================
-          نافذة توريد وسداد نقدية المندوب للخزينة (Cash Settlement Modal)
-          ========================================================= */}
+      {/* =========================================================================
+          نافذة توريد وسداد نقدية المندوب للخزينة
+          ========================================================================= */}
       <Dialog open={Boolean(settlementOrder)} onOpenChange={(open) => !open && setSettlementOrder(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-emerald-600">
-              <BanknoteIcon className="size-5" />
+              <BanknoteIcon className="size-4.5" />
               <span>توريد نقدية الطلب #{settlementOrder?.order_number}</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
@@ -1322,15 +1209,15 @@ export default function DeliveryOperationsPage() {
 
           {settlementOrder && (
             <div className="space-y-3 py-2 text-xs">
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between">
+              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between">
                 <div>
                   <div className="text-[11px] text-muted-foreground">المبلغ المطلوب توريده من المندوب:</div>
                   <div className="text-xl font-extrabold font-mono text-emerald-700 dark:text-emerald-400 mt-0.5">
-                    {settlementOrder.total_amount} {currency}
+                    {settlementOrder.total} {currency}
                   </div>
                 </div>
                 {settlementOrder.deliveryDriver && (
-                  <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-700">
+                  <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-700 text-xs">
                     <BikeIcon className="size-3" />
                     <span>{settlementOrder.deliveryDriver.name}</span>
                   </Badge>
@@ -1338,20 +1225,22 @@ export default function DeliveryOperationsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">الخزينة المستلمة *</label>
-                <select
-                  value={settlementRegisterId}
-                  onChange={(e) => setSettlementRegisterId(Number(e.target.value))}
-                  className="w-full h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
-                >
-                  {registers
+                <label className="text-xs font-semibold text-foreground">الخزينة المستلمة للنقدية *</label>
+                <ComboboxSelect
+                  value={settlementRegisterId ? String(settlementRegisterId) : ""}
+                  onValueChange={(val) => setSettlementRegisterId(Number(val))}
+                  options={registers
                     .filter((r) => r.is_active)
-                    .map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} {r.is_default ? "(الخزنة الافتراضية)" : ""}
-                      </option>
-                    ))}
-                </select>
+                    .map((r) => ({
+                      value: String(r.id),
+                      label: `${r.name} ${r.is_default ? "(الخزنة الافتراضية)" : ""}`,
+                      badge: `${Number(r.balance || 0).toLocaleString("ar-EG")} ${currency}`,
+                      badgeVariant: "success" as const,
+                    }))}
+                  placeholder="اختر الخزينة..."
+                  emptyText="لا توجد خزائن نشطة"
+                  className="h-9 rounded-lg"
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -1360,7 +1249,7 @@ export default function DeliveryOperationsPage() {
                   <button
                     type="button"
                     onClick={() => setSettlementMethod("cash")}
-                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
                       settlementMethod === "cash"
                         ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                         : "border-border/60 hover:bg-muted"
@@ -1372,7 +1261,7 @@ export default function DeliveryOperationsPage() {
                   <button
                     type="button"
                     onClick={() => setSettlementMethod("card")}
-                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
                       settlementMethod === "card"
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border/60 hover:bg-muted"
@@ -1390,7 +1279,7 @@ export default function DeliveryOperationsPage() {
                   value={settlementNotes}
                   onChange={(e) => setSettlementNotes(e.target.value)}
                   placeholder="ملاحظة عن السداد أو رقم العملية..."
-                  className="h-8 text-xs rounded-xl"
+                  className="h-8.5 text-xs rounded-lg"
                 />
               </div>
             </div>
@@ -1400,40 +1289,42 @@ export default function DeliveryOperationsPage() {
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setSettlementOrder(null)}
-              className="rounded-xl text-xs"
+              className="rounded-lg text-xs"
             >
               إلغاء
             </Button>
             <Button
               type="button"
+              size="sm"
               onClick={handleConfirmSettlement}
               disabled={isSettling}
-              className="rounded-xl text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="rounded-lg text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              <CheckCircle2Icon className="size-4" />
-              <span>{isSettling ? "جاري التوريد..." : "تأكيد إيداع المبلغ بالخزينة"}</span>
+              <CheckCircle2Icon className="size-3.5" />
+              <span>{isSettling ? "جاري التوريد..." : "تأكيد الإيداع بالخزينة"}</span>
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* =========================================================
-          نافذة إضافة / تعديل مندوب توصيل (Driver Modal)
-          ========================================================= */}
+      {/* =========================================================================
+          نافذة إضافة / تعديل مندوب توصيل
+          ========================================================================= */}
       <Dialog open={driverModalOpen} onOpenChange={setDriverModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <BikeIcon className="size-5 text-primary" />
-              <span>{editingDriver ? "تعديل بيانات مندوب التوصيل" : "إضافة طيار توصيل جديد"}</span>
+              <BikeIcon className="size-4.5 text-primary" />
+              <span>{editingDriver ? "تعديل بيانات مندوب التوصيل" : "إضافة مندوب توصيل جديد"}</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
-              أدخل اسم المندوب ورقم هاتفه ونوع المركبة لإضافته للأسطول
+              أدخل اسم المندوب ورقم هاتفه ونوع المركبة لإضافته لأسطول المطعم
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSaveDriver} className="space-y-3 pt-2 text-xs">
+          <form onSubmit={handleSaveDriver} className="space-y-3 pt-1 text-xs">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">اسم المندوب *</label>
               <Input
@@ -1441,7 +1332,7 @@ export default function DeliveryOperationsPage() {
                 value={driverFormData.name}
                 onChange={(e) => setDriverFormData({ ...driverFormData, name: e.target.value })}
                 placeholder="مثال: محمود إبراهيم"
-                className="h-9 rounded-xl"
+                className="h-8.5 rounded-lg"
               />
             </div>
 
@@ -1453,26 +1344,50 @@ export default function DeliveryOperationsPage() {
                 onChange={(e) => setDriverFormData({ ...driverFormData, phone: e.target.value })}
                 placeholder="مثال: 01012345678"
                 dir="ltr"
-                className="h-9 rounded-xl font-mono text-sm text-right"
+                className="h-8.5 rounded-lg font-mono text-xs text-right"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">نوع المركبة</label>
-              <select
-                value={driverFormData.vehicle_type}
-                onChange={(e) =>
-                  setDriverFormData({
-                    ...driverFormData,
-                    vehicle_type: e.target.value as "motorcycle" | "bicycle" | "car",
-                  })
-                }
-                className="w-full h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium"
-              >
-                <option value="motorcycle">🏍️ موتوسيكل / سكوتر</option>
-                <option value="car">🚗 سيارة</option>
-                <option value="bicycle">🚲 دراجة هوائية</option>
-              </select>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDriverFormData({ ...driverFormData, vehicle_type: "motorcycle" })}
+                  className={`flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    driverFormData.vehicle_type === "motorcycle"
+                      ? "border-primary bg-primary/10 text-primary shadow-xs"
+                      : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <BikeIcon className="size-5" />
+                  <span>موتوسيكل</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDriverFormData({ ...driverFormData, vehicle_type: "car" })}
+                  className={`flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    driverFormData.vehicle_type === "car"
+                      ? "border-primary bg-primary/10 text-primary shadow-xs"
+                      : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <CarIcon className="size-5" />
+                  <span>سيارة</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDriverFormData({ ...driverFormData, vehicle_type: "bicycle" })}
+                  className={`flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    driverFormData.vehicle_type === "bicycle"
+                      ? "border-primary bg-primary/10 text-primary shadow-xs"
+                      : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <BikeIcon className="size-5" />
+                  <span>دراجة</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -1481,7 +1396,7 @@ export default function DeliveryOperationsPage() {
                 value={driverFormData.license_plate || ""}
                 onChange={(e) => setDriverFormData({ ...driverFormData, license_plate: e.target.value })}
                 placeholder="مثال: أ ب ج 123"
-                className="h-9 rounded-xl"
+                className="h-8.5 rounded-lg"
               />
             </div>
 
@@ -1490,8 +1405,8 @@ export default function DeliveryOperationsPage() {
               <Input
                 value={driverFormData.notes || ""}
                 onChange={(e) => setDriverFormData({ ...driverFormData, notes: e.target.value })}
-                placeholder="منطقة التوصيل المعتادة، شفت العمل..."
-                className="h-9 rounded-xl"
+                placeholder="منطقة التوصيل المعتادة، الملاحظات..."
+                className="h-8.5 rounded-lg"
               />
             </div>
 
@@ -1499,12 +1414,13 @@ export default function DeliveryOperationsPage() {
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => setDriverModalOpen(false)}
-                className="rounded-xl text-xs"
+                className="rounded-lg text-xs"
               >
                 إلغاء
               </Button>
-              <Button type="submit" disabled={driverSaving} className="rounded-xl text-xs font-bold">
+              <Button type="submit" size="sm" disabled={driverSaving} className="rounded-lg text-xs font-bold">
                 {driverSaving ? "جاري الحفظ..." : "حفظ المندوب"}
               </Button>
             </DialogFooter>
@@ -1512,9 +1428,9 @@ export default function DeliveryOperationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* =========================================================
+      {/* =========================================================================
           نافذة تأكيد حذف المندوب
-          ========================================================= */}
+          ========================================================================= */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1524,10 +1440,10 @@ export default function DeliveryOperationsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl text-xs">إلغاء</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-lg text-xs">إلغاء</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteDriverConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl text-xs font-bold"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg text-xs font-bold"
             >
               تأكيد الحذف
             </AlertDialogAction>

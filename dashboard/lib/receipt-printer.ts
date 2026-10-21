@@ -15,6 +15,9 @@ export interface ReceiptPrintData {
   }[]
   subtotal: number
   tax: number
+  delivery_fee?: number
+  delivery_address?: string | null
+  delivery_distance?: number | null
   total: number
   payment_status: "paid" | "partially_paid" | "unpaid"
   payment_method?: string | null
@@ -280,6 +283,22 @@ export function generateReceiptHtml(data: ReceiptPrintData, customConfig?: Recei
             </tr>`
           : ""
       }
+      ${
+        data.order_type === "delivery" && data.delivery_address
+          ? `<tr>
+              <td class="font-bold">عنوان التوصيل:</td>
+              <td class="text-left">${data.delivery_address}</td>
+            </tr>`
+          : ""
+      }
+      ${
+        data.order_type === "delivery" && data.delivery_distance
+          ? `<tr>
+              <td>مسافة التوصيل:</td>
+              <td class="text-left font-mono">${data.delivery_distance} كم</td>
+            </tr>`
+          : ""
+      }
     </table>
 
     <div class="dashed-single"></div>
@@ -314,6 +333,14 @@ export function generateReceiptHtml(data: ReceiptPrintData, customConfig?: Recei
         <span>${config.taxLabel || "ضريبة القيمة المضافة"}:</span>
         <span class="font-mono">${Number(data.tax).toFixed(2)} ${config.currency}</span>
       </div>
+      ${
+        data.order_type === "delivery" && Number(data.delivery_fee || 0) > 0
+          ? `<div class="summary-row font-bold">
+              <span>رسوم التوصيل${data.delivery_distance ? ` (${data.delivery_distance} كم)` : ""}:</span>
+              <span class="font-mono">+${Number(data.delivery_fee).toFixed(2)} ${config.currency}</span>
+            </div>`
+          : ""
+      }
     </div>
 
     <div class="dashed-double"></div>

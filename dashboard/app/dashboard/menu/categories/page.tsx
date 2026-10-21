@@ -258,145 +258,148 @@ export default function CategoriesPage() {
       action={
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
+            type="button"
+            variant="outline"
             size="sm"
             onClick={() => fetchCategories()}
             disabled={isLoading}
-            className="text-muted-foreground hover:text-foreground rounded-lg"
+            className="h-8.5 rounded-lg text-xs gap-1.5"
             title="تحديث القائمة"
           >
-            <RefreshCwIcon className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">تحديث</span>
+            <RefreshCwIcon className={`size-3.5 ${isLoading ? "animate-spin text-primary" : ""}`} />
+            <span>تحديث</span>
           </Button>
 
           <Button
+            type="button"
             size="sm"
             onClick={handleOpenCreate}
-            className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg"
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <PlusIcon className="size-4" />
+            <PlusIcon className="size-3.5" />
             <span>إضافة قسم جديد</span>
           </Button>
         </div>
       }
     >
-      {/* إشعار العملية المنبثق */}
-      {bannerMessage && (
-        <div
-          className={`flex items-center justify-between gap-3 p-4 rounded-xl shadow-xs text-sm font-medium transition-all duration-200 ${
-            bannerMessage.type === "success"
-              ? "bg-primary/10 text-primary"
-              : "bg-destructive/10 text-destructive"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {bannerMessage.type === "success" ? (
-              <CheckCircle2Icon className="size-5 shrink-0" />
-            ) : (
-              <AlertCircleIcon className="size-5 shrink-0" />
-            )}
-            <span>{bannerMessage.text}</span>
-          </div>
-          <button
-            onClick={() => setBannerMessage(null)}
-            className="text-xs opacity-70 hover:opacity-100 transition-opacity p-1"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* كروت الإحصائيات العلوية */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-card shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <LayersIcon className="size-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">إجمالي الأقسام</p>
-            <p className="text-xl font-bold tracking-tight text-foreground">{totalCount}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-card shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2Icon className="size-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">الأقسام النشطة</p>
-            <p className="text-xl font-bold tracking-tight text-foreground">{activeCount}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-card shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <XCircleIcon className="size-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">الأقسام غير المفعلة</p>
-            <p className="text-xl font-bold tracking-tight text-foreground">{inactiveCount}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* شريط البحث والفلترة */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 rounded-xl bg-card shadow-xs">
-        {/* حقل البحث */}
-        <div className="relative flex-1 max-w-md">
-          <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="البحث عن اسم قسم أو وصف..."
-            className="ps-9 bg-muted/40 hover:bg-muted/60 focus:bg-background shadow-none rounded-lg"
-          />
-        </div>
-
-        {/* أزرار فلتر الحالة */}
-        <div className="flex items-center gap-1.5 p-1 rounded-lg bg-muted/40 self-start sm:self-auto">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setStatusFilter("all")}
-            className={`rounded-md text-xs font-medium transition-all ${
-              statusFilter === "all"
-                ? "bg-card shadow-xs text-foreground"
-                : "text-muted-foreground hover:text-foreground"
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* إشعار العملية المنبثق الموحد */}
+        {bannerMessage && (
+          <div
+            className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-lg border text-xs font-medium animate-in fade-in duration-150 ${
+              bannerMessage.type === "success"
+                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
+                : "bg-destructive/10 border-destructive/25 text-destructive"
             }`}
           >
-            الكل ({totalCount})
-          </Button>
+            <div className="flex items-center gap-2">
+              {bannerMessage.type === "success" ? (
+                <CheckCircle2Icon className="size-4 shrink-0" />
+              ) : (
+                <AlertCircleIcon className="size-4 shrink-0" />
+              )}
+              <span>{bannerMessage.text}</span>
+            </div>
+            <button
+              onClick={() => setBannerMessage(null)}
+              className="text-xs opacity-70 hover:opacity-100 p-0.5 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setStatusFilter("active")}
-            className={`rounded-md text-xs font-medium transition-all ${
-              statusFilter === "active"
-                ? "bg-card shadow-xs text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            نشط ({activeCount})
-          </Button>
+        {/* بطاقات الإحصائيات العلوية الموحدة */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <LayersIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">إجمالي الأقسام</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">{totalCount}</p>
+            </div>
+          </div>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setStatusFilter("inactive")}
-            className={`rounded-md text-xs font-medium transition-all ${
-              statusFilter === "inactive"
-                ? "bg-card shadow-xs text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            معطل ({inactiveCount})
-          </Button>
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2Icon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">الأقسام النشطة</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">{activeCount}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <XCircleIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">الأقسام غير المفعلة</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">{inactiveCount}</p>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* شريط البحث والفلترة الموحد */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+          {/* حقل البحث */}
+          <div className="relative flex-1 w-full sm:max-w-md">
+            <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="البحث عن اسم قسم أو وصف..."
+              className="ps-9 bg-muted/40 rounded-lg text-xs h-8.5 border-border/60"
+            />
+          </div>
+
+          {/* أزرار فلتر الحالة */}
+          <div className="flex items-center gap-1.5 p-1 rounded-lg bg-muted/40 text-xs">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatusFilter("all")}
+              className={`h-7.5 px-2.5 rounded-md text-xs font-medium cursor-pointer ${
+                statusFilter === "all"
+                  ? "bg-card shadow-xs text-foreground font-bold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              الكل ({totalCount})
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatusFilter("active")}
+              className={`h-7.5 px-2.5 rounded-md text-xs font-medium cursor-pointer ${
+                statusFilter === "active"
+                  ? "bg-card shadow-xs text-emerald-600 dark:text-emerald-400 font-bold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              نشط ({activeCount})
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatusFilter("inactive")}
+              className={`h-7.5 px-2.5 rounded-md text-xs font-medium cursor-pointer ${
+                statusFilter === "inactive"
+                  ? "bg-card shadow-xs text-amber-600 dark:text-amber-400 font-bold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              معطل ({inactiveCount})
+            </Button>
+          </div>
+        </div>
 
       {/* رسالة الخطأ العامة إن وجدت */}
       {error && (
@@ -566,6 +569,7 @@ export default function CategoriesPage() {
             )}
           </TableBody>
         </Table>
+      </div>
       </div>
 
       {/* =========================================================

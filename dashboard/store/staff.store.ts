@@ -155,7 +155,7 @@ export const useStaffStore = create<StaffState>()((set, get) => ({
     set({ searchQuery: query })
   },
 
-  setRoleFilter: (filter: "all" | "admin" | "cashier" | "kitchen") => {
+  setRoleFilter: (filter: "all" | "admin" | "cashier" | "kitchen" | "delivery") => {
     set({ roleFilter: filter })
   },
 

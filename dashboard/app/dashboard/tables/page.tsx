@@ -303,13 +303,13 @@ export default function TablesPage() {
         </div>
       }
     >
-      {/* إشعار العملية المنبثق */}
+      {/* إشعار العملية المنبثق الموحد */}
       {bannerMessage && (
         <div
-          className={`flex items-center justify-between gap-3 p-3.5 rounded-md text-sm font-medium transition-all duration-200 ${
+          className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-lg border text-xs font-medium animate-in fade-in duration-150 ${
             bannerMessage.type === "success"
-              ? "bg-primary/10 text-primary border border-primary/20"
-              : "bg-destructive/10 text-destructive border border-destructive/20"
+              ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
+              : "bg-destructive/10 border-destructive/25 text-destructive"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -322,44 +322,44 @@ export default function TablesPage() {
           </div>
           <button
             onClick={() => setBannerMessage(null)}
-            className="text-xs opacity-70 hover:opacity-100 p-1"
+            className="text-xs opacity-70 hover:opacity-100 p-0.5 cursor-pointer"
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* كروت الإحصائيات العلوية */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl bg-card border border-border/60 shadow-xs">
-          <div className="flex size-9 sm:size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <ArmchairIcon className="size-4.5 sm:size-5" />
+      {/* بطاقات الإحصائيات العلوية الموحدة */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <ArmchairIcon className="size-4.5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">إجمالي الطاولات</p>
-            <p className="text-xl font-bold tracking-tight text-foreground font-mono">{mounted ? totalCount : 0}</p>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">إجمالي الطاولات</p>
+            <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">{mounted ? totalCount : 0}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl bg-card border border-border/60 shadow-xs">
-          <div className="flex size-9 sm:size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2Icon className="size-4.5 sm:size-5" />
+        <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2Icon className="size-4.5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">طاولات شاغرة (متاحة)</p>
-            <p className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">طاولات شاغرة (متاحة)</p>
+            <p className="text-lg sm:text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
               {mounted ? availableCount : 0}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl bg-card border border-border/60 shadow-xs">
-          <div className="flex size-9 sm:size-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <ReceiptIcon className="size-4.5 sm:size-5" />
+        <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <ReceiptIcon className="size-4.5" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">طاولات مشغولة بطلبات</p>
-            <p className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">طاولات مشغولة بطلبات</p>
+            <p className="text-lg sm:text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
               {mounted ? occupiedCount : 0}
             </p>
           </div>

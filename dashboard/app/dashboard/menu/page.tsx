@@ -38,9 +38,9 @@ export default function MenuOverviewPage() {
           <Link href="/dashboard/menu/products">
             <Button
               size="sm"
-              className="gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg"
+              className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              <PlusIcon className="size-4" />
+              <PlusIcon className="size-3.5" />
               <span>إضافة طبق جديد</span>
             </Button>
           </Link>

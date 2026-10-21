@@ -164,52 +164,48 @@ export default function ProfilePage() {
       title="الملف الشخصي"
       description="إدارة معلومات الحساب وكلمة المرور"
     >
-      {/* البطاقة العلوية: كرت ملخص الحساب أنيق وصغير وبدون خطوط داكنة */}
-      <Card className="transition-all">
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex items-center gap-4">
-            <Avatar className="size-14 border border-border/40">
-              <AvatarImage src="/avatars/admin.jpg" alt={user?.name || "المدير"} />
-              <AvatarFallback className="text-base font-bold bg-muted text-foreground">
-                {getInitials(user?.name || name)}
-              </AvatarFallback>
-            </Avatar>
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* البطاقة العلوية: كرت ملخص الحساب */}
+        <div className="flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl bg-card border border-border/60 shadow-xs">
+          <Avatar className="size-12 rounded-xl border border-border/40">
+            <AvatarImage src="/avatars/admin.jpg" alt={user?.name || "المدير"} />
+            <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary rounded-xl">
+              {getInitials(user?.name || name)}
+            </AvatarFallback>
+          </Avatar>
 
-            <div className="flex-1 space-y-1">
-              <h2 className="text-lg font-bold text-foreground">
-                {loadingUser ? "جاري التحميل..." : user?.name || name}
-              </h2>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5" dir="ltr">
-                <span>{user?.email || email}</span>
-                <MailIcon className="size-3.5 text-muted-foreground" />
+          <div className="flex-1 space-y-0.5">
+            <h2 className="text-base font-bold text-foreground">
+              {loadingUser ? "جاري التحميل..." : user?.name || name}
+            </h2>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5" dir="ltr">
+              <MailIcon className="size-3 text-muted-foreground" />
+              <span>{user?.email || email}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* قسم النماذج: بطاقتان مدمجتان */}
+        <div className="grid gap-3 sm:gap-3.5 md:grid-cols-2">
+          {/* نموذج البيانات الأساسية */}
+          <div className="p-4 sm:p-5 rounded-xl bg-card border border-border/60 shadow-xs space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-foreground">البيانات الشخصية</h3>
+              <p className="text-xs text-muted-foreground">
+                تعديل الاسم والبريد الإلكتروني المرتبط بالحساب
               </p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* قسم النماذج: بطاقتان مدمجتان بدون خطوط فاصلة سوداء */}
-      <div className="grid gap-5 md:grid-cols-2">
-        {/* نموذج البيانات الأساسية */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">البيانات الشخصية</CardTitle>
-            <CardDescription className="text-xs">
-              تعديل الاسم والبريد الإلكتروني المرتبط بالحساب
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <form onSubmit={handleUpdateInfo} className="space-y-4">
+            <form onSubmit={handleUpdateInfo} className="space-y-3.5">
               {infoSuccess && (
-                <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-2.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 p-2.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2Icon className="size-4 shrink-0" />
                   <span>{infoSuccess}</span>
                 </div>
               )}
 
               {infoError && (
-                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-xs font-medium text-destructive">
+                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/25 p-2.5 text-xs font-medium text-destructive">
                   <AlertCircleIcon className="size-4 shrink-0" />
                   <span>{infoError}</span>
                 </div>
@@ -225,11 +221,11 @@ export default function ProfilePage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="اسم المدير"
-                      className="h-9 pr-9 pl-3 text-sm text-right"
+                      className="h-8.5 pr-9 pl-3 text-xs text-right bg-muted/40 rounded-lg border-border/60"
                       required
                       disabled={infoLoading || loadingUser}
                     />
-                    <UserCheckIcon className="absolute right-3 size-4 text-muted-foreground pointer-events-none" />
+                    <UserCheckIcon className="absolute right-3 size-3.5 text-muted-foreground pointer-events-none" />
                   </div>
                 </Field>
 
@@ -243,17 +239,22 @@ export default function ProfilePage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="admin@restro.com"
-                      className="h-9 pr-9 pl-3 text-sm text-right"
+                      className="h-8.5 pr-9 pl-3 text-xs text-right bg-muted/40 rounded-lg border-border/60"
                       required
                       disabled={infoLoading || loadingUser}
                     />
-                    <MailIcon className="absolute right-3 size-4 text-muted-foreground pointer-events-none" />
+                    <MailIcon className="absolute right-3 size-3.5 text-muted-foreground pointer-events-none" />
                   </div>
                 </Field>
               </FieldGroup>
 
               <div className="pt-2 flex justify-end">
-                <Button type="submit" size="sm" disabled={infoLoading || loadingUser} className="gap-2 text-xs">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={infoLoading || loadingUser}
+                  className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
+                >
                   {infoLoading ? (
                     <>
                       <Loader2Icon className="size-3.5 animate-spin" />
@@ -268,29 +269,27 @@ export default function ProfilePage() {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* نموذج كلمة المرور */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">تغيير كلمة المرور</CardTitle>
-            <CardDescription className="text-xs">
-              تحديث كلمة المرور لحماية الحساب
-            </CardDescription>
-          </CardHeader>
+          {/* نموذج كلمة المرور */}
+          <div className="p-4 sm:p-5 rounded-xl bg-card border border-border/60 shadow-xs space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-foreground">تغيير كلمة المرور</h3>
+              <p className="text-xs text-muted-foreground">
+                تحديث كلمة المرور لحماية الحساب
+              </p>
+            </div>
 
-          <CardContent>
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
+            <form onSubmit={handleUpdatePassword} className="space-y-3.5">
               {passwordSuccess && (
-                <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-2.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 p-2.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2Icon className="size-4 shrink-0" />
                   <span>{passwordSuccess}</span>
                 </div>
               )}
 
               {passwordError && (
-                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-xs font-medium text-destructive">
+                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/25 p-2.5 text-xs font-medium text-destructive">
                   <AlertCircleIcon className="size-4 shrink-0" />
                   <span>{passwordError}</span>
                 </div>
@@ -307,11 +306,11 @@ export default function ProfilePage() {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="h-9 pr-9 pl-9 text-sm text-right font-mono"
+                      className="h-8.5 pr-9 pl-9 text-xs text-right font-mono bg-muted/40 rounded-lg border-border/60"
                       required
                       disabled={passwordLoading}
                     />
-                    <KeyRoundIcon className="absolute right-3 size-4 text-muted-foreground pointer-events-none" />
+                    <KeyRoundIcon className="absolute right-3 size-3.5 text-muted-foreground pointer-events-none" />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
@@ -320,9 +319,9 @@ export default function ProfilePage() {
                       className="absolute left-2.5 text-muted-foreground hover:text-foreground transition-colors p-1"
                     >
                       {showCurrentPassword ? (
-                        <EyeOffIcon className="size-4" />
+                        <EyeOffIcon className="size-3.5" />
                       ) : (
-                        <EyeIcon className="size-4" />
+                        <EyeIcon className="size-3.5" />
                       )}
                     </button>
                   </div>
@@ -338,11 +337,11 @@ export default function ProfilePage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="h-9 pr-9 pl-9 text-sm text-right font-mono"
+                      className="h-8.5 pr-9 pl-9 text-xs text-right font-mono bg-muted/40 rounded-lg border-border/60"
                       required
                       disabled={passwordLoading}
                     />
-                    <KeyRoundIcon className="absolute right-3 size-4 text-muted-foreground pointer-events-none" />
+                    <KeyRoundIcon className="absolute right-3 size-3.5 text-muted-foreground pointer-events-none" />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
@@ -351,9 +350,9 @@ export default function ProfilePage() {
                       className="absolute left-2.5 text-muted-foreground hover:text-foreground transition-colors p-1"
                     >
                       {showNewPassword ? (
-                        <EyeOffIcon className="size-4" />
+                        <EyeOffIcon className="size-3.5" />
                       ) : (
-                        <EyeIcon className="size-4" />
+                        <EyeIcon className="size-3.5" />
                       )}
                     </button>
                   </div>
@@ -369,17 +368,22 @@ export default function ProfilePage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="h-9 pr-9 pl-3 text-sm text-right font-mono"
+                      className="h-8.5 pr-9 pl-3 text-xs text-right font-mono bg-muted/40 rounded-lg border-border/60"
                       required
                       disabled={passwordLoading}
                     />
-                    <KeyRoundIcon className="absolute right-3 size-4 text-muted-foreground pointer-events-none" />
+                    <KeyRoundIcon className="absolute right-3 size-3.5 text-muted-foreground pointer-events-none" />
                   </div>
                 </Field>
               </FieldGroup>
 
               <div className="pt-2 flex justify-end">
-                <Button type="submit" size="sm" disabled={passwordLoading} className="gap-2 text-xs">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={passwordLoading}
+                  className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
+                >
                   {passwordLoading ? (
                     <>
                       <Loader2Icon className="size-3.5 animate-spin" />
@@ -394,8 +398,8 @@ export default function ProfilePage() {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </PageContainer>
   )

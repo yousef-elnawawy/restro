@@ -164,28 +164,72 @@ export default function HelpPage() {
       title="مركز المساعدة والدعم الفني"
       description="دليل الاستخدام الكامل لمنصة ريسترو، الأسئلة الشائعة، واختصارات لوحة المفاتيح"
     >
-      <div className="space-y-5">
-        {/* شريط البحث المباشر في المساعدة */}
-        <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-l from-primary/15 via-primary/5 to-card border border-primary/20 shadow-xs text-center space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-semibold">
-            <SparklesIcon className="size-3.5" />
-            <span>مركز التوثيق والمساعدة الذكي</span>
+      <div className="space-y-3 sm:space-y-3.5">
+        {/* كروت الإحصائيات العلوية الموحدة */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <BookOpenIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">أدلة النظام</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">
+                {USER_GUIDES.length} أدلة
+              </p>
+            </div>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-foreground">
-            كيف يمكننا مساعدتك في إدارة مطعمك اليوم؟
-          </h2>
-          <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">
-            ابحث عن إجابات سريعة للأسئلة الشائعة أو اطلع على دليل الاستخدام التفاعلي لكل أقسام المنصة.
-          </p>
-          <div className="max-w-md mx-auto relative pt-1">
-            <SearchIcon className="absolute right-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <HelpCircleIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">الأسئلة الشائعة</p>
+              <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">
+                {FAQ_ITEMS.length} أسئلة
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <ServerIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">حالة النظام</p>
+              <p className="text-sm sm:text-base font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+                متصل 100%
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <LifeBuoyIcon className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">الدعم الفني</p>
+              <p className="text-sm sm:text-base font-bold tracking-tight text-foreground">
+                متاح 24/7
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* شريط البحث الموحد */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+          <div className="relative flex-1 w-full sm:max-w-md">
+            <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث عن سؤال، مثل: تعديل طلب، نسبة الضريبة، الطابعات..."
-              className="pr-10 rounded-xl bg-card border-border/80 shadow-xs h-11 text-sm"
+              placeholder="ابحث عن سؤال أو دليل، مثل: تعديل طلب، نسبة الضريبة، الطابعات..."
+              className="ps-9 h-8.5 text-xs bg-muted/40 rounded-lg border-border/60"
             />
           </div>
+          <span className="text-xs text-muted-foreground font-medium">
+            مركز التوثيق والمساعدة الذكي
+          </span>
         </div>
 
         {/* 1. أدلة الاستخدام التفاعلية للموديولات */}

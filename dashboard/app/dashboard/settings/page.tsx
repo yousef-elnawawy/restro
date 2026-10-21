@@ -41,7 +41,52 @@ import {
   Building2Icon,
   ShieldCheckIcon,
   SparklesIcon,
+  XIcon,
+  CameraIcon,
+  LinkIcon,
+  ImageIcon,
 } from "lucide-react"
+
+// ضغط وتصغير الصورة تلقائياً لسرعة التخزين والتحميل
+async function compressImage(file: File, maxDim = 800, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = reject
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onerror = reject
+      img.onload = () => {
+        let width = img.width
+        let height = img.height
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width)
+            width = maxDim
+          } else {
+            width = Math.round((width * maxDim) / height)
+            height = maxDim
+          }
+        }
+
+        const canvas = document.createElement("canvas")
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          resolve(e.target?.result as string)
+          return
+        }
+
+        ctx.drawImage(img, 0, 0, width, height)
+        const format = file.type === "image/png" ? "image/png" : "image/jpeg"
+        resolve(canvas.toDataURL(format, quality))
+      }
+      img.src = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 // العملات المعتمدة
 const CURRENCY_PRESETS = [
@@ -106,31 +151,81 @@ export default function SettingsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [formData, isSaving, isLoading])
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [isUploadingLogo, setIsUploadingLogo] = React.useState(false)
+  const [showUrlInput, setShowUrlInput] = React.useState(false)
+  const [urlInput, setUrlInput] = React.useState("")
+
   const showBanner = (text: string, type: "success" | "error" = "success") => {
     setBanner({ type, text })
     setTimeout(() => setBanner(null), 4000)
   }
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // رفع وتغيير الصورة من الجهاز مع ضغط تلقائي وحفظ فوري
+  const handleLogoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        showBanner("حجم الصورة يجب ألا يتجاوز 2 ميجابايت", "error")
-        return
+    if (!file) return
+
+    setIsUploadingLogo(true)
+    try {
+      const base64 = await compressImage(file)
+      const updated = { ...formData, logo: base64 }
+      setFormData(updated)
+
+      // حفظ فوري في قاعدة البيانات
+      const res = await updateSettings(updated)
+      if (res.success) {
+        showBanner("تم رفع وتحديث صورة الشعار وحفظها بنجاح ✓", "success")
+      } else {
+        showBanner("تم اختيار الصورة بنجاح. اضغط حفظ لتأكيد التغيير.", "success")
       }
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string
-        setFormData((prev) => ({ ...prev, logo: base64 }))
-        showBanner("تم رفع الشعار، يرجى الضغط على حفظ لتثبيت التغيير.", "success")
+    } catch {
+      showBanner("تعذر معالجة الصورة، يرجى اختيار ملف صورة صالح (PNG أو JPG أو WebP).", "error")
+    } finally {
+      setIsUploadingLogo(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
       }
-      reader.readAsDataURL(file)
     }
   }
 
-  const handleRemoveLogo = () => {
-    setFormData((prev) => ({ ...prev, logo: null }))
-    showBanner("تمت إزالة الشعار", "success")
+  // تطبيق رابط صورة خارجي وحفظه فورياً
+  const handleSaveLogoUrl = async () => {
+    const cleanUrl = urlInput.trim()
+    if (!cleanUrl) return
+
+    setIsUploadingLogo(true)
+    const updated = { ...formData, logo: cleanUrl }
+    setFormData(updated)
+    try {
+      const res = await updateSettings(updated)
+      if (res.success) {
+        showBanner("تم حفظ وتحديث رابط شعار المطعم بنجاح ✓", "success")
+        setShowUrlInput(false)
+        setUrlInput("")
+      } else {
+        showBanner(res.message || "فشل حفظ رابط الشعار", "error")
+      }
+    } catch {
+      showBanner("حدث خطأ أثناء حفظ رابط الصورة", "error")
+    } finally {
+      setIsUploadingLogo(false)
+    }
+  }
+
+  // إزالة الشعار وحفظ التغيير
+  const handleRemoveLogo = async () => {
+    setIsUploadingLogo(true)
+    const updated = { ...formData, logo: null }
+    setFormData(updated)
+    try {
+      const res = await updateSettings(updated)
+      if (res.success) {
+        showBanner("تمت إزالة الشعار بنجاح ✓", "success")
+      }
+    } finally {
+      setIsUploadingLogo(false)
+    }
   }
 
   const handleResetChanges = () => {
@@ -215,66 +310,66 @@ export default function SettingsPage() {
         </div>
       }
     >
-      <div className="max-w-4xl space-y-4">
+      <div className="space-y-3 sm:space-y-3.5">
         {/* إشعار العملية */}
         {banner && (
           <div
-            className={`flex items-center justify-between gap-2.5 p-3 rounded-lg text-xs font-medium border animate-in fade-in duration-150 ${
+            className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-lg text-xs font-medium border animate-in fade-in duration-150 ${
               banner.type === "success"
-                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-300"
+                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
                 : "bg-destructive/10 border-destructive/25 text-destructive"
             }`}
           >
             <div className="flex items-center gap-2">
               {banner.type === "success" ? (
-                <CheckCircle2Icon className="size-4 shrink-0" />
+                <CheckCircle2Icon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               ) : (
-                <AlertCircleIcon className="size-4 shrink-0" />
+                <AlertCircleIcon className="size-4 shrink-0 text-destructive" />
               )}
               <span>{banner.text}</span>
             </div>
             <button
               onClick={() => setBanner(null)}
-              className="text-xs opacity-70 hover:opacity-100 p-0.5"
+              className="text-muted-foreground hover:text-foreground transition-colors p-1"
             >
-              ✕
+              <XIcon className="size-3.5" />
             </button>
           </div>
         )}
 
-        {/* أشرطة التبويبات العصرية الأنيقة */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <div className="border-b border-border/70 pb-px">
-            <TabsList className="flex items-center gap-2 bg-transparent p-0 h-auto border-0 flex-wrap sm:flex-nowrap">
+        {/* أشرطة التبويبات الموحدة */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-3.5">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+            <TabsList className="bg-muted/50 p-1 rounded-lg h-8.5 border border-border/60 flex-wrap sm:flex-nowrap">
               <TabsTrigger
                 value="profile"
-                className="relative pb-2.5 px-3.5 text-xs font-semibold rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary text-muted-foreground hover:text-foreground transition-all gap-2"
+                className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5"
               >
-                <Building2Icon className="size-4 text-primary" />
+                <Building2Icon className="size-3 text-primary" />
                 <span>هوية المطعم</span>
               </TabsTrigger>
 
               <TabsTrigger
                 value="finance"
-                className="relative pb-2.5 px-3.5 text-xs font-semibold rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary text-muted-foreground hover:text-foreground transition-all gap-2"
+                className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5"
               >
-                <CoinsIcon className="size-4 text-amber-500" />
+                <CoinsIcon className="size-3 text-amber-500" />
                 <span>العملة والضرائب</span>
               </TabsTrigger>
 
               <TabsTrigger
                 value="channels"
-                className="relative pb-2.5 px-3.5 text-xs font-semibold rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary text-muted-foreground hover:text-foreground transition-all gap-2"
+                className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5"
               >
-                <TruckIcon className="size-4 text-sky-500" />
+                <TruckIcon className="size-3 text-sky-500" />
                 <span>قنوات الطلبات والتوصيل</span>
               </TabsTrigger>
 
               <TabsTrigger
                 value="receipt"
-                className="relative pb-2.5 px-3.5 text-xs font-semibold rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary text-muted-foreground hover:text-foreground transition-all gap-2"
+                className="rounded-md gap-1.5 text-xs font-semibold h-6.5 px-2.5"
               >
-                <PrinterIcon className="size-4 text-purple-500" />
+                <PrinterIcon className="size-3 text-purple-500" />
                 <span>الفاتورة الحرارية</span>
               </TabsTrigger>
             </TabsList>
@@ -294,60 +389,154 @@ export default function SettingsPage() {
               </CardHeader>
 
               <CardContent className="p-4 sm:p-5 space-y-4">
-                {/* رفع وتعديل الشعار في سطر أنيق مدمج */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/20 border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="size-14 rounded-xl border border-border/80 bg-card flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
-                      {formData.logo ? (
-                        <img
-                          src={formData.logo}
-                          alt="شعار المطعم"
-                          className="size-full object-contain p-1"
-                        />
-                      ) : (
-                        <StoreIcon className="size-6 text-muted-foreground/40" />
-                      )}
-                    </div>
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-bold text-foreground">شعار المطعم الرسمي</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        صورة PNG شفافة أو JPG مربعة، بحد أقصى 2 ميجابايت
+                {/* رفع وتعديل الشعار مع دعم النقر المباشر والرابط والتفريغ الفوري */}
+                <div className="p-4 rounded-xl bg-card border border-border/70 shadow-xs space-y-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      {/* صندوق معاينة الصورة التفاعلي - يقبل النقر المباشر */}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="relative size-16 sm:size-18 rounded-2xl border-2 border-dashed border-primary/40 hover:border-primary bg-muted/30 hover:bg-muted/60 flex items-center justify-center overflow-hidden shrink-0 shadow-xs cursor-pointer group transition-all"
+                        title="اضغط لاختيار صورة من جهازك"
+                      >
+                        {formData.logo ? (
+                          <img
+                            src={formData.logo}
+                            alt="شعار المطعم"
+                            className="size-full object-contain p-1.5 transition-transform group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-muted-foreground/60 group-hover:text-primary transition-colors">
+                            <StoreIcon className="size-7" />
+                            <span className="text-[9px] font-semibold mt-0.5">شعار</span>
+                          </div>
+                        )}
+
+                        {/* تأثير التمرير والأيقونة */}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-0.5 backdrop-blur-xs">
+                          {isUploadingLogo ? (
+                            <Loader2Icon className="size-4 animate-spin" />
+                          ) : (
+                            <>
+                              <CameraIcon className="size-4" />
+                              <span className="text-[9px] font-bold">تغيير</span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs sm:text-sm font-bold text-foreground">شعار المطعم الرسمي</h4>
+                          {formData.logo && (
+                            <Badge variant="outline" className="text-[10px] text-emerald-600 bg-emerald-500/10 border-emerald-500/20 px-2 py-0">
+                              مفعّل ✓
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          يظهر الشعار في الفاتورة الحرارية، وقائمة الزبائن، والتقارير.
+                        </p>
+                        <p className="text-[11px] text-muted-foreground/80">
+                          صورة PNG أو JPG أو WebP (يتم ضغطها وتجهيزها تلقائياً وبدون أي قيود).
+                        </p>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 self-start sm:self-center">
-                    <label className="cursor-pointer">
+                    {/* أزرار التحكم بالصورة */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* زر رفع الصورة المباشر */}
+                      <Button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingLogo}
+                        className="h-8.5 rounded-lg text-xs font-bold gap-1.5 bg-primary text-primary-foreground shadow-xs cursor-pointer"
+                      >
+                        {isUploadingLogo ? (
+                          <Loader2Icon className="size-3.5 animate-spin" />
+                        ) : (
+                          <UploadIcon className="size-3.5" />
+                        )}
+                        <span>{formData.logo ? "تغيير الصورة" : "رفع صورة من جهازك"}</span>
+                      </Button>
+
+                      {/* زر إضافة رابط صورة */}
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-8 rounded-lg text-xs gap-1.5 pointer-events-none"
+                        onClick={() => setShowUrlInput(!showUrlInput)}
+                        className="h-8.5 rounded-lg text-xs gap-1.5"
                       >
-                        <UploadIcon className="size-3.5" />
-                        <span>{formData.logo ? "تغيير الشعار" : "رفع شعار"}</span>
+                        <LinkIcon className="size-3.5" />
+                        <span>{showUrlInput ? "إلغاء الرابط" : "رابط إنترنت"}</span>
                       </Button>
+
+                      {/* زر إزالة الشعار */}
+                      {formData.logo && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveLogo}
+                          disabled={isUploadingLogo}
+                          className="h-8.5 rounded-lg text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 gap-1.5"
+                          title="إزالة الشعار الحالي"
+                        >
+                          <Trash2Icon className="size-3.5" />
+                          <span>إزالة</span>
+                        </Button>
+                      )}
+
+                      {/* مدخل الملفات الخفي الحقيقي */}
                       <input
+                        ref={fileInputRef}
                         type="file"
                         accept="image/*"
-                        onChange={handleLogoUpload}
+                        onChange={handleLogoFileChange}
                         className="hidden"
                       />
-                    </label>
-
-                    {formData.logo && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleRemoveLogo}
-                        className="h-8 rounded-lg text-xs text-destructive hover:bg-destructive/10 px-2"
-                        title="إزالة الشعار"
-                      >
-                        <Trash2Icon className="size-3.5" />
-                      </Button>
-                    )}
+                    </div>
                   </div>
+
+                  {/* حقل إدخال الرابط عند الفتح */}
+                  {showUrlInput && (
+                    <div className="p-3 rounded-xl bg-muted/40 border border-border/60 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <Input
+                        type="url"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        placeholder="ضع رابط الصورة المباشر هنا (مثل: https://example.com/logo.png)"
+                        dir="ltr"
+                        className="h-8.5 text-xs rounded-lg flex-1 font-mono text-left"
+                      />
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleSaveLogoUrl}
+                          disabled={!urlInput.trim() || isUploadingLogo}
+                          className="h-8.5 rounded-lg text-xs font-bold gap-1.5"
+                        >
+                          {isUploadingLogo ? <Loader2Icon className="size-3.5 animate-spin" /> : <CheckIcon className="size-3.5" />}
+                          <span>تطبيق وحفظ الرابط</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowUrlInput(false)
+                            setUrlInput("")
+                          }}
+                          className="h-8.5 rounded-lg text-xs"
+                        >
+                          إلغاء
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* شبكة حقول البيانات المتناسقة */}
@@ -634,33 +823,97 @@ export default function SettingsPage() {
               </Card>
             </div>
 
-            {/* رسوم التوصيل */}
+            {/* حساب ورسوم التوصيل والديليفري */}
             <Card className="rounded-xl border border-border/60 bg-card shadow-xs">
               <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/40">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <TruckIcon className="size-4 text-primary" />
-                  <span>رسوم التوصيل الافتراضية</span>
+                  <span>حساب وتسعير رسوم الديليفري (حسب المسافة)</span>
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  تُضاف تلقائياً عند اختيار نوع الطلب "توصيل" في الكاشير
+                  يتم حساب تكلفة التوصيل تلقائياً في الكاشير بناءً على المسافة بالكيلومتر عند كتابة العنوان
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-4 sm:p-5 space-y-2">
-                <div className="flex items-center gap-2 max-w-xs">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={formData.delivery_fee}
-                    onChange={(e) => setFormData({ ...formData, delivery_fee: parseFloat(e.target.value) || 0 })}
-                    className="h-9 rounded-lg font-mono text-center font-bold text-xs"
-                  />
-                  <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">
-                    {formData.currency}
-                  </span>
+              <CardContent className="p-4 sm:p-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* الرسوم الأساسية */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <span>الرسوم الأساسية (فتحة العداد):</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={formData.delivery_base_fee ?? formData.delivery_fee ?? 15}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0
+                          setFormData({ ...formData, delivery_base_fee: val, delivery_fee: val })
+                        }}
+                        className="h-9 rounded-lg font-mono text-center font-bold text-xs"
+                      />
+                      <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">
+                        {formData.currency}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      المبلغ المبدئي الثابت لكل طلب توصيل بغض النظر عن المسافة.
+                    </p>
+                  </div>
+
+                  {/* سعر الكيلومتر */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <span>سعر الكيلومتر الواحد:</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={formData.delivery_fee_per_km ?? 5}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            delivery_fee_per_km: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        className="h-9 rounded-lg font-mono text-center font-bold text-xs"
+                      />
+                      <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">
+                        {formData.currency} / كم
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      المبلغ الإضافي الذي يضرب في عدد الكيلومترات للعنوان.
+                    </p>
+                  </div>
                 </div>
+
+                {/* معاينة حية للمعادلة */}
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1 text-xs">
+                  <div className="font-semibold text-primary flex items-center gap-1.5">
+                    <SparklesIcon className="size-3.5" />
+                    <span>معادلة الحساب المعتمدة:</span>
+                  </div>
+                  <p className="text-foreground/90 font-mono text-[11px]">
+                    رسوم التوصيل = الرسوم الأساسية ({formData.delivery_base_fee ?? formData.delivery_fee ?? 15} {formData.currency}) + [المسافة بالكم × ({formData.delivery_fee_per_km ?? 5} {formData.currency})]
+                  </p>
+                  <div className="pt-1 text-[11px] text-muted-foreground flex items-center gap-2">
+                    <span className="font-bold text-foreground">مثال عملي:</span>
+                    <span>
+                      عنوان على بعد <b className="text-primary font-mono">4 كم</b> ➔ التكلفة ={" "}
+                      <b className="text-primary font-mono">
+                        {(formData.delivery_base_fee ?? formData.delivery_fee ?? 15) + (4 * (formData.delivery_fee_per_km ?? 5))}{" "}
+                        {formData.currency}
+                      </b>
+                    </span>
+                  </div>
+                </div>
+
                 <p className="text-[11px] text-muted-foreground">
-                  يمكن تعديل أو إعفاء رسوم التوصيل لأي طلب يدوي أثناء إدخال الفاتورة بالكاشير.
+                  * ملاحظة: يمكن للكاشير دائماً تعديل رسوم التوصيل أو المسافة يدوياً أو إعفائها بالكامل لأي طلب أثناء إدخال الفاتورة.
                 </p>
               </CardContent>
             </Card>
