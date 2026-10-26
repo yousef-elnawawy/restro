@@ -106,7 +106,7 @@ class TableController extends Controller
             return $this->errorResponse('الطاولة غير موجودة.', null, Response::HTTP_NOT_FOUND);
         }
 
-        $order = $table->currentOrder()->with(['items', 'table'])->first();
+        $order = $table->currentOrder()->with(['items', 'table', 'customer'])->first();
 
         if (! $order) {
             return $this->errorResponse('لا يوجد طلب نشط حالياً على هذه الطاولة.', null, Response::HTTP_NOT_FOUND);

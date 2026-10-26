@@ -9,6 +9,7 @@ import {
   deleteCashRegisterApi,
   toggleCashRegisterActiveApi,
 } from "@/lib/api"
+import { getCachedCatalog, setCachedCatalog } from "@/lib/offline-db"
 
 function extractErrorMessage(
   res: { message?: string; errors?: Record<string, string[] | string | number> },
@@ -66,17 +67,28 @@ export const useRegisterStore = create<RegisterState>()((set, get) => ({
 
       if (res.success && res.data) {
         set({ registers: res.data, isLoading: false, error: null })
+        setCachedCatalog("registers", res.data)
+      } else {
+        const cached = await getCachedCatalog<CashRegister[]>("registers")
+        if (cached && cached.length > 0) {
+          set({ registers: cached, isLoading: false, error: null })
+        } else {
+          set({
+            error: extractErrorMessage(res, "فشل في تحميل بيانات الخزائن."),
+            isLoading: false,
+          })
+        }
+      }
+    } catch {
+      const cached = await getCachedCatalog<CashRegister[]>("registers")
+      if (cached && cached.length > 0) {
+        set({ registers: cached, isLoading: false, error: null })
       } else {
         set({
-          error: extractErrorMessage(res, "فشل في تحميل بيانات الخزائن."),
+          error: "تعذر الاتصال بالخادم لجلب بيانات الخزائن.",
           isLoading: false,
         })
       }
-    } catch {
-      set({
-        error: "تعذر الاتصال بالخادم لجلب بيانات الخزائن.",
-        isLoading: false,
-      })
     }
   },
 

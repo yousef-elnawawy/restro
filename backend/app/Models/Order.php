@@ -72,6 +72,7 @@ class Order extends Model
         'payment_status',
         'payment_method',
         'cash_register_id',
+        'shift_id',
         'subtotal',
         'tax',
         'delivery_fee',
@@ -132,6 +133,11 @@ class Order extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class, 'order_id');
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class, 'shift_id');
     }
 
     public function scopePending(Builder $query): Builder

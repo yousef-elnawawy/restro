@@ -34,12 +34,18 @@ class AuthController extends Controller
             );
         }
 
-        $user = User::where('email', $request->validated('email'))->first();
+        $loginInput = trim($request->validated('email'));
+
+        $user = User::where('email', $loginInput)
+            ->orWhereHas('deliveryDriver', function ($q) use ($loginInput) {
+                $q->where('phone', $loginInput);
+            })
+            ->first();
 
         if (! $user || ! Hash::check($request->validated('password'), $user->password)) {
             RateLimiter::hit($throttleKey, 60);
 
-            return $this->errorResponse('البريد الإلكتروني أو كلمة المرور غير صحيحة.', null, Response::HTTP_UNAUTHORIZED);
+            return $this->errorResponse('البريد الإلكتروني / رقم الهاتف أو كلمة المرور غير صحيحة.', null, Response::HTTP_UNAUTHORIZED);
         }
 
         $allowedRoles = ['admin', 'cashier', 'kitchen', 'delivery'];

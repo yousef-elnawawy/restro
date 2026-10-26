@@ -13,6 +13,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\RestaurantTable;
 use App\Models\Setting;
+use App\Models\Shift;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -200,6 +201,23 @@ class OrderController extends Controller
                 }
             }
 
+            // Link to active shift and cash register if available
+            $regId = $validated['cash_register_id'] ?? $request->input('cash_register_id');
+            $activeShift = null;
+            if ($regId) {
+                $activeShift = Shift::where('status', 'open')->where('cash_register_id', $regId)->latest('opened_at')->first();
+            }
+            if (! $activeShift && $request->user()) {
+                $activeShift = Shift::where('status', 'open')->where('user_id', $request->user()->id)->latest('opened_at')->first();
+            }
+            if (! $activeShift) {
+                $defaultReg = CashRegister::where('is_default', true)->first();
+                if ($defaultReg) {
+                    $activeShift = Shift::where('status', 'open')->where('cash_register_id', $defaultReg->id)->latest('opened_at')->first();
+                }
+            }
+            $targetRegisterId = $regId ?? $activeShift?->cash_register_id;
+
             // Create Order
             $order = Order::create([
                 'order_number' => $orderNumber,
@@ -211,6 +229,8 @@ class OrderController extends Controller
                 'delivery_address' => $deliveryAddress,
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
+                'cash_register_id' => $targetRegisterId,
+                'shift_id' => $activeShift?->id,
                 'subtotal' => $subtotal,
                 'tax' => $tax,
                 'delivery_fee' => $deliveryFee,
@@ -604,10 +624,17 @@ class OrderController extends Controller
         $completeOrder = $validated['complete_order'] ?? false;
 
         DB::transaction(function () use ($order, $register, $amountToPay, $totalPaidBefore, $paymentMethod, $completeOrder, $validated) {
+            // Find active shift on this register or user
+            $activeShift = Shift::where('status', 'open')
+                ->where('cash_register_id', $register->id)
+                ->latest('opened_at')
+                ->first();
+
             // 1. Record payment transaction
             Payment::create([
                 'order_id' => $order->id,
                 'cash_register_id' => $register->id,
+                'shift_id' => $activeShift?->id ?? $order->shift_id,
                 'amount' => $amountToPay,
                 'payment_method' => $paymentMethod,
                 'notes' => $validated['notes'] ?? "سداد للطلب {$order->order_number}",
@@ -628,6 +655,10 @@ class OrderController extends Controller
                 'payment_method' => $paymentMethod,
                 'cash_register_id' => $register->id,
             ];
+
+            if ($activeShift && ! $order->shift_id) {
+                $orderUpdates['shift_id'] = $activeShift->id;
+            }
 
             if ($isFullyPaid) {
                 $orderUpdates['paid_at'] = now();
@@ -690,6 +721,38 @@ class OrderController extends Controller
 
         DB::transaction(function () use ($order) {
             $order->status = Order::STATUS_CANCELLED;
+
+            // Refund any partial or recorded payments from cash registers and adjust customer totals
+            $totalRefunded = 0;
+            $payments = $order->payments()->get();
+            foreach ($payments as $payment) {
+                if ($payment->cash_register_id && (float) $payment->amount > 0) {
+                    $register = CashRegister::find($payment->cash_register_id);
+                    if ($register) {
+                        $register->decrement('balance', (float) $payment->amount);
+                    }
+                }
+                $totalRefunded += (float) $payment->amount;
+            }
+
+            // Adjust customer total_spent and total_orders if linked
+            if ($order->customer_id) {
+                $customer = Customer::find($order->customer_id);
+                if ($customer) {
+                    if ($totalRefunded > 0) {
+                        $customer->decrement('total_spent', min($totalRefunded, (float) $customer->total_spent));
+                    }
+                    if ($customer->total_orders > 0) {
+                        $customer->decrement('total_orders', 1);
+                    }
+                }
+            }
+
+            if ($totalRefunded > 0) {
+                $order->payments()->delete();
+                $order->payment_status = Order::PAYMENT_UNPAID;
+            }
+
             $order->save();
 
             // If table linked, check if table can be freed
@@ -721,6 +784,27 @@ class OrderController extends Controller
         $this->safeBroadcast(new OrderStatusUpdated($order, '', "تم إلغاء الطلب #{$order->order_number}"));
 
         return $this->successResponse(null, 'تم إلغاء الطلب بنجاح وتحديث الحالات المرتبطة.');
+    }
+
+    /**
+     * Display active preparing and ready orders for customer calling display.
+     */
+    public function queueOrders(): JsonResponse
+    {
+        $orders = Order::select(['id', 'order_number', 'status', 'order_type', 'table_id', 'created_at', 'updated_at'])
+            ->with(['table:id,name'])
+            ->whereIn('status', [Order::STATUS_PREPARING, Order::STATUS_READY])
+            ->where('created_at', '>=', now()->subHours(14))
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        $preparing = $orders->where('status', Order::STATUS_PREPARING)->values();
+        $ready = $orders->where('status', Order::STATUS_READY)->values();
+
+        return $this->successResponse([
+            'preparing' => $preparing,
+            'ready' => $ready,
+        ], 'تم جلب طلبات شاشة النداء بنجاح.');
     }
 
     /**

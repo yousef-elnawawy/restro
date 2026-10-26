@@ -69,6 +69,8 @@ import {
   UserIcon,
   CheckIcon,
   SendIcon,
+  CopyIcon,
+  ShieldCheckIcon,
 } from "lucide-react"
 
 // تفاصيل حالات طلب التوصيل الموحدة مع النظام
@@ -286,7 +288,17 @@ export default function DeliveryOperationsPage() {
     status: "available",
     is_active: true,
     notes: "",
+    email: "",
+    password: "",
   })
+
+  // نافذة عرض بيانات دخول المندوب المنشأة تلقائياً
+  const [createdCredentials, setCreatedCredentials] = React.useState<{
+    name: string
+    phone: string
+    email: string
+    password?: string
+  } | null>(null)
 
   // نافذة تأكيد حذف مندوب
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false)
@@ -407,8 +419,16 @@ export default function DeliveryOperationsPage() {
     } else {
       const res = await createDriver(driverFormData)
       if (res.success) {
-        showToast("تمت إضافة المندوب بنجاح.", "success")
+        showToast("تمت إضافة المندوب وتوليد حساب مستخدم خاص به تلقائياً.", "success")
         setDriverModalOpen(false)
+        if (res.data?.generated_credentials) {
+          setCreatedCredentials({
+            name: driverFormData.name,
+            phone: driverFormData.phone,
+            email: res.data.generated_credentials.email,
+            password: res.data.generated_credentials.password,
+          })
+        }
         setDriverFormData({
           name: "",
           phone: "",
@@ -417,6 +437,8 @@ export default function DeliveryOperationsPage() {
           status: "available",
           is_active: true,
           notes: "",
+          email: "",
+          password: "",
         })
       } else {
         showToast(res.message, "error")
@@ -509,6 +531,8 @@ export default function DeliveryOperationsPage() {
                 status: "available",
                 is_active: true,
                 notes: "",
+                email: "",
+                password: "",
               })
               setDriverModalOpen(true)
             }}
@@ -987,8 +1011,14 @@ export default function DeliveryOperationsPage() {
                           </div>
                           <div>
                             <div className="font-semibold text-foreground text-sm">{driver.name}</div>
+                            {driver.user?.email && (
+                              <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 mt-0.5">
+                                <ShieldCheckIcon className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                <span className="truncate max-w-[150px]">{driver.user.email}</span>
+                              </div>
+                            )}
                             {driver.notes && (
-                              <div className="text-[10px] text-muted-foreground line-clamp-1">{driver.notes}</div>
+                              <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{driver.notes}</div>
                             )}
                           </div>
                         </div>
@@ -1065,6 +1095,8 @@ export default function DeliveryOperationsPage() {
                                 status: driver.status,
                                 is_active: driver.is_active,
                                 notes: driver.notes || "",
+                                email: driver.user?.email || "",
+                                password: "",
                               })
                               setDriverModalOpen(true)
                             }}
@@ -1410,6 +1442,47 @@ export default function DeliveryOperationsPage() {
               />
             </div>
 
+            {/* تفاصيل حساب الدخول الذكي للمندوب */}
+            <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <ShieldCheckIcon className="size-4 text-primary shrink-0" />
+                  حساب الدخول للنظام (تلقائي ذكي)
+                </span>
+                <Badge variant="outline" className="text-[10px] bg-background/80 text-primary border-primary/30">
+                  صلاحية كابتن التوصيل
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                يتم ربط المندوب بحساب دخول فوري. يمكنه الدخول باستخدام رقم هاتفه أو بريده، وتكون كلمة المرور الافتراضية هي رقم الهاتف.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-foreground">البريد الإلكتروني (اختياري)</label>
+                  <Input
+                    type="email"
+                    value={driverFormData.email || ""}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, email: e.target.value })}
+                    placeholder={driverFormData.phone ? `driver.${driverFormData.phone.replace(/\D/g, "")}@restro.com` : "يُنشأ تلقائياً"}
+                    dir="ltr"
+                    className="h-8 rounded-lg text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-foreground">كلمة المرور (اختياري)</label>
+                  <Input
+                    type="text"
+                    value={driverFormData.password || ""}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, password: e.target.value })}
+                    placeholder={editingDriver ? "اتركه فارغاً للإبقاء عليها" : "افتراضياً: رقم الهاتف"}
+                    dir="ltr"
+                    className="h-8 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
             <DialogFooter className="pt-2">
               <Button
                 type="button"
@@ -1450,6 +1523,69 @@ export default function DeliveryOperationsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* =========================================================================
+          نافذة عرض بيانات دخول المندوب المنشأة تلقائياً
+          ========================================================================= */}
+      <Dialog open={!!createdCredentials} onOpenChange={(open) => !open && setCreatedCredentials(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2Icon className="size-5 shrink-0" />
+              <span>تم إنشاء حساب المندوب بنجاح!</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              تم إضافة المندوب ({createdCredentials?.name}) وتوليد حساب مستخدم له في النظام للوصول إلى لوحة التحكم فوراً.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 p-3.5 rounded-xl bg-muted/60 border border-border/80 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-border/50">
+              <span className="text-muted-foreground font-medium">اسم الدخول / الهاتف:</span>
+              <span className="font-bold font-mono text-foreground">{createdCredentials?.phone}</span>
+            </div>
+            <div className="flex items-center justify-between pb-2 border-b border-border/50">
+              <span className="text-muted-foreground font-medium">البريد الإلكتروني:</span>
+              <span className="font-mono text-foreground text-[11px]">{createdCredentials?.email}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground font-medium">كلمة المرور:</span>
+              <span className="font-bold font-mono text-primary bg-primary/10 px-2 py-0.5 rounded text-sm">
+                {createdCredentials?.password}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-[11px] text-muted-foreground bg-primary/5 p-2.5 rounded-lg border border-primary/10">
+            💡 يمكن للمندوب تسجيل الدخول مباشرة برقم هاتفه وكلمة المرور من شاشة تسجيل الدخول العادية وسينتقل مباشرة لصفحة التوصيل.
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const text = `بيانات دخولك لمنظومة التوصيل:\nالاسم: ${createdCredentials?.name}\nرقم الهاتف أو البريد: ${createdCredentials?.phone}\nكلمة المرور: ${createdCredentials?.password}`;
+                navigator.clipboard.writeText(text);
+                showToast("تم نسخ بيانات الدخول إلى الحافظة بنجاح.", "success");
+              }}
+              className="gap-1.5 text-xs rounded-lg"
+            >
+              <CopyIcon className="size-3.5" />
+              <span>نسخ بيانات الدخول</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setCreatedCredentials(null)}
+              className="text-xs rounded-lg font-bold"
+            >
+              تم
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   )
 }

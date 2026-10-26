@@ -102,12 +102,12 @@ export function LoginForm({
 
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="email">البريد الإلكتروني</FieldLabel>
+                <FieldLabel htmlFor="email">البريد الإلكتروني أو رقم الهاتف</FieldLabel>
                 <div className="relative flex items-center">
                   <Input
                     id="email"
-                    type="email"
-                    placeholder="ادخل الايميل"
+                    type="text"
+                    placeholder="مثال: admin@restro.com أو 01012345678"
                     dir="ltr"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

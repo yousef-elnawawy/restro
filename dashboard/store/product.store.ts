@@ -10,6 +10,7 @@ import {
   deleteProductApi,
   toggleProductStatusApi,
 } from "@/lib/api"
+import { getCachedCatalog, setCachedCatalog } from "@/lib/offline-db"
 
 interface ProductState {
   products: Product[]
@@ -116,6 +117,9 @@ export const useProductStore = create<ProductState>()((set, get) => ({
           inactive: (pagination?.total ?? productsList.length) - productsList.filter((p) => p.is_active).length,
         }
 
+        // Save products to offline cache
+        setCachedCatalog("products", productsList)
+
         set({
           products: productsList,
           pagination,
@@ -125,16 +129,26 @@ export const useProductStore = create<ProductState>()((set, get) => ({
           error: null,
         })
       } else {
+        const cached = await getCachedCatalog<Product[]>("products")
+        if (cached && cached.length > 0) {
+          set({ products: cached, isLoading: false, error: null })
+        } else {
+          set({
+            error: extractErrorMessage(res, "فشل في تحميل المنتجات."),
+            isLoading: false,
+          })
+        }
+      }
+    } catch {
+      const cached = await getCachedCatalog<Product[]>("products")
+      if (cached && cached.length > 0) {
+        set({ products: cached, isLoading: false, error: null })
+      } else {
         set({
-          error: extractErrorMessage(res, "فشل في تحميل المنتجات."),
+          error: "تعذر الاتصال بالخادم لجلب المنتجات.",
           isLoading: false,
         })
       }
-    } catch {
-      set({
-        error: "تعذر الاتصال بالخادم لجلب المنتجات.",
-        isLoading: false,
-      })
     }
   },
 

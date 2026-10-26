@@ -37,7 +37,13 @@ interface DeliveryDriverState {
   fetchDrivers: () => Promise<void>
   createDriver: (
     payload: CreateDeliveryDriverPayload
-  ) => Promise<{ success: boolean; message: string; data?: DeliveryDriver }>
+  ) => Promise<{
+    success: boolean
+    message: string
+    data?: DeliveryDriver & {
+      generated_credentials?: { email: string; password?: string; login_identifier?: string }
+    }
+  }>
   updateDriver: (
     id: number,
     payload: UpdateDeliveryDriverPayload

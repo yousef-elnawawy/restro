@@ -4,6 +4,7 @@ import {
   getSettingsApi,
   updateSettingsApi,
 } from "@/lib/api"
+import { getCachedCatalog, setCachedCatalog } from "@/lib/offline-db"
 
 export const defaultSettings: RestaurantSettings = {
   restaurant_name: "مطعم ريسترو",
@@ -50,20 +51,28 @@ export const useSettingStore = create<SettingState>()((set, get) => ({
     try {
       const res = await getSettingsApi()
       if (res.success && res.data) {
+        const merged = { ...defaultSettings, ...res.data }
+        setCachedCatalog("settings", merged)
         set({
-          settings: { ...defaultSettings, ...res.data },
+          settings: merged,
           isLoading: false,
           isInitialized: true,
           error: null,
         })
       } else {
-        set({ isLoading: false, isInitialized: true })
+        const cached = await getCachedCatalog<RestaurantSettings>("settings")
+        set({
+          settings: cached || defaultSettings,
+          isLoading: false,
+          isInitialized: true,
+        })
       }
     } catch {
+      const cached = await getCachedCatalog<RestaurantSettings>("settings")
       set({
+        settings: cached || defaultSettings,
         isLoading: false,
         isInitialized: true,
-        error: "تعذر الاتصال بالخادم لجلب الإعدادات.",
       })
     }
   },

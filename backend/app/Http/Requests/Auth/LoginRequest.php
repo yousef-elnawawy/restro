@@ -23,7 +23,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'email' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -36,8 +36,7 @@ class LoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.required' => 'حقل البريد الإلكتروني مطلوب.',
-            'email.email' => 'البريد الإلكتروني المدخل غير صالح.',
+            'email.required' => 'حقل البريد الإلكتروني أو رقم الهاتف مطلوب.',
             'password.required' => 'حقل كلمة المرور مطلوب.',
         ];
     }

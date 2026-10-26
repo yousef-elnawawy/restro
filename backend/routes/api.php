@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\Products\ProductController;
 use App\Http\Controllers\Api\Settings\SettingController;
 use App\Http\Controllers\Api\Tables\TableController;
 use App\Http\Controllers\Api\Users\UserController;
+use App\Http\Controllers\Api\Analytics\AnalyticsController;
+use App\Http\Controllers\Api\Shifts\ShiftController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,26 +52,38 @@ Route::get('tables', [TableController::class, 'index']);
 Route::get('tables/{table}', [TableController::class, 'show']);
 Route::get('tables/{table}/active-order', [TableController::class, 'activeOrder']);
 
-Route::get('orders', [OrderController::class, 'index']);
-Route::get('orders/{order}', [OrderController::class, 'show']);
+// Public Order tracking, queue display, and placing orders
 Route::post('orders', [OrderController::class, 'store']);
-Route::put('orders/{order}', [OrderController::class, 'update']);
-Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
-Route::patch('orders/{order}/driver', [OrderController::class, 'assignDriver']);
-Route::post('orders/{order}/pay', [OrderController::class, 'pay']);
-Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
+Route::get('orders/{order}', [OrderController::class, 'show']);
+Route::get('queue/orders', [OrderController::class, 'queueOrders']);
+
+// Protected Order Management (Admin, Cashier, Kitchen, Delivery)
+Route::middleware(['auth:sanctum', 'role:admin,cashier,kitchen,delivery'])->group(function () {
+    Route::get('orders', [OrderController::class, 'index']);
+    Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
+    Route::patch('orders/{order}/driver', [OrderController::class, 'assignDriver']);
+});
+
+// Protected Order Actions (Admin & Cashier only)
+Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
+    Route::put('orders/{order}', [OrderController::class, 'update']);
+    Route::post('orders/{order}/pay', [OrderController::class, 'pay']);
+    Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
+});
 
 Route::get('cash-registers', [CashRegisterController::class, 'index']);
 Route::get('cash-registers/{cash_register}', [CashRegisterController::class, 'show']);
 Route::get('cash-registers/{cash_register}/statement', [CashRegisterController::class, 'statement']);
 
-// Customers CRUD & Statement
-Route::get('customers', [CustomerController::class, 'index']);
-Route::get('customers/{customer}', [CustomerController::class, 'show']);
-Route::get('customers/{customer}/statement', [CustomerController::class, 'statement']);
-Route::post('customers', [CustomerController::class, 'store']);
-Route::put('customers/{customer}', [CustomerController::class, 'update']);
-Route::delete('customers/{customer}', [CustomerController::class, 'destroy']);
+// Customers CRUD & Statement (Admin & Cashier)
+Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
+    Route::get('customers', [CustomerController::class, 'index']);
+    Route::get('customers/{customer}', [CustomerController::class, 'show']);
+    Route::get('customers/{customer}/statement', [CustomerController::class, 'statement']);
+    Route::post('customers', [CustomerController::class, 'store']);
+    Route::put('customers/{customer}', [CustomerController::class, 'update']);
+    Route::delete('customers/{customer}', [CustomerController::class, 'destroy']);
+});
 
 // Financial Transactions & Vouchers (سندات القبض والدفع والمصاريف - Admin & Cashier)
 Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
@@ -89,11 +103,22 @@ Route::middleware(['auth:sanctum', 'role:admin,cashier,delivery'])->group(functi
     Route::patch('delivery-drivers/{delivery_driver}/status', [DeliveryDriverController::class, 'updateStatus']);
 });
 
-// Admin Only Settings & Reports
+// Shifts & Z-Reports (Admin & Cashier)
+Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
+    Route::get('shifts/current', [ShiftController::class, 'current']);
+    Route::post('shifts/open', [ShiftController::class, 'open']);
+    Route::post('shifts/{id}/close', [ShiftController::class, 'close']);
+    Route::get('shifts', [ShiftController::class, 'index']);
+    Route::get('shifts/{id}', [ShiftController::class, 'show']);
+});
+
+// Admin Only Settings, Reports & Analytics
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::put('settings', [SettingController::class, 'update']);
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('reports', [DashboardController::class, 'reports']);
+    Route::get('analytics/menu-engineering', [AnalyticsController::class, 'menuEngineering']);
+    Route::get('analytics/peak-hours', [AnalyticsController::class, 'peakHours']);
 });
 
 // System Settings (Read-only for app info)

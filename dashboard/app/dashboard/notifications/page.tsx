@@ -9,7 +9,8 @@ import { useRegisterStore } from "@/store/register.store"
 import { useDeliveryDriverStore } from "@/store/delivery-driver.store"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "cn"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   BellIcon,
@@ -322,16 +323,16 @@ export default function NotificationsPage() {
 
                   <div className="flex items-center gap-2 shrink-0">
                     {notif.link && (
-                      <Link href={notif.link}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => markSingleAsRead(notif.id)}
-                          className="h-8 text-xs rounded-lg gap-1 border-border/60 hover:bg-primary/10 hover:text-primary"
-                        >
-                          <span>{notif.linkText || "عرض"}</span>
-                          <ArrowRightIcon className="size-3.5" />
-                        </Button>
+                      <Link
+                        href={notif.link}
+                        onClick={() => markSingleAsRead(notif.id)}
+                        className={cn(
+                          buttonVariants({ variant: "outline", size: "sm" }),
+                          "h-8 text-xs rounded-lg gap-1 border-border/60 hover:bg-primary/10 hover:text-primary"
+                        )}
+                      >
+                        <span>{notif.linkText || "عرض"}</span>
+                        <ArrowRightIcon className="size-3.5" />
                       </Link>
                     )}
                     {notif.unread && (

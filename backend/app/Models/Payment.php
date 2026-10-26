@@ -15,6 +15,7 @@ class Payment extends Model
     protected $fillable = [
         'order_id',
         'cash_register_id',
+        'shift_id',
         'amount',
         'payment_method',
         'notes',
@@ -37,5 +38,10 @@ class Payment extends Model
     public function cashRegister(): BelongsTo
     {
         return $this->belongsTo(CashRegister::class, 'cash_register_id');
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class, 'shift_id');
     }
 }

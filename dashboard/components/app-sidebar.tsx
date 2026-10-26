@@ -35,6 +35,7 @@ import {
   BarChart3Icon,
   BellIcon,
   ShieldCheckIcon,
+  TvIcon,
 } from "lucide-react"
 
 const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001"
@@ -63,6 +64,12 @@ const data = {
       title: "شاشة المطبخ (KDS)",
       url: "/dashboard/kitchen",
       icon: <ChefHatIcon />,
+    },
+
+    {
+      title: "شاشة نداء العملاء (TV)",
+      url: "/queue",
+      icon: <TvIcon />,
     },
 
     {
@@ -172,7 +179,7 @@ export function AppSidebar({
   const filteredNavMain = React.useMemo(() => {
     if (role === "kitchen") {
       return data.navMain.filter((item) =>
-        ["/dashboard/kitchen", "/dashboard/orders"].includes(item.url)
+        ["/dashboard/kitchen", "/dashboard/orders", "/queue"].includes(item.url)
       )
     }
 
@@ -185,6 +192,7 @@ export function AppSidebar({
           "/dashboard/delivery",
           "/dashboard/customers",
           "/dashboard/registers",
+          "/queue",
         ].includes(item.url)
       )
     }
@@ -231,12 +239,8 @@ export function AppSidebar({
               size="lg"
               render={<Link href={defaultHomeUrl} />}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground overflow-hidden">
-                {settings?.logo ? (
-                  <img src={settings.logo} alt="شعار المطعم" className="size-full object-contain p-0.5" />
-                ) : (
-                  <UtensilsIcon className="size-4" />
-                )}
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <UtensilsIcon className="size-4" />
               </div>
 
               <div className="grid flex-1 text-right text-sm leading-tight">

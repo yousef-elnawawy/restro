@@ -16,6 +16,7 @@ class FinancialTransaction extends Model
         'transaction_type',
         'voucher_number',
         'cash_register_id',
+        'shift_id',
         'customer_id',
         'order_id',
         'amount',
@@ -39,6 +40,11 @@ class FinancialTransaction extends Model
     public function cashRegister(): BelongsTo
     {
         return $this->belongsTo(CashRegister::class, 'cash_register_id');
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class, 'shift_id');
     }
 
     public function customer(): BelongsTo

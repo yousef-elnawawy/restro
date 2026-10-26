@@ -13,6 +13,7 @@ import {
   updateTableStatusApi,
   toggleTableActiveApi,
 } from "@/lib/api"
+import { getCachedCatalog, setCachedCatalog } from "@/lib/offline-db"
 
 function extractErrorMessage(
   res: { message?: string; errors?: Record<string, string[] | string | number> },
@@ -86,17 +87,28 @@ export const useTableStore = create<TableState>()((set, get) => ({
 
       if (res.success && res.data) {
         set({ tables: res.data, isLoading: false, error: null })
+        setCachedCatalog("tables", res.data)
+      } else {
+        const cached = await getCachedCatalog<RestaurantTable[]>("tables")
+        if (cached && cached.length > 0) {
+          set({ tables: cached, isLoading: false, error: null })
+        } else {
+          set({
+            error: extractErrorMessage(res, "فشل في تحميل بيانات الطاولات."),
+            isLoading: false,
+          })
+        }
+      }
+    } catch {
+      const cached = await getCachedCatalog<RestaurantTable[]>("tables")
+      if (cached && cached.length > 0) {
+        set({ tables: cached, isLoading: false, error: null })
       } else {
         set({
-          error: extractErrorMessage(res, "فشل في تحميل بيانات الطاولات."),
+          error: "تعذر الاتصال بالخادم لجلب بيانات الطاولات.",
           isLoading: false,
         })
       }
-    } catch {
-      set({
-        error: "تعذر الاتصال بالخادم لجلب بيانات الطاولات.",
-        isLoading: false,
-      })
     }
   },
 

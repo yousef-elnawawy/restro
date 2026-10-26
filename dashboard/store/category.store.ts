@@ -8,6 +8,7 @@ import {
   deleteCategoryApi,
   toggleCategoryStatusApi,
 } from "@/lib/api"
+import { getCachedCatalog, setCachedCatalog } from "@/lib/offline-db"
 
 interface CategoryState {
   categories: Category[]
@@ -65,17 +66,28 @@ export const useCategoryStore = create<CategoryState>()((set, get) => ({
 
       if (res.success && res.data) {
         set({ categories: res.data, isLoading: false, error: null })
+        setCachedCatalog("categories", res.data)
+      } else {
+        const cached = await getCachedCatalog<Category[]>("categories")
+        if (cached && cached.length > 0) {
+          set({ categories: cached, isLoading: false, error: null })
+        } else {
+          set({
+            error: extractErrorMessage(res, "فشل في تحميل الأقسام."),
+            isLoading: false,
+          })
+        }
+      }
+    } catch {
+      const cached = await getCachedCatalog<Category[]>("categories")
+      if (cached && cached.length > 0) {
+        set({ categories: cached, isLoading: false, error: null })
       } else {
         set({
-          error: extractErrorMessage(res, "فشل في تحميل الأقسام."),
+          error: "تعذر الاتصال بالخادم لجلب الأقسام.",
           isLoading: false,
         })
       }
-    } catch {
-      set({
-        error: "تعذر الاتصال بالخادم لجلب الأقسام.",
-        isLoading: false,
-      })
     }
   },
 

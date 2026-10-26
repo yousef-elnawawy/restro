@@ -21,7 +21,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "cn"
 import {
   Table,
   TableBody,
@@ -291,7 +292,7 @@ export default function DashboardPage() {
             </div>
             <Badge variant="outline" className="gap-1 bg-primary/5 text-primary border-primary/20 text-xs">
               <ClockIcon className="size-3" />
-              <span>اليوم</span>
+              <span>{summary?.is_today === false ? "الوردية السابقة" : "اليوم"}</span>
             </Badge>
           </CardHeader>
           <CardContent className="pt-4">
@@ -317,6 +318,7 @@ export default function DashboardPage() {
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
+                    interval={0}
                     className="text-xs fill-muted-foreground font-medium"
                   />
                   <YAxis
@@ -331,7 +333,22 @@ export default function DashboardPage() {
                     content={
                       <ChartTooltipContent
                         indicator="dot"
-                        formatter={(value: any) => `${Number(value).toLocaleString()} ${currency}`}
+                        labelFormatter={(value: any, payload: any) => {
+                          const item = payload?.[0]?.payload
+                          return item?.full_time || value
+                        }}
+                        formatter={(value: any, name: any, item: any) => (
+                          <div className="flex items-center justify-between gap-3 text-xs">
+                            <span className="font-semibold text-foreground">
+                              {Number(value).toLocaleString()} {currency}
+                            </span>
+                            {item?.payload?.orders ? (
+                              <span className="text-[11px] text-muted-foreground">
+                                ({item.payload.orders} {item.payload.orders === 1 ? "طلب" : "طلبات"})
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
                       />
                     }
                   />
@@ -556,10 +573,11 @@ export default function DashboardPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Link href={`/dashboard/pos?orderId=${order.order_id}`}>
-                              <Button size="xs" variant="outline" className="text-xs h-7 rounded-lg">
-                                تفاصيل / دفع
-                              </Button>
+                            <Link
+                              href={`/dashboard/pos?orderId=${order.order_id}`}
+                              className={cn(buttonVariants({ variant: "outline", size: "xs" }), "text-xs h-7 rounded-lg inline-flex")}
+                            >
+                              تفاصيل / دفع
                             </Link>
                           </TableCell>
                         </TableRow>
@@ -725,16 +743,18 @@ export default function DashboardPage() {
                   </div>
 
                   {tbl.status === "occupied" ? (
-                    <Link href={`/dashboard/pos?tableId=${tbl.table_id}`} className="mt-2.5 block">
-                      <Button size="xs" variant="outline" className="w-full text-[11px] h-7 rounded-lg">
-                        عرض الفاتورة
-                      </Button>
+                    <Link
+                      href={tbl.order_id ? `/dashboard/pos?orderId=${tbl.order_id}&tableId=${tbl.table_id}` : `/dashboard/pos?tableId=${tbl.table_id}`}
+                      className={cn(buttonVariants({ variant: "outline", size: "xs" }), "w-full text-[11px] h-7 rounded-lg mt-2.5 flex")}
+                    >
+                      عرض الفاتورة
                     </Link>
                   ) : (
-                    <Link href={`/dashboard/pos?tableId=${tbl.table_id}`} className="mt-2.5 block">
-                      <Button size="xs" variant="ghost" className="w-full text-[11px] h-7 rounded-lg hover:bg-primary/10 hover:text-primary">
-                        فتح طلب
-                      </Button>
+                    <Link
+                      href={`/dashboard/pos?tableId=${tbl.table_id}`}
+                      className={cn(buttonVariants({ variant: "ghost", size: "xs" }), "w-full text-[11px] h-7 rounded-lg hover:bg-primary/10 hover:text-primary mt-2.5 flex")}
+                    >
+                      فتح طلب
                     </Link>
                   )}
                 </Card>

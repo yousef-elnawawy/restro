@@ -1230,6 +1230,17 @@ export interface DeliveryDriver {
   status: "available" | "on_delivery" | "off_duty"
   is_active: boolean
   notes?: string | null
+  user?: {
+    id: number
+    name: string
+    email: string
+    role: string
+  } | null
+  generated_credentials?: {
+    email: string
+    password?: string
+    login_identifier?: string
+  }
   created_at?: string
   updated_at?: string
 }
@@ -1652,6 +1663,8 @@ export interface CreateDeliveryDriverPayload {
   status?: "available" | "on_delivery" | "off_duty"
   is_active?: boolean
   notes?: string
+  email?: string
+  password?: string
 }
 
 export interface UpdateDeliveryDriverPayload {
@@ -1662,6 +1675,8 @@ export interface UpdateDeliveryDriverPayload {
   status?: "available" | "on_delivery" | "off_duty"
   is_active?: boolean
   notes?: string
+  email?: string
+  password?: string
 }
 
 export async function getDeliveryDriversApi(params?: {
@@ -2078,10 +2093,13 @@ export interface DashboardSummary {
     off_duty: number
   }
   currency: string
+  stats_date?: string
+  is_today?: boolean
 }
 
 export interface HourlySalesPoint {
   time: string
+  full_time?: string
   sales: number
   orders: number
 }
@@ -2120,6 +2138,7 @@ export interface TopDishItem {
 export interface DashboardTableItem {
   id: string
   table_id: number
+  order_id?: number | null
   seats: number
   status: TableStatus
   orderId: string
@@ -2363,5 +2382,317 @@ export async function deleteStaffUserApi(
   }
 }
 
+/* =========================================================
+   Shifts & Z-Report API (الورديات وتقفيل اليومية والدرج)
+   ========================================================= */
 
+export interface Shift {
+  id: number
+  user_id: number
+  cash_register_id: number
+  shift_number: string
+  z_report_number?: string | null
+  opened_at: string
+  closed_at?: string | null
+  starting_cash: number
+  expected_cash?: number | null
+  actual_cash?: number | null
+  difference?: number | null
+  total_sales: number
+  cash_sales: number
+  card_sales: number
+  transfer_sales: number
+  total_orders: number
+  total_expenses: number
+  total_receipts: number
+  status: "open" | "closed"
+  opening_notes?: string | null
+  closing_notes?: string | null
+  user?: { id: number; name: string; email: string }
+  cash_register?: CashRegister
+  live_metrics?: {
+    starting_cash: number
+    cash_sales: number
+    card_sales: number
+    transfer_sales: number
+    total_sales: number
+    total_orders: number
+    total_receipts: number
+    total_expenses: number
+    expected_cash: number
+  }
+}
 
+export interface ZReportData {
+  restaurant_name: string
+  currency: string
+  shift_number: string
+  z_report_number: string
+  cashier_name: string
+  register_name: string
+  opened_at?: string | null
+  closed_at?: string | null
+  status: "open" | "closed"
+  starting_cash: number
+  sales: {
+    cash: number
+    card: number
+    transfer: number
+    total: number
+    orders_count: number
+  }
+  movements: {
+    cash_receipts: number
+    cash_expenses: number
+  }
+  cash_drawer: {
+    starting: number
+    expected: number
+    actual?: number | null
+    difference?: number | null
+    discrepancy_status: "surplus" | "shortage" | "matched"
+  }
+  notes: {
+    opening?: string | null
+    closing?: string | null
+  }
+}
+
+export async function getCurrentShiftApi(registerId?: number): Promise<ApiResponse<Shift | null>> {
+  const token = getAuthToken()
+  const query = registerId ? `?cash_register_id=${registerId}` : ""
+  try {
+    const res = await fetch(`${API_URL}/shifts/current${query}`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+    return await res.json()
+  } catch {
+    return { success: false, message: "تعذر التحقق من حالة الوردية." }
+  }
+}
+
+export async function openShiftApi(payload: {
+  cash_register_id: number
+  starting_cash: number
+  opening_notes?: string
+}): Promise<ApiResponse<Shift>> {
+  const token = getAuthToken()
+  try {
+    const res = await fetch(`${API_URL}/shifts/open`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    })
+    return await res.json()
+  } catch {
+    return { success: false, message: "تعذر فتح الوردية." }
+  }
+}
+
+export async function closeShiftApi(
+  shiftId: number,
+  payload: {
+    actual_cash: number
+    closing_notes?: string
+  }
+): Promise<ApiResponse<{ shift: Shift; z_report: ZReportData }>> {
+  const token = getAuthToken()
+  try {
+    const res = await fetch(`${API_URL}/shifts/${shiftId}/close`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    })
+    return await res.json()
+  } catch {
+    return { success: false, message: "تعذر إغلاق الوردية وإصدار تقرير Z-Report." }
+  }
+}
+
+export async function getShiftsApi(params?: {
+  cash_register_id?: number | "all"
+  status?: string
+  date_from?: string
+  date_to?: string
+}): Promise<ApiResponse<{ data: Shift[]; total: number } | Shift[]>> {
+  const token = getAuthToken()
+  const q = new URLSearchParams()
+  if (params?.cash_register_id && params.cash_register_id !== "all") q.append("cash_register_id", String(params.cash_register_id))
+  if (params?.status && params.status !== "all") q.append("status", params.status)
+  if (params?.date_from) q.append("date_from", params.date_from)
+  if (params?.date_to) q.append("date_to", params.date_to)
+
+  try {
+    const res = await fetch(`${API_URL}/shifts?${q.toString()}`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+    return await res.json()
+  } catch {
+    return { success: false, message: "تعذر جلب سجل الورديات." }
+  }
+}
+
+export async function getShiftDetailsApi(
+  shiftId: number
+): Promise<ApiResponse<{ shift: Shift; z_report: ZReportData }>> {
+  const token = getAuthToken()
+  try {
+    const res = await fetch(`${API_URL}/shifts/${shiftId}`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+    return await res.json()
+  } catch {
+    return { success: false, message: "تعذر جلب تفاصيل الوردية." }
+  }
+}
+
+/* =========================================================
+   Queue Display Orders API (شاشة استدعاء العملاء)
+   ========================================================= */
+
+export interface QueueOrder {
+  id: number
+  order_number: string
+  status: "preparing" | "ready"
+  order_type: "dinein" | "takeaway" | "delivery"
+  table?: { id: number; name: string } | null
+  created_at: string
+  updated_at: string
+}
+
+export interface QueueData {
+  preparing: QueueOrder[]
+  ready: QueueOrder[]
+}
+
+export async function getQueueOrdersApi(): Promise<ApiResponse<QueueData>> {
+  try {
+    const res = await fetch(`${API_URL}/queue/orders`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+    return await res.json()
+  } catch {
+    return { success: false, message: "تعذر جلب طلبات شاشة الانتظار." }
+  }
+}
+
+/* =========================================================
+   Analytics & Menu Engineering API (تحليلات هندسة المنيو وساعات الذروة)
+   ========================================================= */
+
+export interface MenuEngineeringItem {
+  id: number
+  name: string
+  category_name: string
+  image?: string | null
+  price: number
+  estimated_cost: number
+  unit_margin: number
+  quantity_sold: number
+  total_revenue: number
+  total_margin: number
+  category: "star" | "plowhorse" | "puzzle" | "dog"
+  category_label: string
+  badge_color: "emerald" | "amber" | "blue" | "rose"
+  recommendation: string
+}
+
+export interface MenuEngineeringData {
+  matrix: {
+    stars: MenuEngineeringItem[]
+    plowhorses: MenuEngineeringItem[]
+    puzzles: MenuEngineeringItem[]
+    dogs: MenuEngineeringItem[]
+  }
+  summary: {
+    total_products: number
+    total_quantity_sold: number
+    total_revenue: number
+    avg_popularity_threshold: number
+    avg_margin_threshold: number
+    currency: string
+    date_from: string
+    date_to: string
+  }
+}
+
+export interface PeakHoursData {
+  days_labels: Record<number, string>
+  heatmap_grid: {
+    day: number
+    day_name: string
+    hour: number
+    hour_label: string
+    orders_count: number
+    total_sales: number
+  }[]
+  hourly_aggregate: {
+    hour: number
+    hour_label: string
+    count: number
+    sales: number
+  }[]
+  top_peak_hours: {
+    hour_label: string
+    orders_count: number
+    total_sales: number
+  }[]
+  total_analyzed_orders: number
+  period_days: number
+  currency: string
+}
+
+export async function getMenuEngineeringApi(params?: {
+  date_from?: string
+  date_to?: string
+}): Promise<ApiResponse<MenuEngineeringData>> {
+  const token = getAuthToken()
+  const q = new URLSearchParams()
+  if (params?.date_from) q.append("date_from", params.date_from)
+  if (params?.date_to) q.append("date_to", params.date_to)
+
+  try {
+    const res = await fetch(`${API_URL}/analytics/menu-engineering?${q.toString()}`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+    return await res.json()
+  } catch {
+    return { success: false, message: "تعذر جلب تحليل هندسة المنيو." }
+  }
+}
+
+export async function getPeakHoursApi(days = 30): Promise<ApiResponse<PeakHoursData>> {
+  const token = getAuthToken()
+  try {
+    const res = await fetch(`${API_URL}/analytics/peak-hours?days=${days}`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+    return await res.json()
+  } catch {
+    return { success: false, message: "تعذر جلب تحليلات ساعات الذروة." }
+  }
+}

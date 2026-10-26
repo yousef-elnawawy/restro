@@ -8,6 +8,7 @@ import {
   deleteModifierApi,
   toggleModifierStatusApi,
 } from "@/lib/api"
+import { getCachedCatalog, setCachedCatalog } from "@/lib/offline-db"
 
 interface ModifierState {
   modifiers: Modifier[]
@@ -50,17 +51,28 @@ export const useModifierStore = create<ModifierState>()((set, get) => ({
 
       if (res.success && res.data) {
         set({ modifiers: res.data, isLoading: false, error: null })
+        setCachedCatalog("modifiers", res.data)
+      } else {
+        const cached = await getCachedCatalog<Modifier[]>("modifiers")
+        if (cached && cached.length > 0) {
+          set({ modifiers: cached, isLoading: false, error: null })
+        } else {
+          set({
+            error: res.message || "فشل في تحميل الإضافات.",
+            isLoading: false,
+          })
+        }
+      }
+    } catch {
+      const cached = await getCachedCatalog<Modifier[]>("modifiers")
+      if (cached && cached.length > 0) {
+        set({ modifiers: cached, isLoading: false, error: null })
       } else {
         set({
-          error: res.message || "فشل في تحميل الإضافات.",
+          error: "تعذر الاتصال بالخادم لجلب الإضافات.",
           isLoading: false,
         })
       }
-    } catch {
-      set({
-        error: "تعذر الاتصال بالخادم لجلب الإضافات.",
-        isLoading: false,
-      })
     }
   },
 

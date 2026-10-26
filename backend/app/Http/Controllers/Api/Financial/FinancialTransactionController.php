@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CashRegister;
 use App\Models\Customer;
 use App\Models\FinancialTransaction;
+use App\Models\Shift;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,13 +55,13 @@ class FinancialTransactionController extends Controller
             });
         }
 
-        $transactions = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
-
-        // Calculate summary metrics
-        $totalReceipts = (float) FinancialTransaction::where('transaction_type', 'receipt')->sum('amount');
-        $totalPayments = (float) FinancialTransaction::where('transaction_type', 'payment')->sum('amount');
-        $totalExpenses = (float) FinancialTransaction::where('transaction_type', 'expense')->sum('amount');
+        // Calculate summary metrics from the same filtered query BEFORE consuming it
+        $totalReceipts = (float) (clone $query)->where('transaction_type', 'receipt')->sum('amount');
+        $totalPayments = (float) (clone $query)->where('transaction_type', 'payment')->sum('amount');
+        $totalExpenses = (float) (clone $query)->where('transaction_type', 'expense')->sum('amount');
         $netFlow = $totalReceipts - ($totalPayments + $totalExpenses);
+
+        $transactions = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
 
         return $this->successResponse([
             'transactions' => $transactions,
@@ -121,10 +122,16 @@ class FinancialTransactionController extends Controller
             $paymentMethod = $validated['payment_method'] ?? 'cash';
             $customerId = $type === 'expense' ? null : ($validated['customer_id'] ?? null);
 
+            $activeShift = Shift::where('status', 'open')
+                ->where('cash_register_id', $register->id)
+                ->latest('opened_at')
+                ->first();
+
             $transaction = FinancialTransaction::create([
                 'transaction_type' => $type,
                 'voucher_number' => $voucherNumber,
                 'cash_register_id' => $register->id,
+                'shift_id' => $activeShift?->id,
                 'customer_id' => $customerId,
                 'order_id' => $validated['order_id'] ?? null,
                 'amount' => $amount,

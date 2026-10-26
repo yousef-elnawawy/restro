@@ -26,11 +26,34 @@ class DashboardController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
-        $today = Carbon::today();
+        $tz = config('app.timezone', 'Africa/Cairo');
+        $dateParam = $request->query('date');
+
+        if ($dateParam) {
+            $today = Carbon::parse($dateParam, $tz);
+        } else {
+            $today = Carbon::today($tz);
+            // If it's early morning (before 6 AM) and today has no orders yet,
+            // check if there were orders yesterday (e.g. night shift continuation)
+            $hasTodayOrders = Order::whereDate('created_at', $today)
+                ->where('status', '!=', Order::STATUS_CANCELLED)
+                ->exists();
+
+            if (! $hasTodayOrders && Carbon::now($tz)->hour < 6) {
+                $yesterday = Carbon::yesterday($tz);
+                $hasYesterdayOrders = Order::whereDate('created_at', $yesterday)
+                    ->where('status', '!=', Order::STATUS_CANCELLED)
+                    ->exists();
+                if ($hasYesterdayOrders) {
+                    $today = $yesterday;
+                }
+            }
+        }
+
         $setting = Setting::instance();
         $currency = $setting->currency ?? 'ج.م';
 
-        // 1. Today's orders & sales
+        // 1. Target day's orders & sales
         $todayOrdersQuery = Order::whereDate('created_at', $today)
             ->where('status', '!=', Order::STATUS_CANCELLED);
 
@@ -60,18 +83,20 @@ class DashboardController extends Controller
         $availableDrivers = DeliveryDriver::where('is_active', true)->where('status', 'available')->count();
         $offDutyDrivers = DeliveryDriver::where('is_active', true)->where('status', 'off_duty')->count();
 
-        // 5. Hourly sales for today (2-hour buckets)
+        // 5. Hourly sales for target day (2-hour buckets across the full 24h)
         $hourlyBuckets = [
-            ['label' => '١٢ ص', 'hour_start' => 0, 'hour_end' => 2],
-            ['label' => '٢ ص', 'hour_start' => 2, 'hour_end' => 4],
-            ['label' => '٨ ص', 'hour_start' => 8, 'hour_end' => 10],
-            ['label' => '١٠ ص', 'hour_start' => 10, 'hour_end' => 12],
-            ['label' => '١٢ م', 'hour_start' => 12, 'hour_end' => 14],
-            ['label' => '٢ م', 'hour_start' => 14, 'hour_end' => 16],
-            ['label' => '٤ م', 'hour_start' => 16, 'hour_end' => 18],
-            ['label' => '٦ م', 'hour_start' => 18, 'hour_end' => 20],
-            ['label' => '٨ م', 'hour_start' => 20, 'hour_end' => 22],
-            ['label' => '١٠ م', 'hour_start' => 22, 'hour_end' => 24],
+            ['label' => '١٢ ص', 'full_label' => '١٢:٠٠ ص - ٠٢:٠٠ ص', 'hour_start' => 0, 'hour_end' => 2],
+            ['label' => '٢ ص',  'full_label' => '٠٢:٠٠ ص - ٠٤:٠٠ ص', 'hour_start' => 2, 'hour_end' => 4],
+            ['label' => '٤ ص',  'full_label' => '٠٤:٠٠ ص - ٠٦:٠٠ ص', 'hour_start' => 4, 'hour_end' => 6],
+            ['label' => '٦ ص',  'full_label' => '٠٦:٠٠ ص - ٠٨:٠٠ ص', 'hour_start' => 6, 'hour_end' => 8],
+            ['label' => '٨ ص',  'full_label' => '٠٨:٠٠ ص - ١٠:٠٠ ص', 'hour_start' => 8, 'hour_end' => 10],
+            ['label' => '١٠ ص', 'full_label' => '١٠:٠٠ ص - ١٢:٠٠ م', 'hour_start' => 10, 'hour_end' => 12],
+            ['label' => '١٢ م', 'full_label' => '١٢:٠٠ م - ٠٢:٠٠ م', 'hour_start' => 12, 'hour_end' => 14],
+            ['label' => '٢ م',  'full_label' => '٠٢:٠٠ م - ٠٤:٠٠ م', 'hour_start' => 14, 'hour_end' => 16],
+            ['label' => '٤ م',  'full_label' => '٠٤:٠٠ م - ٠٦:٠٠ م', 'hour_start' => 16, 'hour_end' => 18],
+            ['label' => '٦ م',  'full_label' => '٠٦:٠٠ م - ٠٨:٠٠ م', 'hour_start' => 18, 'hour_end' => 20],
+            ['label' => '٨ م',  'full_label' => '٠٨:٠٠ م - ١٠:٠٠ م', 'hour_start' => 20, 'hour_end' => 22],
+            ['label' => '١٠ م', 'full_label' => '١٠:٠٠ م - ١٢:٠٠ ص', 'hour_start' => 22, 'hour_end' => 24],
         ];
 
         $todayOrders = Order::whereDate('created_at', $today)
@@ -80,14 +105,15 @@ class DashboardController extends Controller
 
         $hourlySalesData = [];
         foreach ($hourlyBuckets as $bucket) {
-            $matching = $todayOrders->filter(function ($ord) use ($bucket) {
-                $h = $ord->created_at->hour;
+            $matching = $todayOrders->filter(function ($ord) use ($bucket, $tz) {
+                $h = $ord->created_at->timezone($tz)->hour;
 
                 return $h >= $bucket['hour_start'] && $h < $bucket['hour_end'];
             });
 
             $hourlySalesData[] = [
                 'time' => $bucket['label'],
+                'full_time' => $bucket['full_label'],
                 'sales' => (float) round($matching->sum('total'), 2),
                 'orders' => (int) $matching->count(),
             ];
@@ -106,7 +132,7 @@ class DashboardController extends Controller
 
         $weeklyFinanceData = [];
         for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
+            $date = Carbon::today($tz)->subDays($i);
             $dayNameEn = $date->format('l');
             $dayNameAr = $arabicDays[$dayNameEn] ?? $dayNameEn;
 
@@ -161,7 +187,12 @@ class DashboardController extends Controller
             });
 
         // 8. Top selling dishes
-        $topDishesRaw = OrderItem::select('product_name', DB::raw('SUM(quantity) as total_qty'), DB::raw('SUM(total_price) as total_revenue'))
+        $topDishesRaw = OrderItem::select(
+                'product_name',
+                DB::raw('MAX(product_id) as product_id'),
+                DB::raw('SUM(quantity) as total_qty'),
+                DB::raw('SUM(total_price) as total_revenue')
+            )
             ->whereHas('order', function ($q) {
                 $q->where('status', '!=', Order::STATUS_CANCELLED);
             })
@@ -170,18 +201,22 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        $productIds = $topDishesRaw->pluck('product_id')->filter()->unique();
+        $productsMap = \App\Models\Product::with('category')->whereIn('id', $productIds)->get()->keyBy('id');
+
         $maxQty = $topDishesRaw->max('total_qty') ?: 1;
-        $topDishes = $topDishesRaw->map(function ($item) use ($maxQty, $currency) {
+        $topDishes = $topDishesRaw->map(function ($item) use ($maxQty, $currency, $productsMap) {
             $percent = min(100, (int) round(($item->total_qty / $maxQty) * 100));
+            $product = $item->product_id ? ($productsMap[$item->product_id] ?? null) : null;
+            $categoryName = $product?->category?->name ?? 'الأطباق الأكثر طلباً';
 
             return [
                 'name' => $item->product_name,
-                'category' => 'الأطباق الأكثر طلباً',
+                'category' => $categoryName,
                 'orders' => (int) $item->total_qty,
                 'revenue' => number_format((float) $item->total_revenue, 2).' '.$currency,
                 'raw_revenue' => (float) $item->total_revenue,
                 'percent' => $percent,
-                'growth' => '+١٠٪',
             ];
         });
 
@@ -199,6 +234,7 @@ class DashboardController extends Controller
                 return [
                     'id' => $tbl->name,
                     'table_id' => $tbl->id,
+                    'order_id' => $activeOrder ? $activeOrder->id : null,
                     'seats' => (int) $tbl->capacity,
                     'status' => $tbl->status,
                     'orderId' => $activeOrder ? $activeOrder->order_number : ($tbl->status === 'available' ? 'جاهزة للاستقبال' : 'حجز مسبق'),
@@ -267,6 +303,8 @@ class DashboardController extends Controller
                     'off_duty' => $offDutyDrivers,
                 ],
                 'currency' => $currency,
+                'stats_date' => $today->toDateString(),
+                'is_today' => $today->isToday(),
             ],
             'hourly_sales' => $hourlySalesData,
             'weekly_finance' => $weeklyFinanceData,

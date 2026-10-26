@@ -6,9 +6,11 @@ import { useRegisterStore } from "@/store/register.store"
 import { useFinancialStore } from "@/store/financial.store"
 import { useSettingStore } from "@/store/setting.store"
 import { useAuthStore } from "@/store/auth.store"
-import { type CashRegister, type CashRegisterPayload, type FinancialTransaction } from "@/lib/api"
+import { type CashRegister, type CashRegisterPayload, type FinancialTransaction, type Shift } from "@/lib/api"
 import { VoucherDialog } from "@/components/voucher-dialog"
 import { RegisterStatementDialog } from "@/components/register-statement-dialog"
+import { ZReportDialog } from "@/components/z-report-dialog"
+import { useShiftStore } from "@/store/shift.store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -51,6 +53,7 @@ import {
   Trash2Icon,
   ShieldCheckIcon,
   ReceiptIcon,
+  PrinterIcon,
   ToggleLeftIcon,
   ToggleRightIcon,
   ArrowDownLeftIcon,
@@ -97,7 +100,19 @@ export default function RegistersPage() {
   const user = useAuthStore((state) => state.user)
   const isAdmin = user?.role === "admin"
   const [mounted, setMounted] = React.useState(false)
-  const [activeTab, setActiveTab] = React.useState<"registers" | "vouchers">("registers")
+  const [activeTab, setActiveTab] = React.useState<"registers" | "vouchers" | "shifts">("registers")
+  
+  // حالة سجل الورديات
+  const {
+    shifts,
+    fetchShifts,
+    loadZReport,
+    activeZReport,
+    setActiveZReport,
+    isLoading: isShiftLoading,
+  } = useShiftStore()
+  const [shiftFilterRegisterId, setShiftFilterRegisterId] = React.useState<number | "all">("all")
+  const [shiftFilterStatus, setShiftFilterStatus] = React.useState<string>("all")
 
   React.useEffect(() => {
     setMounted(true)
@@ -428,6 +443,22 @@ export default function RegistersPage() {
           >
             <ReceiptIcon className="size-3.5" />
             <span>السندات والمصاريف ({transactions.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("shifts")
+              fetchShifts()
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer font-semibold ${
+              activeTab === "shifts"
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ShieldCheckIcon className="size-3.5 text-primary" />
+            <span>سجل الورديات و Z-Report</span>
           </button>
         </div>
 
@@ -949,6 +980,155 @@ export default function RegistersPage() {
           </div>
         </div>
       )}
+
+        {/* =====================================================================
+            التبويب الثالث: سجل الورديات وتقارير الـ Z-Report
+            ===================================================================== */}
+        {activeTab === "shifts" && (
+          <div className="space-y-3 sm:space-y-3.5">
+            {/* شريط فلاتر الورديات */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-card border border-border/60 shadow-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="w-48">
+                  <ComboboxSelect
+                    value={String(shiftFilterRegisterId)}
+                    onValueChange={(val) => {
+                      const regVal = val === "all" ? "all" : Number(val)
+                      setShiftFilterRegisterId(regVal)
+                      fetchShifts({ cash_register_id: regVal, status: shiftFilterStatus })
+                    }}
+                    options={[
+                      { value: "all", label: "جميع الخزائن" },
+                      ...registers.map((r) => ({ value: String(r.id), label: r.name })),
+                    ]}
+                    className="h-8 text-xs font-semibold"
+                  />
+                </div>
+
+                <div className="w-40">
+                  <ComboboxSelect
+                    value={shiftFilterStatus}
+                    onValueChange={(val) => {
+                      setShiftFilterStatus(val)
+                      fetchShifts({ cash_register_id: shiftFilterRegisterId, status: val })
+                    }}
+                    options={[
+                      { value: "all", label: "كافة الحالات" },
+                      { value: "open", label: "ورديات نشطة مفتوحة" },
+                      { value: "closed", label: "ورديات مغلقة ومقفلة" },
+                    ]}
+                    className="h-8 text-xs font-semibold"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fetchShifts({ cash_register_id: shiftFilterRegisterId, status: shiftFilterStatus })}
+                className="h-8 text-xs gap-1.5"
+              >
+                <RefreshCwIcon className={`size-3.5 ${isShiftLoading ? "animate-spin" : ""}`} />
+                <span>تحديث السجل</span>
+              </Button>
+            </div>
+
+            {/* جدول الورديات */}
+            <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="text-right text-xs">رقم الوردية</TableHead>
+                    <TableHead className="text-right text-xs">الكاشير</TableHead>
+                    <TableHead className="text-right text-xs">الخزينة</TableHead>
+                    <TableHead className="text-right text-xs">العهدة الافتتاحية</TableHead>
+                    <TableHead className="text-right text-xs">المبيعات</TableHead>
+                    <TableHead className="text-right text-xs">المتوقع بالدرج</TableHead>
+                    <TableHead className="text-right text-xs">الفعلي المحصي</TableHead>
+                    <TableHead className="text-right text-xs">الفارق (عجز/زيادة)</TableHead>
+                    <TableHead className="text-right text-xs">الحالة</TableHead>
+                    <TableHead className="text-left text-xs">تقرير Z-Report</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shifts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="h-32 text-center text-xs text-muted-foreground">
+                        لا توجد ورديات مسجلة مطابقة للفلاتر.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    shifts.map((s) => {
+                      const diff = s.difference ?? 0
+                      return (
+                        <TableRow key={s.id} className="hover:bg-muted/20 transition-colors">
+                          <TableCell className="font-mono text-xs font-bold text-foreground">
+                            {s.shift_number}
+                          </TableCell>
+                          <TableCell className="text-xs font-medium">{s.user?.name || "غير محدد"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{s.cash_register?.name || "—"}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {Number(s.starting_cash || 0).toFixed(2)} {currency}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-primary">
+                            {Number(s.total_sales || 0).toFixed(2)} {currency}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {s.expected_cash !== null ? `${Number(s.expected_cash).toFixed(2)} ${currency}` : "—"}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-foreground">
+                            {s.actual_cash !== null ? `${Number(s.actual_cash).toFixed(2)} ${currency}` : "—"}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {s.difference !== null ? (
+                              <span
+                                className={`font-bold ${
+                                  diff === 0
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : diff > 0
+                                    ? "text-blue-600 dark:text-blue-400"
+                                    : "text-rose-600 dark:text-rose-400"
+                                }`}
+                              >
+                                {diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2)} {currency}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                s.status === "open"
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                  : "bg-slate-500/15 text-slate-600 dark:text-slate-400"
+                              }`}
+                            >
+                              {s.status === "open" ? "مفتوحة نشطة" : "مغلقة"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-left">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => loadZReport(s.id)}
+                              className="h-7 text-xs font-semibold gap-1 rounded-lg"
+                            >
+                              <PrinterIcon className="size-3 text-primary" />
+                              <span>Z-Report</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* نافذة إضافة / تعديل الخزنة */}
@@ -1110,6 +1290,13 @@ export default function RegistersPage() {
         open={statementOpen}
         onOpenChange={setStatementOpen}
         registerId={statementRegisterId}
+      />
+
+      {/* نافذة عرض وطباعة تقرير Z-Report */}
+      <ZReportDialog
+        open={!!activeZReport}
+        onOpenChange={(open) => !open && setActiveZReport(null)}
+        zReport={activeZReport}
       />
     </PageContainer>
   )

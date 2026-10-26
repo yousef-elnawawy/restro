@@ -10,6 +10,10 @@ import { useTableStore } from "@/store/table.store"
 import { useRegisterStore } from "@/store/register.store"
 import { useOrderStore } from "@/store/order.store"
 import { useSettingStore } from "@/store/setting.store"
+import { useShiftStore } from "@/store/shift.store"
+import { useOfflineStore } from "@/store/offline.store"
+import { OfflinePosIndicator } from "@/components/offline-pos-indicator"
+import { ZReportDialog } from "@/components/z-report-dialog"
 import {
   type Product,
   type ProductSize,
@@ -21,6 +25,7 @@ import {
   type Customer,
   getCustomersApi,
   createCustomerApi,
+  getTableActiveOrderApi,
 } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -66,6 +71,7 @@ import {
   SaveIcon,
   TruckIcon,
   MapPinIcon,
+  ShieldCheckIcon,
 } from "lucide-react"
 
 // نوع الصنف داخل الفاتورة
@@ -157,6 +163,7 @@ function PosContent() {
   const { registers, fetchRegisters } = useRegisterStore()
   const { createOrder, updateOrder, payOrder, getOrder } = useOrderStore()
   const { settings, fetchSettings } = useSettingStore()
+  const { isOnline, saveOrderLocally } = useOfflineStore()
   const currency = settings.currency || "ج.م"
 
   const [mounted, setMounted] = React.useState(false)
@@ -239,6 +246,29 @@ function PosContent() {
   // التبديل بين الكتالوج والفاتورة في الشاشات الصغيرة (الموبايل والتابلت)
   const [mobileTab, setMobileTab] = React.useState<"catalog" | "invoice">("catalog")
   const [viewMode, setViewMode] = React.useState<"grid" | "compact">("grid")
+
+  // حالة الورديات والـ Z-Report
+  const {
+    currentShift,
+    fetchCurrentShift,
+    openShift,
+    closeShift,
+    activeZReport,
+    setActiveZReport,
+    isActionLoading: isShiftActionLoading,
+  } = useShiftStore()
+  const [openShiftModalOpen, setOpenShiftModalOpen] = React.useState(false)
+  const [closeShiftModalOpen, setCloseShiftModalOpen] = React.useState(false)
+  const [shiftStartingCash, setShiftStartingCash] = React.useState("0")
+  const [shiftOpeningNotes, setShiftOpeningNotes] = React.useState("")
+  const [shiftActualCash, setShiftActualCash] = React.useState("")
+  const [shiftClosingNotes, setShiftClosingNotes] = React.useState("")
+
+  React.useEffect(() => {
+    if (selectedRegisterId) {
+      fetchCurrentShift(selectedRegisterId)
+    }
+  }, [selectedRegisterId, fetchCurrentShift])
 
   // مرجع شريط تمرير الأقسام للتمرير السلس بالأزرار وبكرة الماوس
   const categoriesScrollRef = React.useRef<HTMLDivElement>(null)
@@ -330,16 +360,58 @@ function PosContent() {
     loadTargetOrder()
   }, [paramOrderId, getOrder])
 
-  // التعامل مع تحديد طاولة شاغرة من الرابط (?tableId=...)
+  // التعامل مع تحديد طاولة أو فتح فاتورتها من الرابط (?tableId=...)
   React.useEffect(() => {
-    if (paramTableId && !loadedOrderId) {
-      const tableIdNum = Number(paramTableId)
-      if (tableIdNum) {
-        setSelectedTableId(tableIdNum)
-        setOrderType("dinein")
+    if (!paramTableId) return
+    const tableIdNum = Number(paramTableId)
+    if (!tableIdNum) return
+
+    setSelectedTableId(tableIdNum)
+    setOrderType("dinein")
+
+    // إذا لم يكن هناك orderId محدد بالرابط، نفحص تلقائياً هل الطاولة عليها طلب نشط لفتح فاتورته
+    if (!paramOrderId && !loadedOrderId) {
+      async function loadActiveTableOrder() {
+        try {
+          const res = await getTableActiveOrderApi(tableIdNum)
+          if (res.success && res.data) {
+            const order = res.data
+            setLoadedOrderId(order.id)
+            setLoadedOrderNumber(order.order_number)
+            setLoadedOrderStatus(order.status)
+            setOrderType(order.order_type)
+            if (order.table_id) setSelectedTableId(order.table_id)
+            if (order.customer_id) setSelectedCustomerId(order.customer_id)
+            if (order.customer_name) setCustomerName(order.customer_name)
+            if (order.delivery_address) {
+              setDeliveryAddress(order.delivery_address)
+            } else if (order.customer?.address) {
+              setDeliveryAddress(order.customer.address)
+            }
+            if (order.notes) setOrderNotes(order.notes)
+
+            const items: InvoiceItem[] = (order.items || []).map((it) => ({
+              id: `loaded-${it.id}`,
+              productId: it.product_id || 0,
+              name: it.product_name,
+              selectedSize: it.size_name ? { name: it.size_name, price: Number(it.unit_price) } : null,
+              selectedExtras: it.selected_extras || [],
+              notes: it.notes || undefined,
+              unitPrice: Number(it.unit_price),
+              quantity: it.quantity,
+              totalPrice: Number(it.total_price),
+            }))
+            setInvoiceItems(items)
+            triggerQuickToast(`تم فتح فاتورة الطاولة (${order.order_number}) بنجاح`)
+          }
+        } catch {
+          // الطاولة شاغرة ولا يوجد طلب نشط
+        }
       }
+
+      loadActiveTableOrder()
     }
-  }, [paramTableId, loadedOrderId])
+  }, [paramTableId, paramOrderId, loadedOrderId])
 
   const tableOptions: ComboboxOption[] = React.useMemo(() => {
     return [
@@ -658,15 +730,43 @@ function PosContent() {
       total: grandTotal,
     }
 
-    const res = await createOrder(payload)
+    let orderSuccess = false
+    let orderNumber = ""
+    let isOfflineSaved = false
+
+    if (isOnline) {
+      const res = await createOrder(payload)
+      if (res.success && res.data) {
+        orderSuccess = true
+        orderNumber = res.data.order_number
+        fetchTables()
+      } else if (res.message && (res.message.includes("تعذر الاتصال") || res.message.includes("Network") || res.message.includes("Failed to fetch"))) {
+        // Fallback to offline save
+        const offRes = await saveOrderLocally(payload)
+        orderSuccess = true
+        orderNumber = offRes.order.order_number
+        isOfflineSaved = true
+      } else {
+        setIsSubmittingOrder(false)
+        alert(res.message || "فشل في حفظ الطلب.")
+        return
+      }
+    } else {
+      const offRes = await saveOrderLocally(payload)
+      orderSuccess = true
+      orderNumber = offRes.order.order_number
+      isOfflineSaved = true
+    }
+
     setIsSubmittingOrder(false)
 
-    if (res.success && res.data) {
-      fetchTables() // تحديث حالة الطاولات في المتجر
-      triggerQuickToast(`تم إنشاء الطلب (${res.data.order_number}) بنجاح! الطاولة أصبحت مشغولة.`)
+    if (orderSuccess) {
+      triggerQuickToast(
+        isOfflineSaved
+          ? `تم حفظ الطلب محلياً (${orderNumber}) بنجاح! سيتم مزامنته عند عودة الاتصال.`
+          : `تم إنشاء الطلب (${orderNumber}) بنجاح! الطاولة أصبحت مشغولة.`
+      )
       handleClearInvoice()
-    } else {
-      alert(res.message || "فشل في حفظ الطلب.")
     }
   }
 
@@ -792,8 +892,42 @@ function PosContent() {
         total: grandTotal,
       }
 
+      if (!isOnline) {
+        // Completely offline - save order and payment locally
+        const offRes = await saveOrderLocally(createPayload, {
+          cash_register_id: selectedRegisterId,
+          amount: grandTotal,
+          payment_method: "cash",
+          complete_order: true,
+        })
+        setIsProcessingPayment(false)
+        setPayDialogOpen(false)
+        setCompletedOrder(offRes.order)
+        setReceiptModalOpen(true)
+        handleClearInvoice()
+        triggerQuickToast(`تم تحصيل وسداد الطلب محلياً (${offRes.order.order_number}) - وضع عدم الاتصال`)
+        return
+      }
+
       const resCreate = await createOrder(createPayload)
       if (!resCreate.success || !resCreate.data) {
+        if (resCreate.message && (resCreate.message.includes("تعذر الاتصال") || resCreate.message.includes("Network") || resCreate.message.includes("Failed to fetch"))) {
+          // Fallback to offline on connection drop
+          const offRes = await saveOrderLocally(createPayload, {
+            cash_register_id: selectedRegisterId,
+            amount: grandTotal,
+            payment_method: "cash",
+            complete_order: true,
+          })
+          setIsProcessingPayment(false)
+          setPayDialogOpen(false)
+          setCompletedOrder(offRes.order)
+          setReceiptModalOpen(true)
+          handleClearInvoice()
+          triggerQuickToast(`تم تحصيل وسداد الطلب محلياً (${offRes.order.order_number}) - انقطع الاتصال`)
+          return
+        }
+
         setIsProcessingPayment(false)
         alert(resCreate.message || "تعذر حفظ الطلب قبل الدفع.")
         return
@@ -829,13 +963,16 @@ function PosContent() {
       className="p-1 sm:p-2.5 max-w-full gap-2 sm:gap-2.5"
       action={
         <div className="flex items-center gap-2">
+          {/* مؤشر وحالة المزامنة ووضع عدم الاتصال */}
+          <OfflinePosIndicator />
+
           {/* محدد الخزنة النقدية للتحصيل بنمط shadcn الموحد */}
           <div className="flex items-center gap-1.5 p-1 rounded-lg bg-card border border-border/60 shadow-xs">
             <span className="text-xs text-muted-foreground font-semibold shrink-0 flex items-center gap-1 ps-1.5">
               <LandmarkIcon className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>الخزنة:</span>
             </span>
-            <div className="w-56 sm:w-64">
+            <div className="w-48 sm:w-56">
               <ComboboxSelect
                 value={selectedRegisterId ? String(selectedRegisterId) : ""}
                 onValueChange={(val) => setSelectedRegisterId(val ? Number(val) : null)}
@@ -846,6 +983,44 @@ function PosContent() {
               />
             </div>
           </div>
+
+          {/* أزرار ومؤشرات الوردية والـ Z-Report */}
+          {currentShift ? (
+            <div className="flex items-center gap-1.5">
+              <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold font-mono">
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>#{currentShift.shift_number}</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShiftActualCash("")
+                  setShiftClosingNotes("")
+                  setCloseShiftModalOpen(true)
+                }}
+                className="h-8 text-xs font-bold text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/10 gap-1 rounded-lg"
+              >
+                <ShieldCheckIcon className="size-3.5" />
+                <span>تقفيل (Z-Report)</span>
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setShiftStartingCash("0")
+                setShiftOpeningNotes("")
+                setOpenShiftModalOpen(true)
+              }}
+              className="h-8 text-xs font-bold gap-1.5 bg-primary text-primary-foreground shadow-xs rounded-lg"
+            >
+              <PlusIcon className="size-3.5" />
+              <span>فتح وردية</span>
+            </Button>
+          )}
         </div>
       }
     >
@@ -2017,6 +2192,193 @@ function PosContent() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* نافذة فتح وردية جديدة */}
+      <Dialog open={openShiftModalOpen} onOpenChange={setOpenShiftModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold">
+              <PlusIcon className="size-4 text-primary" />
+              <span>بدء وردية جديدة (فتح الدرج)</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              أدخل مبلغ العهدة الافتتاحية في درج النقدية لبدء تسجيل مبيعات الوردية.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              if (!selectedRegisterId) {
+                triggerQuickToast("يرجى اختيار الخزنة أولاً.")
+                return
+              }
+              const res = await openShift({
+                cash_register_id: selectedRegisterId,
+                starting_cash: Number(shiftStartingCash || 0),
+                opening_notes: shiftOpeningNotes,
+              })
+              if (res.success) {
+                triggerQuickToast(res.message)
+                setOpenShiftModalOpen(false)
+              } else {
+                triggerQuickToast(res.message)
+              }
+            }}
+            className="space-y-3 pt-1 text-xs"
+          >
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">العهدة النقدية الافتتاحية بالدرج *</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={shiftStartingCash}
+                onChange={(e) => setShiftStartingCash(e.target.value)}
+                placeholder="0.00"
+                className="h-9 text-sm font-bold font-mono"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">ملاحظات الفتح (اختياري)</label>
+              <Input
+                value={shiftOpeningNotes}
+                onChange={(e) => setShiftOpeningNotes(e.target.value)}
+                placeholder="رقم الوردية الصباحية / المسائية..."
+                className="h-9 text-xs"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setOpenShiftModalOpen(false)}
+                className="h-8.5 rounded-md text-xs"
+              >
+                إلغاء
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isShiftActionLoading}
+                className="gap-1.5 bg-primary text-primary-foreground font-bold h-8.5 px-3 rounded-md text-xs shadow-xs"
+              >
+                {isShiftActionLoading && <Loader2Icon className="size-3.5 animate-spin" />}
+                <span>فتح الوردية</span>
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة تقفيل الوردية وإصدار تقرير الـ Z-Report */}
+      <Dialog open={closeShiftModalOpen} onOpenChange={setCloseShiftModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold text-rose-600 dark:text-rose-400">
+              <ShieldCheckIcon className="size-4" />
+              <span>تقفيل الوردية الحالية (إصدار Z-Report)</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              قم بعد النقدية الموجودة فعلياً في الدرج وإدخالها لمطابقتها مع مبيعات النظام.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              if (!currentShift) return
+              const res = await closeShift(currentShift.id, {
+                actual_cash: Number(shiftActualCash || 0),
+                closing_notes: shiftClosingNotes,
+              })
+              if (res.success) {
+                triggerQuickToast(res.message)
+                setCloseShiftModalOpen(false)
+                if (res.z_report) {
+                  setActiveZReport(res.z_report, res.shift)
+                }
+              } else {
+                triggerQuickToast(res.message)
+              }
+            }}
+            className="space-y-3 pt-1 text-xs"
+          >
+            {currentShift?.live_metrics && (
+              <div className="p-3 rounded-xl bg-muted/40 border border-border/60 space-y-1.5 font-mono text-xs">
+                <div className="flex items-center justify-between font-sans text-muted-foreground">
+                  <span>العهدة الافتتاحية:</span>
+                  <span className="font-mono text-foreground">{currentShift.live_metrics.starting_cash.toFixed(2)} {currency}</span>
+                </div>
+                <div className="flex items-center justify-between font-sans text-muted-foreground">
+                  <span>مبيعات نقدية محصلة:</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">+{currentShift.live_metrics.cash_sales.toFixed(2)} {currency}</span>
+                </div>
+                <div className="flex items-center justify-between font-sans font-bold border-t border-border/50 pt-1 text-foreground">
+                  <span>النقدية المتوقعة بالدرج:</span>
+                  <span className="font-mono text-primary text-sm font-bold">{currentShift.live_metrics.expected_cash.toFixed(2)} {currency}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">النقدية الفعلية المحصية بالدرج *</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={shiftActualCash}
+                onChange={(e) => setShiftActualCash(e.target.value)}
+                placeholder="0.00"
+                className="h-9 text-sm font-bold font-mono"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">ملاحظات التقفيل (اختياري)</label>
+              <Input
+                value={shiftClosingNotes}
+                onChange={(e) => setShiftClosingNotes(e.target.value)}
+                placeholder="أي أسباب للعجز أو الزيادة..."
+                className="h-9 text-xs"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCloseShiftModalOpen(false)}
+                className="h-8.5 rounded-md text-xs"
+              >
+                إلغاء
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isShiftActionLoading}
+                className="gap-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold h-8.5 px-3 rounded-md text-xs shadow-xs"
+              >
+                {isShiftActionLoading && <Loader2Icon className="size-3.5 animate-spin" />}
+                <span>تقفيل وإصدار Z-Report</span>
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة عرض وطباعة تقرير Z-Report */}
+      <ZReportDialog
+        open={!!activeZReport}
+        onOpenChange={(open) => !open && setActiveZReport(null)}
+        zReport={activeZReport}
+      />
     </PageContainer>
   )
 }
