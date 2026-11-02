@@ -284,10 +284,10 @@ export default function TablesPage() {
               setQrDialogOpen(true)
             }}
             className="h-8.5 rounded-lg text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
-            title="توليد وطباعة ملصقات الباركود QR لكافة الطاولات"
+            title="توليد وطباعة ملصقات الباركود لكافة الطاولات"
           >
             <QrCodeIcon className="size-3.5" />
-            <span>طباعة باركود QR</span>
+            <span>طباعة الباركود</span>
           </Button>
 
           {isAdmin && (
@@ -588,7 +588,7 @@ export default function TablesPage() {
                         setQrDialogOpen(true)
                       }}
                       className="p-2 h-auto rounded-md text-primary hover:bg-primary/10 border-primary/20"
-                      title="طباعة باركود QR للطاولة"
+                      title="طباعة باركود الطاولة"
                     >
                       <QrCodeIcon className="size-3.5" />
                     </Button>
@@ -605,10 +605,10 @@ export default function TablesPage() {
                         setQrDialogOpen(true)
                       }}
                       className="text-xs text-primary hover:text-primary hover:bg-primary/10 p-1.5 h-auto rounded-md"
-                      title="توليد وطباعة باركود QR للطاولة"
+                      title="توليد وطباعة باركود الطاولة"
                     >
                       <QrCodeIcon className="size-3.5 ms-1" />
-                      <span>رمز QR</span>
+                      <span>الباركود</span>
                     </Button>
 
                     {isAdmin && (
@@ -669,9 +669,6 @@ export default function TablesPage() {
             <DialogTitle className="text-base font-bold text-foreground">
               تفاصيل طلب ({selectedTableWithOrder?.name})
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              الأصناف والمبالغ المستحقة على هذه الطاولة حالياً.
-            </DialogDescription>
           </DialogHeader>
 
           {selectedTableWithOrder?.current_order && (
@@ -772,7 +769,7 @@ export default function TablesPage() {
               className="gap-1.5 bg-primary text-primary-foreground font-bold rounded-md text-xs"
             >
               <CreditCardIcon className="size-3.5" />
-              <span>الدفع في نقطة البيع (POS)</span>
+              <span>الدفع في نقطة البيع</span>
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -787,9 +784,6 @@ export default function TablesPage() {
             <DialogTitle className="text-base font-bold text-foreground">
               {editingTable ? "تعديل بيانات الطاولة" : "إضافة طاولة جديدة"}
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              أدخل رقم أو اسم الطاولة وسعتها لتنظيم صالة الطعام.
-            </DialogDescription>
           </DialogHeader>
 
           {formError && (
@@ -807,7 +801,7 @@ export default function TablesPage() {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="مثال: طاولة 1، VIP 2، طاولة الشرفة 5..."
+                placeholder="اسم أو رقم الطاولة"
                 className="bg-muted/40 rounded-md text-sm"
                 required
               />

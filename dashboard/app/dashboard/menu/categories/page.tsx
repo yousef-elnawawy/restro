@@ -582,11 +582,6 @@ export default function CategoriesPage() {
               <SparklesIcon className="size-5 text-primary" />
               <span>{editingCategory ? "تعديل بيانات القسم" : "إضافة قسم جديد للمنيو"}</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              {editingCategory
-                ? "قم بتحديث معلومات القسم وتفاصيله كما ستظهر في المنيو والشاشات."
-                : "أدخل بيانات القسم الجديد لتنظيم أطباق ومشروبات المطعم."}
-            </DialogDescription>
           </DialogHeader>
 
           {/* تنبيه الخطأ داخل النافذة */}
@@ -606,7 +601,7 @@ export default function CategoriesPage() {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="مثال: البرجر، البيتزا، المقبلات، المشروبات..."
+                placeholder="اسم القسم"
                 className="bg-muted/40 hover:bg-muted/60 focus:bg-background rounded-lg text-sm"
                 required
                 autoFocus

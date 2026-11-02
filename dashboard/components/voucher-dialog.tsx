@@ -11,6 +11,7 @@ import {
 import { useSettingStore } from "@/store/setting.store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
@@ -247,11 +248,6 @@ export function VoucherDialog({
               </span>
             )}
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-            {type === "expense"
-              ? "تسجيل المصروفات التشغيلية للمطعم مع خصم المبلغ فورياً من الخزنة المحددة."
-              : "سندات القبض والصرف مخصصة لحسابات العملاء لتعديل الأرصدة والمديونيات والخزينة."}
-          </DialogDescription>
         </DialogHeader>
 
         {/* جسم النموذج التفاعلي */}
@@ -465,9 +461,6 @@ export function VoucherDialog({
                       <span className="font-bold text-primary font-mono">
                         {Number(selectedCustomer.balance || 0).toLocaleString("ar-EG")} {currency}
                       </span>
-                      <span className="text-muted-foreground text-[10px] ms-1">
-                        {type === "receipt" ? "(سيتم إيداع المبلغ وتخفيض مديونيته)" : "(سيتم خصم المبلغ من حسابه)"}
-                      </span>
                     </div>
                   </div>
                 )}
@@ -481,17 +474,16 @@ export function VoucherDialog({
                 <Input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="البيان التفصيلي للعملية"
+                  placeholder="البيان"
                   className="h-9 text-xs"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="font-semibold text-foreground">تاريخ السند <span className="text-destructive">*</span></label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
                   className="h-9 text-xs"
                   required
                 />
@@ -504,7 +496,7 @@ export function VoucherDialog({
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="أي ملاحظات أو أرقام فواتير ورقية تابعة للسند..."
+                placeholder="ملاحظات (اختياري)..."
                 className="text-xs min-h-[55px] resize-none"
               />
             </div>

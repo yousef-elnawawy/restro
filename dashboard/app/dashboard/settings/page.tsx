@@ -180,7 +180,7 @@ export default function SettingsPage() {
         showBanner("تم اختيار الصورة بنجاح. اضغط حفظ لتأكيد التغيير.", "success")
       }
     } catch {
-      showBanner("تعذر معالجة الصورة، يرجى اختيار ملف صورة صالح (PNG أو JPG أو WebP).", "error")
+      showBanner("تعذر معالجة الصورة، يرجى اختيار ملف صورة صالح.", "error")
     } finally {
       setIsUploadingLogo(false)
       if (fileInputRef.current) {
@@ -383,9 +383,6 @@ export default function SettingsPage() {
                   <StoreIcon className="size-4 text-primary" />
                   <span>البيانات الأساسية للمنشأة</span>
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  تظهر هذه البيانات على الفواتير المطبوعة والمستندات الرسمية
-                </CardDescription>
               </CardHeader>
 
               <CardContent className="p-4 sm:p-5 space-y-4">
@@ -610,9 +607,6 @@ export default function SettingsPage() {
                   <CoinsIcon className="size-4 text-amber-500" />
                   <span>العملة المعتمدة للنظام</span>
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  العملة التي ستعتمد في تسعير الأطباق، الفواتير المطبوعة، وكشوف الحسابات
-                </CardDescription>
               </CardHeader>
 
               <CardContent className="p-4 sm:p-5 space-y-3.5">
@@ -661,11 +655,8 @@ export default function SettingsPage() {
                   <div>
                     <CardTitle className="text-sm font-bold flex items-center gap-2">
                       <PercentIcon className="size-4 text-primary" />
-                      <span>ضريبة القيمة المضافة (VAT)</span>
+                      <span>ضريبة القيمة المضافة</span>
                     </CardTitle>
-                    <CardDescription className="text-xs">
-                      الحساب التلقائي للضريبة على الفواتير وإدراجها في إقرار المبيعات
-                    </CardDescription>
                   </div>
                   <Switch
                     checked={formData.tax_enabled}
@@ -828,11 +819,8 @@ export default function SettingsPage() {
               <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/40">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <TruckIcon className="size-4 text-primary" />
-                  <span>حساب وتسعير رسوم الديليفري (حسب المسافة)</span>
+                  <span>رسوم التوصيل والديليفري</span>
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  يتم حساب تكلفة التوصيل تلقائياً في الكاشير بناءً على المسافة بالكيلومتر عند كتابة العنوان
-                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 sm:p-5 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -857,9 +845,6 @@ export default function SettingsPage() {
                         {formData.currency}
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      المبلغ المبدئي الثابت لكل طلب توصيل بغض النظر عن المسافة.
-                    </p>
                   </div>
 
                   {/* سعر الكيلومتر */}
@@ -885,36 +870,8 @@ export default function SettingsPage() {
                         {formData.currency} / كم
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      المبلغ الإضافي الذي يضرب في عدد الكيلومترات للعنوان.
-                    </p>
                   </div>
                 </div>
-
-                {/* معاينة حية للمعادلة */}
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1 text-xs">
-                  <div className="font-semibold text-primary flex items-center gap-1.5">
-                    <SparklesIcon className="size-3.5" />
-                    <span>معادلة الحساب المعتمدة:</span>
-                  </div>
-                  <p className="text-foreground/90 font-mono text-[11px]">
-                    رسوم التوصيل = الرسوم الأساسية ({formData.delivery_base_fee ?? formData.delivery_fee ?? 15} {formData.currency}) + [المسافة بالكم × ({formData.delivery_fee_per_km ?? 5} {formData.currency})]
-                  </p>
-                  <div className="pt-1 text-[11px] text-muted-foreground flex items-center gap-2">
-                    <span className="font-bold text-foreground">مثال عملي:</span>
-                    <span>
-                      عنوان على بعد <b className="text-primary font-mono">4 كم</b> ➔ التكلفة ={" "}
-                      <b className="text-primary font-mono">
-                        {(formData.delivery_base_fee ?? formData.delivery_fee ?? 15) + (4 * (formData.delivery_fee_per_km ?? 5))}{" "}
-                        {formData.currency}
-                      </b>
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-[11px] text-muted-foreground">
-                  * ملاحظة: يمكن للكاشير دائماً تعديل رسوم التوصيل أو المسافة يدوياً أو إعفائها بالكامل لأي طلب أثناء إدخال الفاتورة.
-                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -930,9 +887,6 @@ export default function SettingsPage() {
                       <FileTextIcon className="size-4 text-primary" />
                       <span>نصوص الفاتورة الحرارية</span>
                     </CardTitle>
-                    <CardDescription className="text-xs">
-                      الرسائل والنصوص الترحيبية المطبوعة للعميل على الإيصال
-                    </CardDescription>
                   </CardHeader>
 
                   <CardContent className="p-4 sm:p-5 space-y-4">
@@ -997,7 +951,7 @@ export default function SettingsPage() {
               <div className="md:col-span-5 flex flex-col items-center">
                 <div className="w-full max-w-[270px] space-y-2">
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-bold text-muted-foreground">معاينة ورقية (80mm)</span>
+                    <span className="text-xs font-bold text-muted-foreground">معاينة ورقية (80 مم)</span>
                     <Button
                       type="button"
                       variant="outline"
@@ -1032,7 +986,7 @@ export default function SettingsPage() {
                     <div className="border-b border-dashed border-neutral-300 my-1" />
 
                     <div className="flex justify-between text-[9px] text-neutral-600">
-                      <span>فاتورة #ORD-001</span>
+                      <span>فاتورة #001</span>
                       <span>طاولة 04</span>
                     </div>
 

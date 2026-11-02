@@ -111,13 +111,8 @@ export function OfflinePosIndicator() {
               ) : (
                 <WifiOffIcon className="size-5 text-amber-600 dark:text-amber-400" />
               )}
-              <span>إدارة وضع عدم الاتصال (Offline POS)</span>
+              <span>إدارة وضع العمل بدون إنترنت</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground pt-1">
-              {isOnline
-                ? "أنت متصل بالإنترنت حالياً. يتم إرسال الطلبات للسيرفر مباشرة وتزامن الطلبات المحلية تلقائياً."
-                : "الإنترنت منقطع حالياً. يمكنك الاستمرار في إنشاء الطلبات، وتجهيز الفواتير، وطباعتها بأمان محلياً."}
-            </DialogDescription>
           </DialogHeader>
 
           {syncError && (

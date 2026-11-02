@@ -72,7 +72,7 @@ export function ThermalReceiptCard({
       {/* ترويسة الفاتورة */}
       <div className="text-center space-y-0.5 pb-2">
         <h3 className="font-extrabold text-base tracking-wide text-black">{activeName}</h3>
-        <p className="text-[10px] font-bold text-neutral-800">RESTRO RESTAURANT & POS</p>
+        <p className="text-[10px] font-bold text-neutral-800">نظام إدارة المطاعم ونقاط البيع</p>
         <p className="text-[10px] text-neutral-700">{activeAddress}</p>
         <p className="text-[10px] text-neutral-700">هاتف: {activePhone}</p>
         <p className="text-[10px] text-neutral-700">الرقم الضريبي: {activeTaxNumber}</p>

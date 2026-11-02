@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { PageContainer } from "@/components/page-container"
 import { useRegisterStore } from "@/store/register.store"
 import { useFinancialStore } from "@/store/financial.store"
@@ -8,6 +9,7 @@ import { useSettingStore } from "@/store/setting.store"
 import { useAuthStore } from "@/store/auth.store"
 import { type CashRegister, type CashRegisterPayload, type FinancialTransaction, type Shift } from "@/lib/api"
 import { VoucherDialog } from "@/components/voucher-dialog"
+import { QuickVoucherDialog } from "@/components/quick-voucher-dialog"
 import { RegisterStatementDialog } from "@/components/register-statement-dialog"
 import { ZReportDialog } from "@/components/z-report-dialog"
 import { useShiftStore } from "@/store/shift.store"
@@ -66,6 +68,7 @@ import {
 } from "lucide-react"
 
 export default function RegistersPage() {
+  const router = useRouter()
   const {
     registers,
     isLoading: isRegisterLoading,
@@ -139,8 +142,7 @@ export default function RegistersPage() {
   const [statementRegisterId, setStatementRegisterId] = React.useState<number | null>(null)
 
   const handleOpenStatement = (regId: number) => {
-    setStatementRegisterId(regId)
-    setStatementOpen(true)
+    router.push(`/dashboard/registers/statement?id=${regId}`)
   }
 
   // نافذة تأكيد حذف الخزنة
@@ -328,6 +330,30 @@ export default function RegistersPage() {
         <div className="flex flex-wrap items-center gap-1.5">
           <Button
             type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/registers/statement")}
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs border-primary/40 text-primary hover:bg-primary/10"
+            title="فتح صفحة كشف حساب الخزائن"
+          >
+            <ReceiptIcon className="size-3.5" />
+            <span>كشف حساب الخزنة</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/vouchers")}
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs"
+            title="فتح صفحة السندات والمصاريف"
+          >
+            <CoinsIcon className="size-3.5" />
+            <span>صفحة السندات</span>
+          </Button>
+
+          <Button
+            type="button"
             size="sm"
             onClick={() => handleOpenVoucher("receipt")}
             className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -458,7 +484,7 @@ export default function RegistersPage() {
             }`}
           >
             <ShieldCheckIcon className="size-3.5 text-primary" />
-            <span>سجل الورديات و Z-Report</span>
+            <span>سجل إغلاق الورديات</span>
           </button>
         </div>
 
@@ -1048,7 +1074,7 @@ export default function RegistersPage() {
                     <TableHead className="text-right text-xs">الفعلي المحصي</TableHead>
                     <TableHead className="text-right text-xs">الفارق (عجز/زيادة)</TableHead>
                     <TableHead className="text-right text-xs">الحالة</TableHead>
-                    <TableHead className="text-left text-xs">تقرير Z-Report</TableHead>
+                    <TableHead className="text-left text-xs">تقرير الإغلاق</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1117,7 +1143,7 @@ export default function RegistersPage() {
                               className="h-7 text-xs font-semibold gap-1 rounded-lg"
                             >
                               <PrinterIcon className="size-3 text-primary" />
-                              <span>Z-Report</span>
+                              <span>تقرير الإغلاق</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1138,11 +1164,7 @@ export default function RegistersPage() {
             <DialogTitle className="text-sm font-bold">
               {editingRegister ? "تعديل بيانات الخزنة" : "إضافة خزنة مالية جديدة"}
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              أدخل اسم الخزنة ورصيدها الأولي للبدء في تتبع عمليات الصندوق.
-            </DialogDescription>
           </DialogHeader>
-
           <form onSubmit={handleSaveRegister} className="space-y-3 py-1 text-xs">
             {formError && (
               <div className="p-2 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium flex items-center gap-1.5">
@@ -1168,16 +1190,15 @@ export default function RegistersPage() {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="مثال: الخزنة الرئيسية، خزنة الكاشير 1..."
+                placeholder="اسم الخزنة"
                 className="h-9 text-xs rounded-xl"
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-semibold text-foreground flex items-center justify-between">
-                <span>رصيد أول المدة (الافتتاحي) ({currency})</span>
-                <span className="text-[10px] text-muted-foreground font-normal">قيمة ابتدائية ثابتة</span>
+              <label className="font-semibold text-foreground">
+                رصيد أول المدة (الافتتاحي) ({currency})
               </label>
               <Input
                 type="number"
@@ -1187,9 +1208,6 @@ export default function RegistersPage() {
                 onChange={(e) => setFormData({ ...formData, opening_balance: Number(e.target.value) })}
                 className="h-9 text-xs rounded-xl font-mono font-bold"
               />
-              <p className="text-[10px] text-muted-foreground leading-relaxed pt-0.5">
-                💡 رصيد أول المدة لا يتغير مع عمليات البيع والمصروفات. في حال تعديله، يُضاف الفارق أو يُخصم من الرصيد الحالي مع الحفاظ على جميع السندات المسجلة.
-              </p>
             </div>
 
             <div className="space-y-1">
@@ -1197,7 +1215,7 @@ export default function RegistersPage() {
               <Textarea
                 value={formData.notes || ""}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="موقع الخزنة، المسؤول عنها، أو تفاصيل أخرى..."
+                placeholder="ملاحظات (اختياري)..."
                 className="text-xs min-h-[60px] resize-none"
               />
             </div>
@@ -1247,12 +1265,11 @@ export default function RegistersPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* نافذة إصدار سند مالي (قبض / دفع / مصاريف) */}
-      <VoucherDialog
+      {/* نافذة إصدار سند مالي مبسط وسريع (قبض / دفع / مصاريف) */}
+      <QuickVoucherDialog
         open={voucherDialogOpen}
         onOpenChange={setVoucherDialogOpen}
         initialType={voucherInitialType}
-        registers={registers}
         onSuccess={(msg) => {
           showBanner(msg, "success")
           fetchRegisters()

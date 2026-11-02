@@ -9,6 +9,7 @@ import {
 import { useSettingStore } from "@/store/setting.store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -212,21 +213,21 @@ export function RegisterStatementDialog({
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="text-muted-foreground font-medium">من:</span>
-                <Input
-                  type="date"
+                <DatePicker
                   value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-8 text-xs w-32"
+                  onChange={setDateFrom}
+                  placeholder="من تاريخ"
+                  className="h-8 text-xs w-36"
                 />
               </div>
 
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="text-muted-foreground font-medium">إلى:</span>
-                <Input
-                  type="date"
+                <DatePicker
                   value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="h-8 text-xs w-32"
+                  onChange={setDateTo}
+                  placeholder="إلى تاريخ"
+                  className="h-8 text-xs w-36"
                 />
               </div>
 

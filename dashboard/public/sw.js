@@ -38,9 +38,14 @@ self.addEventListener("fetch", (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Skip API calls and WebSocket/Reverb traffic from service worker caching
+  // Skip API calls, Next.js internal chunks, and WebSocket/Reverb traffic from service worker caching
   // (API data is managed intelligently by IndexedDB offline-db)
-  if (url.pathname.startsWith("/api") || url.pathname.includes("reverb") || request.method !== "GET") {
+  if (
+    url.pathname.startsWith("/api") ||
+    url.pathname.startsWith("/_next") ||
+    url.pathname.includes("reverb") ||
+    request.method !== "GET"
+  ) {
     return
   }
 

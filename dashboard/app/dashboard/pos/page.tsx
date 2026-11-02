@@ -1003,7 +1003,7 @@ function PosContent() {
                 className="h-8 text-xs font-bold text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/10 gap-1 rounded-lg"
               >
                 <ShieldCheckIcon className="size-3.5" />
-                <span>تقفيل (Z-Report)</span>
+                <span>تقفيل الوردية</span>
               </Button>
             </div>
           ) : (
@@ -1818,9 +1818,6 @@ function PosContent() {
               <LandmarkIcon className="size-5 text-emerald-600" />
               <span>تحديد الخزنة وتسجيل الدفع النقدي</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              حدد الخزنة النقدية التي سيتم تسجيل مبلغ التحصيل عليها لإغلاق الطلب.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 mt-2 text-xs">
@@ -1925,9 +1922,6 @@ function PosContent() {
             <DialogTitle className="text-base font-bold text-foreground">
               تم سداد الطلب بنجاح!
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              تم إيداع المبلغ بالخزنة وإغلاق الطلب وتفريغ الطاولة.
-            </DialogDescription>
           </DialogHeader>
 
           {/* إيصال الفاتورة الحرارية القابلة للطباعة (أبيض وأسود عادية) */}
@@ -1983,9 +1977,6 @@ function PosContent() {
                 <DialogTitle className="text-base font-bold text-foreground">
                   {customizingProduct?.name}
                 </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  اختر الحجم والإضافات المطلوبة قبل الإضافة للفاتورة.
-                </DialogDescription>
               </div>
             </div>
           </DialogHeader>
@@ -2126,9 +2117,6 @@ function PosContent() {
               <UserPlusIcon className="size-5 text-primary" />
               <span>تسجيل عميل جديد</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              سجل بيانات العميل للارتباط بطلباته الحالية والمستقبلية.
-            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleQuickCreateCustomer} className="space-y-3.5 py-2">
@@ -2139,7 +2127,7 @@ function PosContent() {
               <Input
                 value={newCustomerName}
                 onChange={(e) => setNewCustomerName(e.target.value)}
-                placeholder="مثال: محمد علي"
+                placeholder="اسم العميل"
                 className="h-9 text-xs rounded-md"
                 required
               />
@@ -2152,7 +2140,7 @@ function PosContent() {
               <Input
                 value={newCustomerPhone}
                 onChange={(e) => setNewCustomerPhone(e.target.value)}
-                placeholder="مثال: 01012345678"
+                placeholder="رقم الهاتف"
                 className="h-9 text-xs rounded-md"
                 dir="ltr"
                 required
@@ -2164,7 +2152,7 @@ function PosContent() {
               <Input
                 value={newCustomerAddress}
                 onChange={(e) => setNewCustomerAddress(e.target.value)}
-                placeholder="المنطقة أو الشارع..."
+                placeholder="العنوان (اختياري)..."
                 className="h-9 text-xs rounded-md"
               />
             </div>
@@ -2201,9 +2189,6 @@ function PosContent() {
               <PlusIcon className="size-4 text-primary" />
               <span>بدء وردية جديدة (فتح الدرج)</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              أدخل مبلغ العهدة الافتتاحية في درج النقدية لبدء تسجيل مبيعات الوردية.
-            </DialogDescription>
           </DialogHeader>
 
           <form
@@ -2246,7 +2231,7 @@ function PosContent() {
               <Input
                 value={shiftOpeningNotes}
                 onChange={(e) => setShiftOpeningNotes(e.target.value)}
-                placeholder="رقم الوردية الصباحية / المسائية..."
+                placeholder="ملاحظات (اختياري)..."
                 className="h-9 text-xs"
               />
             </div>
@@ -2281,11 +2266,8 @@ function PosContent() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-sm font-bold text-rose-600 dark:text-rose-400">
               <ShieldCheckIcon className="size-4" />
-              <span>تقفيل الوردية الحالية (إصدار Z-Report)</span>
+              <span>تقفيل الوردية الحالية وإصدار تقرير الإغلاق</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              قم بعد النقدية الموجودة فعلياً في الدرج وإدخالها لمطابقتها مع مبيعات النظام.
-            </DialogDescription>
           </DialogHeader>
 
           <form
@@ -2366,7 +2348,7 @@ function PosContent() {
                 className="gap-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold h-8.5 px-3 rounded-md text-xs shadow-xs"
               >
                 {isShiftActionLoading && <Loader2Icon className="size-3.5 animate-spin" />}
-                <span>تقفيل وإصدار Z-Report</span>
+                <span>تقفيل وإصدار تقرير الإغلاق</span>
               </Button>
             </DialogFooter>
           </form>

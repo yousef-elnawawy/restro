@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { PageContainer } from "@/components/page-container"
 import { useCustomerStore } from "@/store/customer.store"
 import { useSettingStore } from "@/store/setting.store"
@@ -57,6 +58,7 @@ import {
 } from "lucide-react"
 
 export default function CustomersPage() {
+  const router = useRouter()
   const {
     customers,
     isLoading,
@@ -105,8 +107,7 @@ export default function CustomersPage() {
   const [customerForStatement, setCustomerForStatement] = React.useState<Customer | null>(null)
 
   const handleOpenStatement = (cust: Customer) => {
-    setCustomerForStatement(cust)
-    setStatementDialogOpen(true)
+    router.push(`/dashboard/customers/statement?id=${cust.id}`)
   }
 
   // إشعار العملية
@@ -228,6 +229,18 @@ export default function CustomersPage() {
       description="إدارة بيانات العملاء، أرقام الهواتف، العناوين، وسجل المشتريات"
       action={
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/customers/statement")}
+            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs border-primary/40 text-primary hover:bg-primary/10"
+            title="فتح صفحة كشف حساب العملاء"
+          >
+            <ReceiptIcon className="size-3.5" />
+            <span>كشف حساب العملاء</span>
+          </Button>
+
           <Button
             type="button"
             variant="outline"
@@ -680,9 +693,6 @@ export default function CustomersPage() {
             <DialogTitle className="text-sm font-bold">
               {editingCustomer ? "تعديل بيانات العميل" : "إضافة عميل جديد"}
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              أدخل بيانات الاتصال والتفاصيل الخاصة بالعميل.
-            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSave} className="space-y-3 py-1 text-xs">
@@ -700,7 +710,7 @@ export default function CustomersPage() {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="مثال: أحمد محمود"
+                placeholder="اسم العميل"
                 className="h-8.5 text-xs rounded-md"
                 required
               />
@@ -713,7 +723,7 @@ export default function CustomersPage() {
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="مثال: 01012345678"
+                placeholder="رقم الهاتف"
                 className="h-8.5 text-xs rounded-md"
                 dir="ltr"
                 required
@@ -726,7 +736,7 @@ export default function CustomersPage() {
                 type="email"
                 value={formData.email || ""}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="customer@example.com"
+                placeholder="email@example.com"
                 className="h-8.5 text-xs rounded-md"
                 dir="ltr"
               />
@@ -737,7 +747,7 @@ export default function CustomersPage() {
               <Textarea
                 value={formData.address || ""}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="المنطقة، الشارع، رقم العقار..."
+                placeholder="العنوان..."
                 rows={2}
                 className="text-xs rounded-md resize-none"
               />
@@ -748,7 +758,7 @@ export default function CustomersPage() {
               <Input
                 value={formData.notes || ""}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="مثال: بدون بصل، عميل مميز..."
+                placeholder="ملاحظات (اختياري)..."
                 className="h-8.5 text-xs rounded-md"
               />
             </div>

@@ -156,7 +156,7 @@ export default function DashboardPage() {
               className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
             >
               <ReceiptIcon className="size-3.5" />
-              <span>الكاشير (POS)</span>
+              <span>نقطة البيع</span>
             </Button>
           </Link>
         </div>
@@ -288,7 +288,6 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle className="text-base font-bold">حركة المبيعات خلال اليوم</CardTitle>
-              <CardDescription className="text-xs">توزيع المبيعات بالجنيه عبر ساعات العمل</CardDescription>
             </div>
             <Badge variant="outline" className="gap-1 bg-primary/5 text-primary border-primary/20 text-xs">
               <ClockIcon className="size-3" />
@@ -369,8 +368,7 @@ export default function DashboardPage() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex items-center justify-between border-t border-border/40 py-3 text-xs text-muted-foreground">
-            <span>ذروة الإقبال تتزامن مع أوقات الغداء والعشاء</span>
+          <CardFooter className="flex items-center justify-end border-t border-border/40 py-2.5 text-xs">
             <Link href="/dashboard/orders" className="text-primary hover:underline font-semibold flex items-center gap-1">
               عرض سجل الطلبات
               <ArrowUpRightIcon className="size-3" />
@@ -383,7 +381,6 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
               <CardTitle className="text-base font-bold">المبيعات مقابل المصروفات</CardTitle>
-              <CardDescription className="text-xs">مقارنة حركة الإيرادات وسندات الصرف في ٧ أيام</CardDescription>
             </div>
             <Link href="/dashboard/reports">
               <Badge variant="outline" className="text-xs cursor-pointer hover:bg-muted">
@@ -487,7 +484,6 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base font-bold">الطلبات قيد المتابعة والتجهيز</CardTitle>
-                  <CardDescription className="text-xs">تحديث مباشر بحالة الطلبات النشطة في الصالة والتوصيل والاستلام</CardDescription>
                 </div>
                 <Link href="/dashboard/orders">
                   <Button variant="ghost" size="sm" className="text-xs gap-1 font-semibold text-primary">
@@ -606,7 +602,6 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base font-bold">الأطباق الأكثر طلباً ومبيعاً</CardTitle>
-                  <CardDescription className="text-xs">ترتيب الأصناف بحسب عدد مرات الطلب والإيرادات المحققة</CardDescription>
                 </div>
                 <Link href="/dashboard/menu/products">
                   <Button variant="ghost" size="sm" className="text-xs gap-1 font-semibold text-primary">

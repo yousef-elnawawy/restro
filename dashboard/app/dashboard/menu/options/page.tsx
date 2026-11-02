@@ -532,11 +532,6 @@ export default function OptionsPage() {
               <SparklesIcon className="size-5 text-primary" />
               <span>{editingModifier ? "تعديل الخيار الإضافي" : "إضافة خيار أو إضافة جديدة"}</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              {editingModifier
-                ? "تعديل تفاصيل الخيار وسعره الإضافي عند الطلب."
-                : "أدخل اسم الإضافة وسعرها الإضافي (مثال: جبن، صلصة حارة، حجم كبير)."}
-            </DialogDescription>
           </DialogHeader>
 
           {/* تنبيه الخطأ */}
@@ -555,7 +550,7 @@ export default function OptionsPage() {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="مثال: جبن شيدر إضافي، صلصة ثوم، بطاطس..."
+                placeholder="اسم الإضافة أو الخيار"
                 className="bg-muted/40 hover:bg-muted/60 focus:bg-background rounded-lg text-sm"
                 required
                 autoFocus

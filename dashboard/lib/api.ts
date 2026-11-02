@@ -1009,6 +1009,7 @@ export interface CashRegisterStatementResponse {
     total_income: number
     total_expenses: number
     net_flow: number
+    closing_balance?: number
     current_balance: number
   }
   entries: StatementEntry[]
@@ -1980,10 +1981,20 @@ export async function deleteFinancialTransactionApi(id: number): Promise<ApiResp
   }
 }
 
-export async function getCustomerStatementApi(customerId: number): Promise<ApiResponse<CustomerStatementData>> {
+export async function getCustomerStatementApi(
+  customerId: number,
+  params?: { date_from?: string; date_to?: string; type?: string }
+): Promise<ApiResponse<CustomerStatementData>> {
   const token = getAuthToken()
+  const query = new URLSearchParams()
+  if (params?.date_from) query.append("date_from", params.date_from)
+  if (params?.date_to) query.append("date_to", params.date_to)
+  if (params?.type && params.type !== "all") query.append("type", params.type)
+
+  const url = `${API_URL}/customers/${customerId}/statement${query.toString() ? `?${query.toString()}` : ""}`
+
   try {
-    const res = await fetch(`${API_URL}/customers/${customerId}/statement`, {
+    const res = await fetch(url, {
       method: "GET",
       headers: {
         Accept: "application/json",

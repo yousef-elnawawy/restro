@@ -917,7 +917,7 @@ export default function ProductsPage() {
                         variant="ghost"
                         size="icon-sm"
                         className="size-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                        title="طلب عبر الكاشير (POS)"
+                        title="طلب عبر الكاشير"
                       >
                         <ReceiptIcon className="size-4" />
                         <span className="sr-only">طلب عبر الكاشير</span>
@@ -1297,9 +1297,6 @@ export default function ProductsPage() {
               <SparklesIcon className="size-5 text-primary" />
               <span>{editingProduct ? "تعديل بيانات الطبق / المنتج" : "إضافة منتج جديد للمنيو"}</span>
             </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              أدخل بيانات الطبق، وحدد الصور المتعددة والصورة الرئيسية، بالإضافة لتعيين الأحجام والملحقات التابعة له.
-            </DialogDescription>
           </DialogHeader>
 
           {/* تنبيه الخطأ */}
@@ -1328,7 +1325,7 @@ export default function ProductsPage() {
                     <Input
                       value={formData.name}
                       onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                      placeholder="مثال: برجر لحم كلاسيك، بيتزا مارجريتا، بطاطس مقلية..."
+                      placeholder="اسم المنتج أو الطبق"
                       className="bg-background/80 hover:bg-background focus:bg-background rounded-xl text-sm h-11 border-border/70"
                       required
                     />
@@ -1343,7 +1340,7 @@ export default function ProductsPage() {
                         value={formData.category_id ? String(formData.category_id) : ""}
                         onValueChange={(val) => setFormData((prev) => ({ ...prev, category_id: Number(val) || 0 }))}
                         options={categoryModalOptions}
-                        placeholder="اختر القسم التابع له..."
+                        placeholder="اختر القسم..."
                         emptyText="لا توجد أقسام مطابقة"
                         className="w-full text-sm bg-background/80 hover:bg-background text-foreground rounded-xl border border-border/70 h-11"
                       />
@@ -1360,7 +1357,7 @@ export default function ProductsPage() {
                           min="0"
                           value={formData.price}
                           onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
-                          placeholder="مثال: 150.00"
+                          placeholder="0.00"
                           className="bg-background/80 hover:bg-background focus:bg-background rounded-xl text-sm h-11 border-border/70 pe-12"
                           required={!formData.has_sizes}
                           disabled={formData.has_sizes && formData.sizes.length > 0}
@@ -1369,11 +1366,6 @@ export default function ProductsPage() {
                           {activeCurrency}
                         </span>
                       </div>
-                      {formData.has_sizes && (
-                        <span className="text-[11px] text-muted-foreground block mt-1">
-                          يتم احتساب السعر تلقائياً من أقل سعر حجم محدد أدناه.
-                        </span>
-                      )}
                     </div>
                   </div>
 
@@ -1384,7 +1376,7 @@ export default function ProductsPage() {
                     <Textarea
                       value={formData.description || ""}
                       onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                      placeholder="اكتب مكونات الوجبة وتفاصيلها اللذيذة لجذب الزبائن..."
+                      placeholder="الوصف والمكونات..."
                       rows={2}
                       className="bg-background/80 hover:bg-background focus:bg-background rounded-xl text-sm resize-none border-border/70"
                     />

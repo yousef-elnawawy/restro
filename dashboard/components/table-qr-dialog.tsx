@@ -351,10 +351,7 @@ export function TableQrDialog({
                   <QrCodeIcon className="w-5 h-5" />
                 </div>
                 <div>
-                  <DialogTitle className="text-lg font-bold">ملصقات باركود الطاولات (QR Code)</DialogTitle>
-                  <DialogDescription className="text-xs">
-                    توليد وطباعة ملصقات الـ QR ليقوم الزبائن بمسحها وطلب الطعام مباشرة من الصالة.
-                  </DialogDescription>
+                  <DialogTitle className="text-lg font-bold">ملصقات باركود الطاولات</DialogTitle>
                 </div>
               </div>
 
@@ -499,7 +496,7 @@ export function TableQrDialog({
                           className="gap-1.5 h-9 text-xs"
                         >
                           <DownloadIcon className="w-3.5 h-3.5" />
-                          <span>تحميل PNG</span>
+                          <span>تحميل كصورة</span>
                         </Button>
 
                         <Button

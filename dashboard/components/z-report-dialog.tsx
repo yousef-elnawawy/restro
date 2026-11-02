@@ -96,11 +96,11 @@ export function ZReportDialog({ open, onOpenChange, zReport, shift }: ZReportDia
             </div>
             <div className="space-y-1 text-muted-foreground text-[11px] pt-0.5">
               <div className="flex items-center justify-between">
-                <span>• مبيعات نقداً (Cash):</span>
+                <span>• مبيعات نقداً:</span>
                 <span className="font-mono text-foreground">{zReport.sales?.cash?.toFixed(2)} {currency}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>• مبيعات بطاقة وشبكة (Card):</span>
+                <span>• مبيعات بطاقة وشبكة:</span>
                 <span className="font-mono text-foreground">{zReport.sales?.card?.toFixed(2)} {currency}</span>
               </div>
               {zReport.sales?.transfer > 0 && (
@@ -207,7 +207,7 @@ export function ZReportDialog({ open, onOpenChange, zReport, shift }: ZReportDia
             className="gap-1.5 text-xs rounded-lg"
           >
             <PrinterIcon className="size-3.5" />
-            <span>طباعة الإيصال (Print)</span>
+            <span>طباعة الإيصال</span>
           </Button>
           <Button
             type="button"

@@ -47,98 +47,59 @@ export default function MenuOverviewPage() {
         </div>
       }
     >
-      {/* بطاقات خطوات المنيو الثلاث الموحدة */}
+      {/* بطاقات أقسام المنيو */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        {/* الخطوة الأولى: الأقسام */}
-        <Link href="/dashboard/menu/categories" className="group block">
-          <div className="flex flex-col justify-between h-full p-4 sm:p-4.5 rounded-xl bg-card shadow-xs transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-border/60 hover:border-primary/40 overflow-hidden">
-            <div>
-              <div className="flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:scale-105 transition-transform">
-                  <LayersIcon className="size-5" />
-                </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/15 text-primary">
-                  الخطوة 1 • {mounted ? categories.length : 0} أقسام
+        {/* الأقسام */}
+        <Link href="/dashboard/menu/categories" className="block">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-card shadow-xs border border-border/60 hover:border-primary/50 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <LayersIcon className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">أقسام المنيو</h3>
+                <span className="text-xs text-muted-foreground font-mono font-medium">
+                  {mounted ? categories.length : 0} قسم
                 </span>
               </div>
-
-              <div className="mt-3.5 space-y-1 text-right">
-                <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                  <span>أقسام المنيو</span>
-                  <ArrowLeftIcon className="size-3.5 group-hover:-translate-x-1 transition-transform text-muted-foreground group-hover:text-primary" />
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  تنظيم قائمة المطعم إلى تصنيفات (برجر، بيتزا، مقبلات، مشروبات...)
-                </p>
-              </div>
             </div>
-
-            <div className="pt-3 mt-3.5 flex items-center justify-between text-xs text-muted-foreground bg-muted/20 -mx-4.5 -mb-4.5 px-4.5 py-2.5 border-t border-border/40">
-              <span className="font-medium text-emerald-600 dark:text-emerald-400 text-[11px]">الحالة: مهيأة</span>
-              <span className="text-primary font-bold group-hover:underline text-[11px]">إدارة الأقسام ←</span>
-            </div>
+            <ArrowLeftIcon className="size-4 text-muted-foreground" />
           </div>
         </Link>
 
-        {/* الخطوة الثانية: المنتجات والأطباق */}
-        <Link href="/dashboard/menu/products" className="group block">
-          <div className="flex flex-col justify-between h-full p-4 sm:p-4.5 rounded-xl bg-card shadow-xs transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-border/60 hover:border-amber-500/40 overflow-hidden">
-            <div>
-              <div className="flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
-                  <UtensilsCrossedIcon className="size-5" />
-                </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                  الخطوة 2 • {mounted ? (counts?.total ?? pagination?.total ?? products.length) : 0} أطباق
+        {/* المنتجات والأطباق */}
+        <Link href="/dashboard/menu/products" className="block">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-card shadow-xs border border-border/60 hover:border-amber-500/50 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <UtensilsCrossedIcon className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">المنتجات والأطباق</h3>
+                <span className="text-xs text-muted-foreground font-mono font-medium">
+                  {mounted ? (counts?.total ?? pagination?.total ?? products.length) : 0} طبق
                 </span>
               </div>
-
-              <div className="mt-3.5 space-y-1 text-right">
-                <h3 className="text-sm font-bold text-foreground group-hover:text-amber-600 transition-colors flex items-center gap-1.5">
-                  <span>المنتجات والأطباق</span>
-                  <ArrowLeftIcon className="size-3.5 group-hover:-translate-x-1 transition-transform text-muted-foreground group-hover:text-amber-600" />
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  إضافة الأطباق والوجبات وتحديد أسعارها والصور المتعددة والأحجام.
-                </p>
-              </div>
             </div>
-
-            <div className="pt-3 mt-3.5 flex items-center justify-between text-xs text-muted-foreground bg-muted/20 -mx-4.5 -mb-4.5 px-4.5 py-2.5 border-t border-border/40">
-              <span className="text-[11px]">الأطباق والأسعار</span>
-              <span className="text-amber-600 dark:text-amber-400 font-bold group-hover:underline text-[11px]">إدارة الأطباق ←</span>
-            </div>
+            <ArrowLeftIcon className="size-4 text-muted-foreground" />
           </div>
         </Link>
 
-        {/* الخطوة الثالثة: إضافات وخيارات الأطباق */}
-        <Link href="/dashboard/menu/options" className="group block">
-          <div className="flex flex-col justify-between h-full p-4 sm:p-4.5 rounded-xl bg-card shadow-xs transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-border/60 hover:border-indigo-500/40 overflow-hidden">
-            <div>
-              <div className="flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform">
-                  <SlidersHorizontalIcon className="size-5" />
-                </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
-                  الخطوة 3 • {mounted ? modifiers.length : 0} خيارات
+        {/* خيارات وإضافات الأطباق */}
+        <Link href="/dashboard/menu/options" className="block">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-card shadow-xs border border-border/60 hover:border-indigo-500/50 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <SlidersHorizontalIcon className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">خيارات وإضافات الأطباق</h3>
+                <span className="text-xs text-muted-foreground font-mono font-medium">
+                  {mounted ? modifiers.length : 0} خيار
                 </span>
               </div>
-
-              <div className="mt-3.5 space-y-1 text-right">
-                <h3 className="text-sm font-bold text-foreground group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
-                  <span>خيارات وإضافات الأطباق</span>
-                  <ArrowLeftIcon className="size-3.5 group-hover:-translate-x-1 transition-transform text-muted-foreground group-hover:text-indigo-600" />
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  تحديد الإضافات الاختيارية (مثل: جبن إضافي، أحجام، صلصات) وتكلفتها.
-                </p>
-              </div>
             </div>
-
-            <div className="pt-3 mt-3.5 flex items-center justify-between text-xs text-muted-foreground bg-muted/20 -mx-4.5 -mb-4.5 px-4.5 py-2.5 border-t border-border/40">
-              <span className="text-[11px]">التخصيص والإضافات</span>
-              <span className="text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline text-[11px]">إدارة الخيارات ←</span>
-            </div>
+            <ArrowLeftIcon className="size-4 text-muted-foreground" />
           </div>
         </Link>
       </div>

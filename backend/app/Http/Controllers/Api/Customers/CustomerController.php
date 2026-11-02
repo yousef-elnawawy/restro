@@ -117,18 +117,33 @@ class CustomerController extends Controller
     /**
      * Get account statement (كشف حساب العميل وعملياته ورصيده)
      */
-    public function statement(Customer $customer): JsonResponse
+    public function statement(Request $request, Customer $customer): JsonResponse
     {
-        $orders = $customer->orders()
-            ->with(['items.product', 'table', 'payments'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+        $typeFilter = $request->query('type', 'all');
 
-        $transactions = $customer->transactions()
-            ->with(['cashRegister'])
-            ->orderBy('date', 'desc')
-            ->orderBy('id', 'desc')
-            ->get();
+        $ordersQuery = $customer->orders()
+            ->with(['items.product', 'table', 'payments']);
+
+        if ($dateFrom) {
+            $ordersQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $ordersQuery->whereDate('created_at', '<=', $dateTo);
+        }
+        $orders = $ordersQuery->orderBy('created_at', 'desc')->get();
+
+        $txQuery = $customer->transactions()
+            ->with(['cashRegister']);
+
+        if ($dateFrom) {
+            $txQuery->whereDate('date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $txQuery->whereDate('date', '<=', $dateTo);
+        }
+        $transactions = $txQuery->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
 
         // Build chronological ledger
         $entries = collect();
@@ -177,6 +192,19 @@ class CustomerController extends Controller
             return $entry;
         });
 
+        $finalLedger = $ledgerWithBalance;
+        if ($typeFilter && $typeFilter !== 'all') {
+            if ($typeFilter === 'orders') {
+                $finalLedger = $finalLedger->filter(fn ($e) => $e['type'] === 'order');
+            } elseif ($typeFilter === 'vouchers') {
+                $finalLedger = $finalLedger->filter(fn ($e) => $e['type'] === 'voucher');
+            } elseif ($typeFilter === 'receipt') {
+                $finalLedger = $finalLedger->filter(fn ($e) => ($e['voucher_type'] ?? null) === 'receipt');
+            } elseif ($typeFilter === 'payment') {
+                $finalLedger = $finalLedger->filter(fn ($e) => ($e['voucher_type'] ?? null) === 'payment');
+            }
+        }
+
         $totalPaidOnOrders = (float) $orders->reduce(fn ($carry, $ord) => $carry + (float) $ord->payments->sum('amount'), 0);
 
         return $this->successResponse([
@@ -189,7 +217,7 @@ class CustomerController extends Controller
             ],
             'orders' => $orders,
             'transactions' => $transactions,
-            'ledger' => $ledgerWithBalance->reverse()->values(),
+            'ledger' => $finalLedger->reverse()->values(),
         ], 'تم جلب كشف حساب العميل بنجاح.');
     }
 }

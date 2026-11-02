@@ -74,14 +74,14 @@ const ROLES_INFO = {
   },
   cashier: {
     label: "كاشير الصالة",
-    sublabel: "إدارة الفواتير والطلبات، نقطة البيع POS، وسندات القبض",
+    sublabel: "إدارة الفواتير والطلبات، نقطة البيع، وسندات القبض",
     icon: ReceiptIcon,
     badgeClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
     borderActive: "border-blue-500 bg-blue-500/5",
   },
   kitchen: {
     label: "رئيس / طاقم المطبخ",
-    sublabel: "شاشة المطبخ (KDS) لتحديث ومتابعة تذاكر تحضير الأطباق",
+    sublabel: "شاشة المطبخ لتحديث ومتابعة تذاكر تحضير الأطباق",
     icon: ChefHatIcon,
     badgeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
     borderActive: "border-amber-500 bg-amber-500/5",
@@ -347,7 +347,7 @@ export default function StaffPage() {
               <ShieldCheckIcon className="size-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground truncate">المدراء (Admin)</p>
+              <p className="text-xs text-muted-foreground truncate">المدراء</p>
               <p className="text-lg sm:text-xl font-bold tracking-tight text-purple-600 dark:text-purple-400 font-mono">{stats.admins}</p>
             </div>
           </div>
@@ -357,7 +357,7 @@ export default function StaffPage() {
               <ReceiptIcon className="size-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground truncate">الكاشير (Cashier)</p>
+              <p className="text-xs text-muted-foreground truncate">الكاشير</p>
               <p className="text-lg sm:text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400 font-mono">{stats.cashiers}</p>
             </div>
           </div>
@@ -367,7 +367,7 @@ export default function StaffPage() {
               <ChefHatIcon className="size-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground truncate">المطبخ (Kitchen)</p>
+              <p className="text-xs text-muted-foreground truncate">المطبخ</p>
               <p className="text-lg sm:text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">{stats.kitchen}</p>
             </div>
           </div>
@@ -377,7 +377,7 @@ export default function StaffPage() {
               <TruckIcon className="size-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground truncate">التوصيل (Delivery)</p>
+              <p className="text-xs text-muted-foreground truncate">التوصيل</p>
               <p className="text-lg sm:text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">{stats.delivery}</p>
             </div>
           </div>
@@ -592,9 +592,6 @@ export default function StaffPage() {
               <UserPlusIcon className="w-5 h-5 text-primary" />
               <span>إضافة موظف جديد</span>
             </DialogTitle>
-            <DialogDescription>
-              أنشئ حساباً جديداً لطاقم العمل مع تحديد الصلاحيات المناسبة لدوره.
-            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
@@ -604,7 +601,7 @@ export default function StaffPage() {
                 <UserIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   required
-                  placeholder="مثال: أحمد عبد الله"
+                  placeholder="اسم الموظف"
                   value={newStaffData.name}
                   onChange={(e) => setNewStaffData({ ...newStaffData, name: e.target.value })}
                   className="pr-9"
@@ -719,9 +716,6 @@ export default function StaffPage() {
               <Edit2Icon className="w-5 h-5 text-primary" />
               <span>تعديل بيانات الموظف</span>
             </DialogTitle>
-            <DialogDescription>
-              تعديل الاسم، البريد، أو إعادة تعيين كلمة المرور للدور المحدد.
-            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleUpdateSubmit} className="space-y-4 pt-2">

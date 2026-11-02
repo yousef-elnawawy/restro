@@ -107,8 +107,8 @@ export function LoginForm({
                   <Input
                     id="email"
                     type="text"
-                    placeholder="مثال: admin@restro.com أو 01012345678"
-                    dir="ltr"
+                    placeholder="أدخل البريد الإلكتروني أو رقم الهاتف"
+                    dir="rtl"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-10 pr-10 pl-3 text-right"

@@ -1138,9 +1138,6 @@ export default function DeliveryOperationsPage() {
               <ReceiptIcon className="size-4.5 text-primary" />
               <span>تفاصيل طلب التوصيل #{inspectingOrder?.order_number}</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              بيانات العميل، أصناف الوجبة، وتفاصيل الحساب المالي
-            </DialogDescription>
           </DialogHeader>
 
           {inspectingOrder && (
@@ -1234,9 +1231,6 @@ export default function DeliveryOperationsPage() {
               <BanknoteIcon className="size-4.5" />
               <span>توريد نقدية الطلب #{settlementOrder?.order_number}</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              تسوية عهدة طيار التوصيل وإيداع النقدية المستلمة في خزينة المطعم
-            </DialogDescription>
           </DialogHeader>
 
           {settlementOrder && (
@@ -1351,9 +1345,6 @@ export default function DeliveryOperationsPage() {
               <BikeIcon className="size-4.5 text-primary" />
               <span>{editingDriver ? "تعديل بيانات مندوب التوصيل" : "إضافة مندوب توصيل جديد"}</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              أدخل اسم المندوب ورقم هاتفه ونوع المركبة لإضافته لأسطول المطعم
-            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSaveDriver} className="space-y-3 pt-1 text-xs">
@@ -1534,9 +1525,6 @@ export default function DeliveryOperationsPage() {
               <CheckCircle2Icon className="size-5 shrink-0" />
               <span>تم إنشاء حساب المندوب بنجاح!</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              تم إضافة المندوب ({createdCredentials?.name}) وتوليد حساب مستخدم له في النظام للوصول إلى لوحة التحكم فوراً.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2 p-3.5 rounded-xl bg-muted/60 border border-border/80 text-xs">

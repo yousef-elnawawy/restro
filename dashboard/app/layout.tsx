@@ -31,9 +31,9 @@ export default function RootLayout({
         />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#10b981" />
-        <Script
-          id="theme-initializer"
-          strategy="beforeInteractive"
+      </head>
+      <body className="min-h-full flex flex-col font-sans">
+        <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}else{document.documentElement.classList.remove("dark");}}catch(e){}`,
           }}
@@ -42,11 +42,9 @@ export default function RootLayout({
           id="sw-registrar"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator && window.location.protocol.startsWith('http')){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('[PWA] SW register error:',e);});});}`,
+            __html: `if('serviceWorker' in navigator && window.location.protocol.startsWith('http')){if(location.hostname==='localhost'||location.hostname==='127.0.0.1'){navigator.serviceWorker.getRegistrations().then(function(regs){for(var i=0;i<regs.length;i++)regs[i].unregister();});}else{window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('[PWA] SW register error:',e);});});}}`,
           }}
         />
-      </head>
-      <body className="min-h-full flex flex-col font-sans">
         <ThemeProvider>
           <TopProgressBar />
           {children}

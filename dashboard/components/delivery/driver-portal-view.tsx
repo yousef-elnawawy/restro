@@ -472,7 +472,7 @@ export function DriverPortalView({
                         className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-xs font-bold transition-colors"
                       >
                         <ExternalLinkIcon className="size-3.5" />
-                        <span>فتح العنوان على خرائط جوجل (Google Maps) 🗺️</span>
+                        <span>فتح العنوان على خرائط جوجل 🗺️</span>
                       </a>
                     </div>
 
@@ -646,9 +646,6 @@ export function DriverPortalView({
               <CheckCircle2Icon className="size-5 text-emerald-600" />
               <span>تأكيد تسليم الطلب #{confirmDeliveryOrder?.order_number}</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              يرجى التأكد من تسليم الوجبة للعميل واستلام المبلغ المطلوب إن كان نقداً.
-            </DialogDescription>
           </DialogHeader>
 
           {confirmDeliveryOrder && (

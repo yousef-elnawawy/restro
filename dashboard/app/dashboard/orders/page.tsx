@@ -499,14 +499,14 @@ export default function OrdersPage() {
             <Link href="/dashboard/kitchen">
               <Button size="sm" className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90">
                 <ChefHatIcon className="size-3.5" />
-                <span>شاشة المطبخ (KDS)</span>
+                <span>شاشة المطبخ</span>
               </Button>
             </Link>
           ) : (
             <Link href="/dashboard/pos">
               <Button size="sm" className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90">
                 <ReceiptIcon className="size-3.5" />
-                <span>نقطة البيع (الكاشير)</span>
+                <span>نقطة البيع</span>
               </Button>
             </Link>
           )}
@@ -806,7 +806,7 @@ export default function OrdersPage() {
                                 className="gap-2 cursor-pointer text-xs"
                               >
                                 <ReceiptIcon className="size-3.5 text-indigo-600" />
-                                <span>فتح وسداد في شاشة POS</span>
+                                <span>فتح وسداد في نقطة البيع</span>
                               </DropdownMenuItem>
                             )}
 
@@ -855,9 +855,6 @@ export default function OrdersPage() {
             <DialogTitle className="text-base font-bold text-foreground">
               فاتورة الطلب ({selectedOrder?.order_number})
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              تفاصيل الأصناف والحساب ومسار الحالة والخزينة المسجلة.
-            </DialogDescription>
           </DialogHeader>
 
           {selectedOrder && (
@@ -933,9 +930,6 @@ export default function OrdersPage() {
               <CreditCardIcon className="size-5 text-emerald-600" />
               <span>سداد فاتورة الطلب ({selectedOrder?.order_number})</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              تسجيل دفعة نقدية أو بنكية وتوريدها للخزينة المحددة.
-            </DialogDescription>
           </DialogHeader>
 
           {selectedOrder && (
@@ -1087,9 +1081,6 @@ export default function OrdersPage() {
               <RefreshCwIcon className="size-5 text-primary" />
               <span>تعديل حالة ومسار الطلب ({selectedOrder?.order_number})</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              تحديث الحالة التشغيلية للطلب وتعيين سائق التوصيل إذا تطلب الأمر.
-            </DialogDescription>
           </DialogHeader>
 
           {selectedOrder && (

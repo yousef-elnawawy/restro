@@ -12,6 +12,7 @@ import {
 import { useSettingStore } from "@/store/setting.store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
@@ -412,11 +413,10 @@ export function CustomerStatementDialog({
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-foreground">التاريخ</label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={voucherData.date}
-                    onChange={(e) => setVoucherData({ ...voucherData, date: e.target.value })}
-                    className="h-8 text-xs"
+                    onChange={(val) => setVoucherData({ ...voucherData, date: val })}
+                    className="h-8 text-xs w-full"
                   />
                 </div>
               </div>

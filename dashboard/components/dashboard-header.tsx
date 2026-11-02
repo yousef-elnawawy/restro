@@ -29,11 +29,11 @@ import {
 // قاموس لأسماء المسارات بالعربية لتوليد مسار التنقل (Breadcrumbs) تلقائياً
 const routeNames: Record<string, string> = {
   dashboard: "لوحة التحكم",
-  pos: "نقطة البيع (الكاشير)",
+  pos: "نقطة البيع",
   orders: "الطلبات",
   new: "الطلبات الجديدة",
   completed: "الطلبات المكتملة",
-  menu: "المنيو",
+  menu: "قائمة الطعام",
   categories: "الأقسام",
   products: "المنتجات والأطباق",
   options: "الإضافات والخيارات",
@@ -41,7 +41,9 @@ const routeNames: Record<string, string> = {
   customers: "العملاء",
   delivery: "التوصيل والديليفري",
   registers: "الخزائن المالية",
-  kitchen: "شاشة المطبخ (KDS)",
+  vouchers: "السندات والمصاريف",
+  statement: "كشف الحساب",
+  kitchen: "شاشة المطبخ",
   reports: "تقارير المبيعات",
   settings: "الإعدادات",
   restaurant: "بيانات المطعم",
@@ -49,7 +51,6 @@ const routeNames: Record<string, string> = {
   account: "الحساب",
   profile: "الملف الشخصي",
   notifications: "الإشعارات",
-  help: "المساعدة",
 }
 
 export function DashboardHeader() {
@@ -82,9 +83,9 @@ export function DashboardHeader() {
     if (currentRole !== "admin" && (pathname === userHome || pathname === `${userHome}/`)) {
       const homeLabel =
         currentRole === "kitchen"
-          ? "شاشة المطبخ (KDS)"
+          ? "شاشة المطبخ"
           : currentRole === "cashier"
-          ? "نقطة البيع (الكاشير)"
+          ? "نقطة البيع"
           : "التوصيل والديليفري"
       return [
         {
@@ -160,7 +161,7 @@ export function DashboardHeader() {
     },
     kitchen: {
       label: "رئيس المطبخ",
-      subLabel: "شاشة تحضير KDS",
+      subLabel: "شاشة تحضير المطبخ",
       icon: ChefHatIcon,
       color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
     },
@@ -193,7 +194,7 @@ export function DashboardHeader() {
             {breadcrumbs.length === 0 || (breadcrumbs.length === 1 && segments[0] === "dashboard") ? (
               <BreadcrumbItem>
                 <BreadcrumbPage className="truncate max-w-[150px] sm:max-w-none">
-                  {currentRole === "kitchen" ? "شاشة المطبخ (KDS)" : currentRole === "cashier" ? "نقطة البيع (الكاشير)" : "لوحة التحكم"}
+                  {currentRole === "kitchen" ? "شاشة المطبخ" : currentRole === "cashier" ? "نقطة البيع" : "لوحة التحكم"}
                 </BreadcrumbPage>
               </BreadcrumbItem>
             ) : (

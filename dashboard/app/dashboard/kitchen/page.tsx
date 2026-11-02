@@ -101,7 +101,7 @@ export default function KitchenPage() {
 
   // تحديث عنوان الصفحة في المتصفح
   React.useEffect(() => {
-    document.title = "ريسترو | شاشة المطبخ (KDS)"
+    document.title = "ريسترو | شاشة المطبخ"
   }, [])
 
   // تتبع الطلبات المعروفة لإطلاق الصوت فقط عند دخول طلب جديد
@@ -271,7 +271,7 @@ export default function KitchenPage() {
 
   return (
     <PageContainer
-      title="شاشة المطبخ (KDS)"
+      title="شاشة المطبخ"
       description="متابعة تذاكر تحضير الطلبات اللحظية، بنود الوجبات، وزمن الطهي"
       className="p-1 sm:p-2.5 max-w-full gap-2 sm:gap-2.5"
       action={

@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import { ComboboxSelect } from "@/components/ui/combobox-select"
 import {
   Table,
@@ -47,11 +48,10 @@ import {
   ReceiptIcon,
   SparklesIcon,
   ClockIcon,
-  HelpCircleIcon,
+  TargetIcon,
   AlertTriangleIcon,
   SearchIcon,
   FlameIcon,
-  InfoIcon,
   LightbulbIcon,
   ChefHatIcon,
   ActivityIcon,
@@ -465,7 +465,7 @@ export default function ReportsPage() {
           )}
         >
           <ShieldCheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>سجل الورديات وإغلاقات Z-Reports</span>
+          <span>سجل إغلاق الورديات</span>
           {shifts.length > 0 ? (
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-bold">
               {shifts.length}
@@ -487,7 +487,7 @@ export default function ReportsPage() {
           )}
         >
           <SparklesIcon className="size-3.5 text-amber-500" />
-          <span>هندسة المنيو والربحية (BCG Matrix)</span>
+          <span>هندسة قائمة الطعام والربحية</span>
           {menuData?.summary?.total_products ? (
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono">
               {menuData.summary.total_products}
@@ -509,7 +509,7 @@ export default function ReportsPage() {
           )}
         >
           <ClockIcon className="size-3.5 text-blue-500" />
-          <span>ساعات الذروة والضغط (Heatmap)</span>
+          <span>ساعات الذروة والضغط</span>
         </button>
       </div>
 
@@ -561,20 +561,20 @@ export default function ReportsPage() {
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground whitespace-nowrap">من:</span>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
+                    onChange={setDateFrom}
+                    placeholder="من تاريخ"
                     className="h-8 text-xs w-36 rounded-lg"
                   />
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground whitespace-nowrap">إلى:</span>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
+                    onChange={setDateTo}
+                    placeholder="إلى تاريخ"
                     className="h-8 text-xs w-36 rounded-lg"
                   />
                 </div>
@@ -663,7 +663,6 @@ export default function ReportsPage() {
                   <CreditCardIcon className="size-4 text-primary" />
                   <span>طرق الدفع والتحصيل</span>
                 </CardTitle>
-                <CardDescription className="text-xs">توزيع المقبوضات حسب وسيلة السداد</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-2">
                 <div className="space-y-3">
@@ -709,7 +708,6 @@ export default function ReportsPage() {
                   <ShoppingBagIcon className="size-4 text-primary" />
                   <span>توزيع المبيعات حسب نوع الطلب</span>
                 </CardTitle>
-                <CardDescription className="text-xs">صالة، سفري (تيك أواي)، توصيل منازل</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-2">
                 <div className="space-y-3">
@@ -754,9 +752,8 @@ export default function ReportsPage() {
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <BarChart3Icon className="size-4 text-primary" />
-                <span>الأطباق الأكثر طلباً ومساهمة في المبيعات (Top Dishes)</span>
+                <span>الأطباق الأكثر طلباً ومساهمة في المبيعات</span>
               </CardTitle>
-              <CardDescription className="text-xs">الأصناف الرائدة في حجم المبيعات والإيرادات خلال الفترة المحددة</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -812,7 +809,6 @@ export default function ReportsPage() {
                     <LandmarkIcon className="size-4 text-primary" />
                     <span>تقرير حركة الخزائن النقدية للفترة</span>
                   </CardTitle>
-                  <CardDescription className="text-xs">المقبوضات والمصروفات وصافي التدفق النقدي</CardDescription>
                 </div>
                 <Badge variant="outline" className="text-xs">
                   الفترة: {dateFrom} إلى {dateTo}
@@ -915,20 +911,20 @@ export default function ReportsPage() {
               <div className="flex items-center gap-2.5 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground whitespace-nowrap">من:</span>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={shiftDateFrom}
-                    onChange={(e) => setShiftDateFrom(e.target.value)}
+                    onChange={setShiftDateFrom}
+                    placeholder="من تاريخ"
                     className="h-8 text-xs w-34 rounded-lg"
                   />
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground whitespace-nowrap">إلى:</span>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={shiftDateTo}
-                    onChange={(e) => setShiftDateTo(e.target.value)}
+                    onChange={setShiftDateTo}
+                    placeholder="إلى تاريخ"
                     className="h-8 text-xs w-34 rounded-lg"
                   />
                 </div>
@@ -954,7 +950,7 @@ export default function ReportsPage() {
                     options={[
                       { value: "all", label: "جميع الحالات" },
                       { value: "open", label: "مفتوحة الآن" },
-                      { value: "closed", label: "مقفلة Z-Report" },
+                      { value: "closed", label: "مقفلة بتقرير إغلاق" },
                     ]}
                     value={shiftStatusFilter}
                     onValueChange={(val) => setShiftStatusFilter(val)}
@@ -1065,11 +1061,8 @@ export default function ReportsPage() {
               <div>
                 <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
                   <ShieldCheckIcon className="size-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>سجل الورديات وإغلاقات الكاشير اليومية (Z-Reports)</span>
+                  <span>سجل الورديات وإغلاقات الكاشير اليومية</span>
                 </CardTitle>
-                <CardDescription className="text-xs mt-0.5">
-                  تفاصيل العهدة الافتتاحية، المبيعات الفعلية، والنقدية المسلمة ومطابقة العجز والزيادة
-                </CardDescription>
               </div>
               <Badge variant="outline" className="text-xs font-mono font-semibold self-start sm:self-auto">
                 {shifts.length} وردية
@@ -1080,12 +1073,12 @@ export default function ReportsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-muted/40">
-                    <TableHead className="text-right text-xs font-bold">الوردية وتقرير Z</TableHead>
+                    <TableHead className="text-right text-xs font-bold">الوردية وتقرير الإغلاق</TableHead>
                     <TableHead className="text-right text-xs font-bold">الكاشير والخزينة</TableHead>
                     <TableHead className="text-right text-xs font-bold">التوقيت والمدة</TableHead>
                     <TableHead className="text-right text-xs font-bold">العهدة الافتتاحية</TableHead>
                     <TableHead className="text-right text-xs font-bold">مبيعات الوردية</TableHead>
-                    <TableHead className="text-right text-xs font-bold">المتوقع vs الفعلي</TableHead>
+                    <TableHead className="text-right text-xs font-bold">المتوقع مقابل الفعلي</TableHead>
                     <TableHead className="text-right text-xs font-bold">الفارق (العجز/الزيادة)</TableHead>
                     <TableHead className="text-right text-xs font-bold">الحالة</TableHead>
                     <TableHead className="text-center text-xs font-bold">الإجراءات</TableHead>
@@ -1292,19 +1285,19 @@ export default function ReportsPage() {
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground whitespace-nowrap">من:</span>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={menuDateFrom}
-                    onChange={(e) => setMenuDateFrom(e.target.value)}
+                    onChange={setMenuDateFrom}
+                    placeholder="من تاريخ"
                     className="h-8 text-xs w-36 rounded-lg"
                   />
                 </div>
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground whitespace-nowrap">إلى:</span>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={menuDateTo}
-                    onChange={(e) => setMenuDateTo(e.target.value)}
+                    onChange={setMenuDateTo}
+                    placeholder="إلى تاريخ"
                     className="h-8 text-xs w-36 rounded-lg"
                   />
                 </div>
@@ -1389,7 +1382,7 @@ export default function ReportsPage() {
                   <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                     <SparklesIcon className="size-4" />
                   </div>
-                  <span className="font-bold text-xs text-foreground">النجوم (Stars)</span>
+                  <span className="font-bold text-xs text-foreground">النجوم</span>
                 </div>
                 <Badge variant="outline" className="font-mono text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
                   {menuData?.matrix?.stars?.length ?? 0} صنف
@@ -1419,7 +1412,7 @@ export default function ReportsPage() {
                   <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
                     <FlameIcon className="size-4" />
                   </div>
-                  <span className="font-bold text-xs text-foreground">أحصنة الجر (Plowhorses)</span>
+                  <span className="font-bold text-xs text-foreground">الأصناف الشعبية (عالية الطلب)</span>
                 </div>
                 <Badge variant="outline" className="font-mono text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
                   {menuData?.matrix?.plowhorses?.length ?? 0} صنف
@@ -1447,9 +1440,9 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div className="flex size-7 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                    <HelpCircleIcon className="size-4" />
+                    <TargetIcon className="size-4" />
                   </div>
-                  <span className="font-bold text-xs text-foreground">الألغاز (Puzzles)</span>
+                  <span className="font-bold text-xs text-foreground">الأصناف الواعدة (عالية الربح)</span>
                 </div>
                 <Badge variant="outline" className="font-mono text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
                   {menuData?.matrix?.puzzles?.length ?? 0} صنف
@@ -1479,7 +1472,7 @@ export default function ReportsPage() {
                   <div className="flex size-7 items-center justify-center rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400">
                     <AlertTriangleIcon className="size-4" />
                   </div>
-                  <span className="font-bold text-xs text-foreground">الأصناف الراكدة (Dogs)</span>
+                  <span className="font-bold text-xs text-foreground">الأصناف الراكدة</span>
                 </div>
                 <Badge variant="outline" className="font-mono text-xs bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20">
                   {menuData?.matrix?.dogs?.length ?? 0} صنف
@@ -1556,11 +1549,8 @@ export default function ReportsPage() {
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <SparklesIcon className="size-4 text-amber-500" />
-                <span>جدول تحليل وتصنيف أطباق المنيو (BCG Breakdown)</span>
+                <span>جدول تحليل وتصنيف أطباق قائمة الطعام</span>
               </CardTitle>
-              <CardDescription className="text-xs">
-                مقارنة كل صنف بالنسبة لحد الشعبية ({menuData?.summary?.avg_popularity_threshold ?? 0} طبق) وحد هامش الربح ({menuData?.summary?.avg_margin_threshold ?? 0} {currency})
-              </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -1611,7 +1601,7 @@ export default function ReportsPage() {
                           >
                             {item.category === "star" && <SparklesIcon className="size-3" />}
                             {item.category === "plowhorse" && <FlameIcon className="size-3" />}
-                            {item.category === "puzzle" && <HelpCircleIcon className="size-3" />}
+                            {item.category === "puzzle" && <TargetIcon className="size-3" />}
                             {item.category === "dog" && <AlertTriangleIcon className="size-3" />}
                             <span>{item.category_label}</span>
                           </Badge>
@@ -1766,9 +1756,6 @@ export default function ReportsPage() {
                     <ActivityIcon className="size-4 text-primary" />
                     <span>الخريطة الحرارية الأسبوعية للضغط وحجم الطلبات (7 × 24 ساعة)</span>
                   </CardTitle>
-                  <CardDescription className="text-xs">
-                    مرر مؤشر الماوس على أي خلية لعرض تفاصيل اليوم، الساعة، عدد الطلبات، والمبيعات
-                  </CardDescription>
                 </div>
 
                 {/* مفتاح الألوان الدليلي (Legend) */}
@@ -1837,16 +1824,13 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          {/* التوزيع الساعي للأوامر على مدار اليوم (24-Hour Bar Chart Visualizer) */}
+          {/* التوزيع الساعي للأوامر على مدار اليوم */}
           <Card className="rounded-xl border-border/60 shadow-xs">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <BarChart3Icon className="size-4 text-primary" />
-                <span>منحنى توزيع الطلبات على مدار الـ 24 ساعة (Daily Hourly Curve)</span>
+                <span>منحنى توزيع الطلبات على مدار الـ 24 ساعة</span>
               </CardTitle>
-              <CardDescription className="text-xs">
-                إجمالي حجم الطلبات المتراكمة لكل ساعة لتحديد أوقات فتح وإغلاق المحطات بالمطبخ
-              </CardDescription>
             </CardHeader>
             <CardContent className="p-4">
               <div className="grid grid-cols-12 md:grid-cols-24 gap-1.5 items-end h-44 pt-6 pb-2 border-b border-border/40">
@@ -1887,15 +1871,12 @@ export default function ReportsPage() {
                 <LightbulbIcon className="size-4 text-amber-500" />
                 <span>إرشادات الذكاء التشغيلي لإدارة فترات الذروة</span>
               </CardTitle>
-              <CardDescription className="text-xs">
-                خطوات عملية لرفع الكفاءة التشغيلية وتقليل وقت انتظار العملاء خلال أوقات الضغط
-              </CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-1 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
               <div className="p-3 rounded-lg bg-card border border-border/50 space-y-1">
                 <div className="font-bold text-foreground flex items-center gap-1.5">
                   <ChefHatIcon className="size-3.5 text-primary" />
-                  <span>تجهيز المكونات مسبقاً (Mise en place)</span>
+                  <span>تجهيز المكونات مسبقاً</span>
                 </div>
                 <p className="text-muted-foreground text-[11px] leading-relaxed">
                   وجّه طاقم المطبخ للبدء في تجهيز التتبيلات، تقطيع الخضروات، والصلصات قبل أول ساعة ذروة بساعة كاملة لتجنب الاختناق وقت الذروة.
@@ -1918,7 +1899,7 @@ export default function ReportsPage() {
                   <span>موازنة الكاشير والدفع الإلكتروني</span>
                 </div>
                 <p className="text-muted-foreground text-[11px] leading-relaxed">
-                  شجع الدفع بالبطاقات ونقاط البيع السريعة لتقليل وقت الطوابير أمام الكاونتر، واستعن بشاشة نداء العملاء (TV) لتنظيم الاستلام بسلاسة.
+                  شجع الدفع بالبطاقات ونقاط البيع السريعة لتقليل وقت الطوابير أمام الكاونتر وتنظيم الاستلام بسلاسة.
                 </p>
               </div>
             </CardContent>

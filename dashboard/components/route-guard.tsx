@@ -10,7 +10,6 @@ const KITCHEN_ALLOWED_PREFIXES = [
   "/dashboard/orders",
   "/dashboard/profile",
   "/dashboard/notifications",
-  "/dashboard/help",
 ]
 
 const CASHIER_ALLOWED_PREFIXES = [
@@ -20,16 +19,15 @@ const CASHIER_ALLOWED_PREFIXES = [
   "/dashboard/delivery",
   "/dashboard/customers",
   "/dashboard/registers",
+  "/dashboard/vouchers",
   "/dashboard/profile",
   "/dashboard/notifications",
-  "/dashboard/help",
 ]
 
 const DELIVERY_ALLOWED_PREFIXES = [
   "/dashboard/delivery",
   "/dashboard/profile",
   "/dashboard/notifications",
-  "/dashboard/help",
 ]
 
 function checkPermission(role: string | undefined, pathname: string): boolean {

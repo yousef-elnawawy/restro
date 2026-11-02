@@ -24,7 +24,6 @@ import {
   ReceiptIcon,
   BookOpenIcon,
   Settings2Icon,
-  LifeBuoyIcon,
   ExternalLinkIcon,
   UtensilsIcon,
   ArmchairIcon,
@@ -35,7 +34,7 @@ import {
   BarChart3Icon,
   BellIcon,
   ShieldCheckIcon,
-  TvIcon,
+  FileTextIcon,
 } from "lucide-react"
 
 const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001"
@@ -61,15 +60,9 @@ const data = {
     },
 
     {
-      title: "شاشة المطبخ (KDS)",
+      title: "شاشة المطبخ",
       url: "/dashboard/kitchen",
       icon: <ChefHatIcon />,
-    },
-
-    {
-      title: "شاشة نداء العملاء (TV)",
-      url: "/queue",
-      icon: <TvIcon />,
     },
 
     {
@@ -82,6 +75,18 @@ const data = {
       title: "الخزائن المالية",
       url: "/dashboard/registers",
       icon: <LandmarkIcon />,
+    },
+
+    {
+      title: "كشف حساب الخزائن",
+      url: "/dashboard/registers/statement",
+      icon: <FileTextIcon />,
+    },
+
+    {
+      title: "السندات والمصاريف",
+      url: "/dashboard/vouchers",
+      icon: <ReceiptIcon />,
     },
 
     {
@@ -100,6 +105,12 @@ const data = {
       title: "العملاء",
       url: "/dashboard/customers",
       icon: <UsersIcon />,
+    },
+
+    {
+      title: "كشف حساب العملاء",
+      url: "/dashboard/customers/statement",
+      icon: <FileTextIcon />,
     },
 
     {
@@ -153,12 +164,6 @@ const data = {
     },
 
     {
-      title: "المساعدة",
-      url: "/dashboard/help",
-      icon: <LifeBuoyIcon />,
-    },
-
-    {
       title: "الموقع الإلكتروني للمطعم",
       url: frontendUrl,
       icon: <ExternalLinkIcon />,
@@ -172,14 +177,20 @@ import { useAuthStore } from "@/store/auth.store"
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
+  const [mounted, setMounted] = React.useState(false)
   const user = useAuthStore((state) => state.user)
-  const role = user?.role || "admin"
   const settings = useSettingStore((state) => state.settings)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const role = mounted && user?.role ? user.role : "admin"
 
   const filteredNavMain = React.useMemo(() => {
     if (role === "kitchen") {
       return data.navMain.filter((item) =>
-        ["/dashboard/kitchen", "/dashboard/orders", "/queue"].includes(item.url)
+        ["/dashboard/kitchen", "/dashboard/orders"].includes(item.url)
       )
     }
 
@@ -191,8 +202,10 @@ export function AppSidebar({
           "/dashboard/orders",
           "/dashboard/delivery",
           "/dashboard/customers",
+          "/dashboard/customers/statement",
           "/dashboard/registers",
-          "/queue",
+          "/dashboard/registers/statement",
+          "/dashboard/vouchers",
         ].includes(item.url)
       )
     }
@@ -216,14 +229,15 @@ export function AppSidebar({
       ? "/dashboard/delivery"
       : "/dashboard"
 
-  const roleLabel =
-    role === "kitchen"
-      ? "رئيس المطبخ (KDS)"
-      : role === "cashier"
-      ? "كاشير الصالة"
-      : role === "delivery"
-      ? "كابتن التوصيل (Driver)"
-      : "إدارة المطعم"
+  const roleLabel = !mounted
+    ? "إدارة المطعم"
+    : role === "kitchen"
+    ? "رئيس المطبخ"
+    : role === "cashier"
+    ? "كاشير الصالة"
+    : role === "delivery"
+    ? "كابتن التوصيل"
+    : "إدارة المطعم"
 
   return (
     <Sidebar

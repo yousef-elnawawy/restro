@@ -184,19 +184,40 @@ class CashRegisterController extends Controller
         }
         $transactions = $txQuery->get();
 
-        // 3. Build unified timeline of entries
+        // 3. Compute Opening Balance for the period
+        $periodOpeningBalance = (float) $register->opening_balance;
+
+        if ($dateFrom) {
+            $priorPayments = (float) $register->payments()
+                ->whereDate('paid_at', '<', $dateFrom)
+                ->sum('amount');
+
+            $priorReceipts = (float) $register->transactions()
+                ->where('transaction_type', 'receipt')
+                ->whereDate('date', '<', $dateFrom)
+                ->sum('amount');
+
+            $priorExpenses = (float) $register->transactions()
+                ->whereIn('transaction_type', ['payment', 'expense'])
+                ->whereDate('date', '<', $dateFrom)
+                ->sum('amount');
+
+            $periodOpeningBalance += ($priorPayments + $priorReceipts - $priorExpenses);
+        }
+
+        // 4. Build unified timeline of entries
         $entries = collect();
 
         // Opening balance entry
         $entries->push([
             'id' => 'opening-' . $register->id,
-            'date' => $register->created_at ? $register->created_at->format('Y-m-d H:i') : now()->format('Y-m-d 00:00'),
-            'raw_date' => $register->created_at ? $register->created_at->timestamp : 0,
+            'date' => $dateFrom ? "{$dateFrom} 00:00" : ($register->created_at ? $register->created_at->format('Y-m-d H:i') : now()->format('Y-m-d 00:00')),
+            'raw_date' => $dateFrom ? strtotime("{$dateFrom} 00:00:00") : ($register->created_at ? $register->created_at->timestamp : 0),
             'type' => 'opening_balance',
-            'type_label' => 'رصيد أول المدة',
+            'type_label' => $dateFrom ? 'رصيد بداية الفترة' : 'رصيد أول المدة',
             'reference' => 'افتتاحي',
-            'description' => 'الرصيد الافتتاحي المعتمد عند تأسيس الخزنة',
-            'credit' => (float) $register->opening_balance,
+            'description' => $dateFrom ? "رصيد الخزنة حتى بداية تاريخ {$dateFrom}" : 'الرصيد الافتتاحي المعتمد عند تأسيس الخزنة',
+            'credit' => round($periodOpeningBalance, 2),
             'debit' => 0.00,
             'payment_method' => 'cash',
             'user_name' => 'النظام',
@@ -279,14 +300,16 @@ class CashRegisterController extends Controller
         $totalIncome = (float) $payments->sum('amount') + (float) $transactions->where('transaction_type', 'receipt')->sum('amount');
         $totalExpenses = (float) $transactions->whereIn('transaction_type', ['payment', 'expense'])->sum('amount');
         $netFlow = $totalIncome - $totalExpenses;
+        $closingBalance = $periodOpeningBalance + $netFlow;
 
         return $this->successResponse([
             'register' => $register,
             'summary' => [
-                'opening_balance' => (float) $register->opening_balance,
+                'opening_balance' => round($periodOpeningBalance, 2),
                 'total_income' => round($totalIncome, 2),
                 'total_expenses' => round($totalExpenses, 2),
                 'net_flow' => round($netFlow, 2),
+                'closing_balance' => round($closingBalance, 2),
                 'current_balance' => (float) $register->balance,
             ],
             'entries' => $finalEntries->reverse()->values(),
