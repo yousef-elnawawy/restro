@@ -95,21 +95,7 @@ export function ZReportDialog({ open, onOpenChange, zReport, shift }: ZReportDia
               </span>
             </div>
             <div className="space-y-1 text-muted-foreground text-[11px] pt-0.5">
-              <div className="flex items-center justify-between">
-                <span>• مبيعات نقداً:</span>
-                <span className="font-mono text-foreground">{zReport.sales?.cash?.toFixed(2)} {currency}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>• مبيعات بطاقة وشبكة:</span>
-                <span className="font-mono text-foreground">{zReport.sales?.card?.toFixed(2)} {currency}</span>
-              </div>
-              {zReport.sales?.transfer > 0 && (
-                <div className="flex items-center justify-between">
-                  <span>• تحويلات بنكية ومحافظ:</span>
-                  <span className="font-mono text-foreground">{zReport.sales?.transfer?.toFixed(2)} {currency}</span>
-                </div>
-              )}
-              <div className="flex items-center justify-between pt-1 border-t border-border/40 font-medium">
+              <div className="flex items-center justify-between pt-0.5 font-medium">
                 <span>عدد الطلبات المكتملة:</span>
                 <span className="font-mono text-foreground">{zReport.sales?.orders_count || 0} طلب</span>
               </div>

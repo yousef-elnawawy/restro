@@ -137,28 +137,19 @@ export default function VouchersPage() {
           <Button
             size="sm"
             onClick={() => handleOpenDialog("receipt")}
-            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="h-8.5 px-3.5 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <PlusIcon className="size-3.5" />
-            <span>سند قبض</span>
+            <span>+ إيداع / قبض (وارد)</span>
           </Button>
 
           <Button
             size="sm"
             onClick={() => handleOpenDialog("expense")}
-            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-amber-600 hover:bg-amber-700 text-white"
+            className="h-8.5 px-3.5 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-rose-600 hover:bg-rose-700 text-white"
           >
             <PlusIcon className="size-3.5" />
-            <span>تسجيل مصروف</span>
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => handleOpenDialog("payment")}
-            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-rose-600 hover:bg-rose-700 text-white"
-          >
-            <PlusIcon className="size-3.5" />
-            <span>سند صرف</span>
+            <span>- صرف / مصاريف (منصرف)</span>
           </Button>
         </div>
       }
@@ -166,14 +157,14 @@ export default function VouchersPage() {
       <div className="space-y-3 sm:space-y-3.5">
         {/* 1. STATS CARDS */}
         {summary && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 print:hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 print:hidden">
             {/* Receipts */}
             <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <ArrowDownLeftIcon className="size-4.5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">إجمالي المقبوضات</p>
+                <p className="text-xs text-muted-foreground truncate">إجمالي الوارد (مقبوضات)</p>
                 <p className="text-base sm:text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
                   +{summary.total_receipts.toLocaleString("ar-EG")}{" "}
                   <span className="text-[10px] font-normal">{currency}</span>
@@ -181,35 +172,21 @@ export default function VouchersPage() {
               </div>
             </div>
 
-            {/* Payments */}
+            {/* Total Outflow */}
             <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
                 <ArrowUpRightIcon className="size-4.5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">سندات الصرف</p>
+                <p className="text-xs text-muted-foreground truncate">إجمالي المنصرف (مصاريف وسندات)</p>
                 <p className="text-base sm:text-lg font-bold tracking-tight text-rose-600 dark:text-rose-400 font-mono">
-                  -{summary.total_payments.toLocaleString("ar-EG")}{" "}
+                  -{(summary.total_payments + summary.total_expenses).toLocaleString("ar-EG")}{" "}
                   <span className="text-[10px] font-normal">{currency}</span>
                 </p>
               </div>
             </div>
 
-            {/* Expenses */}
-            <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <ReceiptIcon className="size-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">المصروفات التشغيلية</p>
-                <p className="text-base sm:text-lg font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
-                  -{summary.total_expenses.toLocaleString("ar-EG")}{" "}
-                  <span className="text-[10px] font-normal">{currency}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Net */}
+            {/* Net Flow */}
             <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
                 <SlidersHorizontalIcon className="size-4.5" />
@@ -239,15 +216,14 @@ export default function VouchersPage() {
             <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-lg border border-border/40">
               {[
                 { id: "all", label: "الكل" },
-                { id: "receipt", label: "مقبوضات" },
-                { id: "payment", label: "صرف" },
-                { id: "expense", label: "مصروفات" },
+                { id: "receipt", label: "+ وارد / مقبوضات" },
+                { id: "outflow", label: "- منصرف / مصاريف" },
               ].map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setTypeFilter(t.id as any)}
-                  className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${
                     typeFilter === t.id
                       ? "bg-card text-foreground font-semibold shadow-xs"
                       : "text-muted-foreground hover:text-foreground"
@@ -319,7 +295,6 @@ export default function VouchersPage() {
                   <TableHead className="text-start font-semibold">النوع</TableHead>
                   <TableHead className="text-start font-semibold">الخزنة</TableHead>
                   <TableHead className="text-center font-semibold">المبلغ</TableHead>
-                  <TableHead className="text-start font-semibold">طريقة الدفع</TableHead>
                   <TableHead className="text-start font-semibold">البيان والتصنيف</TableHead>
                   <TableHead className="text-start font-semibold">المستفيد / الدافع</TableHead>
                   <TableHead className="text-center font-semibold">التاريخ</TableHead>
@@ -330,14 +305,14 @@ export default function VouchersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={8} className="h-32 text-center text-xs text-muted-foreground">
                       <RefreshCwIcon className="size-4 animate-spin inline-block ml-1 text-primary" />
                       جاري تحميل السندات...
                     </TableCell>
                   </TableRow>
                 ) : filteredList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={8} className="h-32 text-center text-xs text-muted-foreground">
                       لا توجد سندات أو معاملات مطابقة للبحث
                     </TableCell>
                   </TableRow>
@@ -356,15 +331,11 @@ export default function VouchersPage() {
                         <TableCell className="p-2.5 whitespace-nowrap">
                           {isReceipt ? (
                             <Badge variant="outline" className="text-[10px] font-normal bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                              سند قبض
-                            </Badge>
-                          ) : isExpense ? (
-                            <Badge variant="outline" className="text-[10px] font-normal bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
-                              مصروفات
+                              + وارد / قبض
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-[10px] font-normal bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20">
-                              سند صرف
+                              - منصرف / مصاريف
                             </Badge>
                           )}
                         </TableCell>
@@ -378,22 +349,12 @@ export default function VouchersPage() {
                             className={
                               isReceipt
                                 ? "text-emerald-600 dark:text-emerald-400"
-                                : isExpense
-                                ? "text-amber-600 dark:text-amber-400"
                                 : "text-rose-600 dark:text-rose-400"
                             }
                           >
                             {isReceipt ? "+" : "-"}
                             {amount.toLocaleString("ar-EG")} {currency}
                           </span>
-                        </TableCell>
-
-                        <TableCell className="p-2.5 whitespace-nowrap text-muted-foreground">
-                          {tx.payment_method === "cash"
-                            ? "نقدي"
-                            : tx.payment_method === "card"
-                            ? "بطاقة"
-                            : "تحويل"}
                         </TableCell>
 
                         <TableCell className="p-2.5 max-w-xs">
@@ -476,10 +437,6 @@ export default function VouchersPage() {
                 <div className="flex justify-between border-b pb-1">
                   <span>الخزنة:</span>
                   <span>{printingTx.cash_register?.name || "الخزنة"}</span>
-                </div>
-                <div className="flex justify-between border-b pb-1">
-                  <span>طريقة الدفع:</span>
-                  <span>{printingTx.payment_method === "cash" ? "نقدي" : "أخرى"}</span>
                 </div>
                 <div className="flex justify-between border-b pb-1">
                   <span>المعني:</span>

@@ -397,53 +397,6 @@ export function VoucherDialog({
                       className="h-9 rounded-lg"
                     />
                   </div>
-
-                  {/* طريقة التحصيل / الصرف بنمط أزرار تفاعلية راقية */}
-                  <div className="space-y-1.5">
-                    <label className="font-semibold text-foreground">
-                      {type === "receipt" ? "طريقة التحصيل / القبض *" : "طريقة الصرف والدفع *"}
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod("cash")}
-                        className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                          paymentMethod === "cash"
-                            ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                            : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <BanknoteIcon className="size-4 shrink-0" />
-                        <span>نقدي (كاش)</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod("card")}
-                        className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                          paymentMethod === "card"
-                            ? "border-primary bg-primary/10 text-primary shadow-xs"
-                            : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <CreditCardIcon className="size-4 shrink-0" />
-                        <span>بطاقة / شبكة</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod("transfer")}
-                        className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                          paymentMethod === "transfer"
-                            ? "border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-xs"
-                            : "border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <LandmarkIcon className="size-4 shrink-0" />
-                        <span>تحويل بنكي</span>
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
                 {/* كارت ملخص رصيد العميل المختار */}

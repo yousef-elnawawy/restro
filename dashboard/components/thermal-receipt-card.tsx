@@ -217,14 +217,22 @@ export function ThermalReceiptCard({
             {data.payment_status === "paid"
               ? "مدفوع بالكامل ✓"
               : data.payment_status === "partially_paid"
-              ? "مدفوع جزئياً ⏳"
-              : "غير مدفوع ✕"}
+              ? "مدفوع جزئياً"
+              : "غير مدفوع"}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span>طريقة الدفع:</span>
-          <span className="font-bold">{paymentMethodText}</span>
-        </div>
+        {data.tendered_amount != null && Number(data.tendered_amount) > 0 && (
+          <>
+            <div className="flex justify-between text-neutral-900 font-bold">
+              <span>المبلغ المستلم:</span>
+              <span className="font-mono">{Number(data.tendered_amount).toFixed(2)} {activeCurrency}</span>
+            </div>
+            <div className="flex justify-between text-emerald-800 font-bold">
+              <span>الباقي للعميل:</span>
+              <span className="font-mono">{Number(data.change_amount || 0).toFixed(2)} {activeCurrency}</span>
+            </div>
+          </>
+        )}
         {data.paid_at && (
           <div className="flex justify-between text-neutral-700">
             <span>تاريخ السداد:</span>

@@ -420,10 +420,9 @@ export default function RegisterStatementPage() {
                   <TableHead className="text-start font-semibold">نوع المعاملة</TableHead>
                   <TableHead className="text-start font-semibold">المرجع</TableHead>
                   <TableHead className="text-start font-semibold">البيان والتفاصيل</TableHead>
-                  <TableHead className="text-center font-semibold text-emerald-600 dark:text-emerald-400">دائن (+)</TableHead>
-                  <TableHead className="text-center font-semibold text-rose-600 dark:text-rose-400">مدين (-)</TableHead>
-                  <TableHead className="text-center font-semibold">الرصيد التراكمي</TableHead>
-                  <TableHead className="text-start font-semibold">طريقة الدفع</TableHead>
+                  <TableHead className="text-center font-bold text-emerald-600 dark:text-emerald-400">وارد / مقبوضات (+)</TableHead>
+                  <TableHead className="text-center font-bold text-rose-600 dark:text-rose-400">منصرف / مدفوعات (-)</TableHead>
+                  <TableHead className="text-center font-bold">رصيد الخزنة الفعلي</TableHead>
                   <TableHead className="text-start font-semibold">المسؤول</TableHead>
                 </TableRow>
               </TableHeader>
@@ -431,14 +430,14 @@ export default function RegisterStatementPage() {
               <TableBody>
                 {isLoadingStatement ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={8} className="h-32 text-center text-xs text-muted-foreground">
                       <RefreshCwIcon className="size-4 animate-spin inline-block ml-1 text-primary" />
                       جاري تحميل كشف الحساب...
                     </TableCell>
                   </TableRow>
                 ) : filteredEntries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={8} className="h-32 text-center text-xs text-muted-foreground">
                       لا توجد حركات مسجلة لهذه الخزنة في الفترة المحددة
                     </TableCell>
                   </TableRow>
@@ -499,16 +498,6 @@ export default function RegisterStatementPage() {
 
                         <TableCell className="p-2.5 text-center font-mono font-bold whitespace-nowrap text-foreground bg-muted/15">
                           {item.running_balance.toLocaleString("ar-EG")} {currency}
-                        </TableCell>
-
-                        <TableCell className="p-2.5 whitespace-nowrap text-muted-foreground">
-                          {item.payment_method === "cash"
-                            ? "نقدي"
-                            : item.payment_method === "card"
-                            ? "بطاقة"
-                            : item.payment_method === "transfer"
-                            ? "تحويل"
-                            : item.payment_method || "نقدي"}
                         </TableCell>
 
                         <TableCell className="p-2.5 whitespace-nowrap text-muted-foreground">

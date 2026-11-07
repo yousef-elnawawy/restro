@@ -324,92 +324,55 @@ export default function RegistersPage() {
 
   return (
     <PageContainer
-      title="الخزائن المالية والسندات"
-      description="متابعة الخزائن النقدية، إصدار سندات القبض والدفع، وتسجيل المصروفات التشغيلية"
+      title="الخزائن والسيولة النقدية"
+      description="أرصدة الخزائن وحركات الإيداع والمصروفات"
       action={
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/dashboard/registers/statement")}
-            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs border-primary/40 text-primary hover:bg-primary/10"
-            title="فتح صفحة كشف حساب الخزائن"
-          >
-            <ReceiptIcon className="size-3.5" />
-            <span>كشف حساب الخزنة</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/dashboard/vouchers")}
-            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs"
-            title="فتح صفحة السندات والمصاريف"
-          >
-            <CoinsIcon className="size-3.5" />
-            <span>صفحة السندات</span>
-          </Button>
-
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             size="sm"
             onClick={() => handleOpenVoucher("receipt")}
-            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-            title="إصدار سند قبض نقدية"
+            className="h-8.5 px-3 rounded-lg text-xs font-bold gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
           >
             <ArrowDownLeftIcon className="size-3.5" />
-            <span>سند قبض</span>
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => handleOpenVoucher("payment")}
-            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-sky-600 hover:bg-sky-700 text-white"
-            title="إصدار سند صرف / دفع نقدية"
-          >
-            <ArrowUpRightIcon className="size-3.5" />
-            <span>سند صرف</span>
+            <span>+ إيداع / قبض</span>
           </Button>
 
           <Button
             type="button"
             size="sm"
             onClick={() => handleOpenVoucher("expense")}
-            className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-amber-600 hover:bg-amber-700 text-white"
-            title="تسجيل سند مصاريف تشغيلية"
+            className="h-8.5 px-3 rounded-lg text-xs font-bold gap-1.5 shadow-xs bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
           >
-            <ShoppingBagIcon className="size-3.5" />
-            <span>سند مصاريف</span>
+            <ArrowUpRightIcon className="size-3.5" />
+            <span>- صرف / مصاريف</span>
           </Button>
 
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenCreateRegister}
+              className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs"
+            >
+              <PlusIcon className="size-3.5" />
+              <span>خزنة جديدة</span>
+            </Button>
+          )}
+
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => {
               fetchRegisters()
               fetchTransactions()
             }}
             disabled={isRegisterLoading || isFinancialLoading}
-            className="h-8.5 rounded-lg text-xs gap-1.5"
+            className="h-8.5 px-2.5 rounded-lg text-xs text-muted-foreground hover:text-foreground"
             title="تحديث البيانات"
           >
             <RefreshCwIcon className={`size-3.5 ${isRegisterLoading || isFinancialLoading ? "animate-spin" : ""}`} />
-            <span>تحديث</span>
           </Button>
-
-          {isAdmin && (
-            <Button
-              size="sm"
-              onClick={handleOpenCreateRegister}
-              className="h-8.5 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <PlusIcon className="size-3.5" />
-              <span>خزنة جديدة</span>
-            </Button>
-          )}
         </div>
       }
     >
@@ -633,35 +596,25 @@ export default function RegistersPage() {
                     )}
                   </div>
 
-                  {/* تفاصيل الأرصدة (رصيد أول المدة + الرصيد الفعلي الحالي) */}
-                  <div className="space-y-1.5 p-2.5 rounded-xl bg-muted/40 border border-border/50 text-xs">
-                    <div className="flex items-center justify-between text-muted-foreground pb-1 border-b border-border/40">
-                      <span className="text-[11px] font-medium">رصيد أول المدة (افتتاحي):</span>
-                      <span className="font-mono font-bold text-foreground">
-                        {Number(reg.opening_balance || 0).toLocaleString("ar-EG")}{" "}
-                        <span className="text-[10px] font-normal text-muted-foreground">{currency}</span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-0.5">
-                      <span className="text-xs font-bold text-primary">الرصيد الفعلي الحالي:</span>
-                      <span className="font-mono font-black text-base text-primary">
-                        {Number(reg.balance).toLocaleString("ar-EG")}{" "}
-                        <span className="text-xs font-normal text-primary/80">{currency}</span>
-                      </span>
-                    </div>
+                  {/* الرصيد الحالي */}
+                  <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-center space-y-0.5">
+                    <span className="text-[11px] font-semibold text-muted-foreground block">الرصيد المتوفر الآن</span>
+                    <p className="font-mono font-black text-xl text-primary">
+                      {Number(reg.balance).toLocaleString("ar-EG")}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">{currency}</span>
+                    </p>
                   </div>
 
-                  {/* زر عرض كشف الحساب التفصيلي */}
+                  {/* زر عرض كشف الحساب */}
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => handleOpenStatement(reg.id)}
-                    className="w-full h-8.5 rounded-lg text-xs gap-1.5 font-bold border-border/70 hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-colors"
+                    className="w-full h-8.5 rounded-lg text-xs gap-1.5 font-bold border-border/70 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                   >
-                    <ReceiptIcon className="size-3.5 text-primary" />
-                    <span>عرض كشف حساب الخزنة</span>
+                    <ReceiptIcon className="size-3.5" />
+                    <span>كشف حساب الخزنة</span>
                   </Button>
 
                   {/* أزرار الإجراءات السريعة للخزنة */}
@@ -889,7 +842,6 @@ export default function RegistersPage() {
                       <TableHead className="text-start">النوع</TableHead>
                       <TableHead className="text-start">الخزنة</TableHead>
                       <TableHead className="text-center font-bold">المبلغ</TableHead>
-                      <TableHead className="text-center">طريقة الدفع</TableHead>
                       <TableHead className="text-start">البيان والتصنيف</TableHead>
                       <TableHead className="text-start">العميل المستفيد</TableHead>
                       <TableHead className="text-center w-24">التاريخ</TableHead>
@@ -937,20 +889,6 @@ export default function RegistersPage() {
                             {tx.transaction_type === "receipt" ? "+" : "-"}
                             {Number(tx.amount).toLocaleString("ar-EG")} {currency}
                           </span>
-                        </TableCell>
-
-                        <TableCell className="p-2.5 text-center">
-                          {tx.transaction_type === "expense" ? (
-                            <span className="text-muted-foreground">-</span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-muted/60 text-foreground">
-                              {tx.payment_method === "cash"
-                                ? "كاش"
-                                : tx.payment_method === "card"
-                                ? "بطاقة"
-                                : "تحويل"}
-                            </span>
-                          )}
                         </TableCell>
 
                         <TableCell className="p-2.5 max-w-xs">

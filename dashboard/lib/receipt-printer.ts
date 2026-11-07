@@ -21,6 +21,8 @@ export interface ReceiptPrintData {
   total: number
   payment_status: "paid" | "partially_paid" | "unpaid"
   payment_method?: string | null
+  tendered_amount?: number | null
+  change_amount?: number | null
   created_at?: string
   paid_at?: string | null
   notes?: string | null
@@ -364,10 +366,18 @@ export function generateReceiptHtml(data: ReceiptPrintData, customConfig?: Recei
             : "غير مدفوع ✕"
         }</td>
       </tr>
-      <tr>
-        <td>طريقة الدفع:</td>
-        <td class="text-left font-bold">${paymentMethodText}</td>
-      </tr>
+      ${
+        data.tendered_amount != null && Number(data.tendered_amount) > 0
+          ? `<tr>
+              <td>المبلغ المستلم:</td>
+              <td class="text-left font-mono font-bold">${Number(data.tendered_amount).toFixed(2)} ${config.currency}</td>
+            </tr>
+            <tr>
+              <td>الباقي للعميل:</td>
+              <td class="text-left font-mono font-bold" style="color: #059669;">${Number(data.change_amount || 0).toFixed(2)} ${config.currency}</td>
+            </tr>`
+          : ""
+      }
       ${
         data.paid_at
           ? `<tr>
@@ -395,8 +405,17 @@ export function generateReceiptHtml(data: ReceiptPrintData, customConfig?: Recei
 </html>`
 }
 
-export function printThermalReceipt(data: ReceiptPrintData, config?: ReceiptConfig): void {
+export function printThermalReceipt(
+  data: ReceiptPrintData,
+  config?: ReceiptConfig,
+  options?: { kickDrawer?: boolean }
+): void {
   if (typeof window === "undefined") return
+
+  // إذا تم طلب فتح درج الكاش (مثلاً مع الدفع النقدي)
+  if (options?.kickDrawer || data.payment_method === "cash") {
+    openCashDrawer().catch(() => {})
+  }
 
   const html = generateReceiptHtml(data, config)
 
@@ -448,4 +467,34 @@ export function printThermalReceipt(data: ReceiptPrintData, config?: ReceiptConf
       window.print()
     }
   }, 250)
+}
+
+/**
+ * إرسال نبضة لفتح درج النقدية المربوط بالطابعة الحرارية (ESC/POS)
+ * الأمر القياسي لدرج الكاش: ESC p 0 25 250
+ */
+export async function openCashDrawer(): Promise<boolean> {
+  if (typeof window === "undefined") return false
+
+  // محاولة الإرسال المباشر عبر Web Serial API لطابعات USB/Serial
+  if ("serial" in navigator) {
+    try {
+      const ports = await (navigator as any).serial.getPorts()
+      if (ports && ports.length > 0) {
+        const port = ports[0]
+        if (!port.readable) {
+          await port.open({ baudRate: 9600 })
+        }
+        const writer = port.writable.getWriter()
+        const pulse = new Uint8Array([0x1b, 0x70, 0x00, 0x19, 0xfa])
+        await writer.write(pulse)
+        writer.releaseLock()
+        return true
+      }
+    } catch (err) {
+      console.warn("Could not send raw serial pulse to cash drawer:", err)
+    }
+  }
+
+  return false
 }

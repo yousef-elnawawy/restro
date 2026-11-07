@@ -16,7 +16,7 @@ interface FinancialStore {
   error: string | null
 
   // Filters
-  typeFilter: "all" | "receipt" | "payment" | "expense"
+  typeFilter: "all" | "receipt" | "payment" | "expense" | "outflow"
   registerFilter: number | "all"
   searchQuery: string
   dateFrom: string
@@ -26,7 +26,7 @@ interface FinancialStore {
   fetchTransactions: () => Promise<void>
   createTransaction: (payload: FinancialTransactionPayload) => Promise<{ success: boolean; message: string; data?: FinancialTransaction }>
   deleteTransaction: (id: number) => Promise<{ success: boolean; message: string }>
-  setTypeFilter: (type: "all" | "receipt" | "payment" | "expense") => void
+  setTypeFilter: (type: "all" | "receipt" | "payment" | "expense" | "outflow") => void
   setRegisterFilter: (id: number | "all") => void
   setSearchQuery: (query: string) => void
   setDateFrom: (date: string) => void

@@ -37,6 +37,21 @@ class FinancialTransaction extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saved(function (FinancialTransaction $tx) {
+            if ($tx->customer_id) {
+                $tx->customer?->recalculateBalance();
+            }
+        });
+
+        static::deleted(function (FinancialTransaction $tx) {
+            if ($tx->customer_id) {
+                $tx->customer?->recalculateBalance();
+            }
+        });
+    }
+
     public function cashRegister(): BelongsTo
     {
         return $this->belongsTo(CashRegister::class, 'cash_register_id');

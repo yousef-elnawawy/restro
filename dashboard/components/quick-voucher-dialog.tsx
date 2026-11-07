@@ -208,35 +208,24 @@ export function QuickVoucherDialog({
             <button
               type="button"
               onClick={() => handleTypeTab("receipt")}
-              className={`flex-1 py-1 text-xs rounded-md font-medium transition-colors ${
+              className={`flex-1 py-1.5 text-xs rounded-md font-bold transition-all cursor-pointer ${
                 type === "receipt"
-                  ? "bg-card text-foreground font-semibold shadow-xs"
+                  ? "bg-emerald-600 text-white shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              سند قبض
+              + إيداع / قبض (وارد)
             </button>
             <button
               type="button"
               onClick={() => handleTypeTab("expense")}
-              className={`flex-1 py-1 text-xs rounded-md font-medium transition-colors ${
-                type === "expense"
-                  ? "bg-card text-foreground font-semibold shadow-xs"
+              className={`flex-1 py-1.5 text-xs rounded-md font-bold transition-all cursor-pointer ${
+                type === "expense" || type === "payment"
+                  ? "bg-rose-600 text-white shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              مصروفات
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTypeTab("payment")}
-              className={`flex-1 py-1 text-xs rounded-md font-medium transition-colors ${
-                type === "payment"
-                  ? "bg-card text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              سند صرف
+              - صرف / مصاريف (منصرف)
             </button>
           </div>
         </DialogHeader>
@@ -350,45 +339,19 @@ export function QuickVoucherDialog({
             </div>
           )}
 
-          {/* Safe & Payment Method */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="font-semibold text-foreground">الخزنة</label>
-              <ComboboxSelect
-                value={String(cashRegisterId)}
-                onValueChange={(val) => setCashRegisterId(Number(val))}
-                options={registers.map((r) => ({
-                  value: String(r.id),
-                  label: `${r.name} (${Number(r.balance).toLocaleString("ar-EG")} ${currency})`,
-                }))}
-                placeholder="اختر الخزنة..."
-                className="h-8.5 text-xs rounded-lg w-full"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-semibold text-foreground">طريقة الدفع</label>
-              <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-lg border border-border/40">
-                {[
-                  { id: "cash", label: "نقدي" },
-                  { id: "card", label: "بطاقة" },
-                  { id: "transfer", label: "تحويل" },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setPaymentMethod(m.id as any)}
-                    className={`flex-1 py-1 text-[11px] rounded transition-colors ${
-                      paymentMethod === m.id
-                        ? "bg-card text-foreground font-semibold shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Safe */}
+          <div className="space-y-1">
+            <label className="font-semibold text-foreground">الخزنة</label>
+            <ComboboxSelect
+              value={String(cashRegisterId)}
+              onValueChange={(val) => setCashRegisterId(Number(val))}
+              options={registers.map((r) => ({
+                value: String(r.id),
+                label: `${r.name} (${Number(r.balance).toLocaleString("ar-EG")} ${currency})`,
+              }))}
+              placeholder="اختر الخزنة..."
+              className="h-8.5 text-xs rounded-lg w-full"
+            />
           </div>
 
           {/* Description */}

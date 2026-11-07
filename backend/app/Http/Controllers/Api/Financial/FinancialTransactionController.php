@@ -25,7 +25,9 @@ class FinancialTransactionController extends Controller
         $query = FinancialTransaction::with(['cashRegister', 'customer', 'order', 'creator']);
 
         if ($type = $request->query('type')) {
-            if (in_array($type, ['receipt', 'payment', 'expense'])) {
+            if ($type === 'outflow') {
+                $query->whereIn('transaction_type', ['payment', 'expense']);
+            } elseif (in_array($type, ['receipt', 'payment', 'expense'])) {
                 $query->where('transaction_type', $type);
             }
         }

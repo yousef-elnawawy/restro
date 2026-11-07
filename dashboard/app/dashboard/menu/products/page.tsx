@@ -98,7 +98,24 @@ export default function ProductsPage() {
   const { settings, fetchSettings } = useSettingStore()
 
   const [mounted, setMounted] = React.useState(false)
-  const [viewMode, setViewMode] = React.useState<"grid" | "table">("grid")
+  const [viewMode, setViewModeState] = React.useState<"grid" | "table">("grid")
+
+  // استرجاع نمط العرض من التخزين المحلي
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("restro_products_view_mode")
+      if (saved === "grid" || saved === "table") {
+        setViewModeState(saved)
+      }
+    } catch {}
+  }, [])
+
+  const setViewMode = (mode: "grid" | "table") => {
+    setViewModeState(mode)
+    try {
+      localStorage.setItem("restro_products_view_mode", mode)
+    } catch {}
+  }
 
   const activeCurrency = settings?.currency || "ج.م"
 
@@ -783,9 +800,9 @@ export default function ProductsPage() {
           </div>
         </div>
       ) : viewMode === "grid" ? (
-        /* شبكة كروت المنتجات الاحترافية (Card Grid View) */
+        /* شبكة كروت المنتجات الاحترافية المتناسقة والمدمجة */
         <div
-          className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 transition-opacity duration-200 ${
+          className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-3.5 transition-opacity duration-200 ${
             isLoading ? "opacity-60 pointer-events-none" : "opacity-100"
           }`}
         >
@@ -811,8 +828,8 @@ export default function ProductsPage() {
                 className="group flex flex-col justify-between rounded-xl bg-card border border-border/60 shadow-xs transition-all duration-200 hover:shadow-md hover:border-primary/50 overflow-hidden"
               >
                 <div>
-                  {/* رأس الكرت مع صورة الطبق الفاخرة */}
-                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted/40 border-b border-border/40">
+                  {/* رأس الكرت مع صورة الطبق */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/40 border-b border-border/40">
                     {mainImg ? (
                       <img
                         src={mainImg}
@@ -821,28 +838,28 @@ export default function ProductsPage() {
                       />
                     ) : (
                       <div className="flex size-full flex-col items-center justify-center text-muted-foreground/60 bg-gradient-to-br from-primary/5 via-muted/20 to-primary/10">
-                        <UtensilsCrossedIcon className="size-10 text-primary/40 mb-1" />
-                        <span className="text-[11px] font-medium text-muted-foreground/70">بدون صورة</span>
+                        <UtensilsCrossedIcon className="size-8 text-primary/40 mb-1" />
+                        <span className="text-[10px] font-medium text-muted-foreground/70">بدون صورة</span>
                       </div>
                     )}
 
                     {/* شارة القسم العائمة */}
                     {cat && (
-                      <div className="absolute top-2.5 start-2.5 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-background/90 text-foreground backdrop-blur-md shadow-xs border border-border/50">
-                        <LayersIcon className="size-3 text-primary" />
-                        <span>{cat.name}</span>
+                      <div className="absolute top-2 start-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-background/90 text-foreground backdrop-blur-md shadow-xs border border-border/50">
+                        <LayersIcon className="size-2.5 text-primary" />
+                        <span className="truncate max-w-[80px]">{cat.name}</span>
                       </div>
                     )}
 
                     {/* شارة حالة التوفر وسويتش التبديل */}
-                    <div className="absolute top-2.5 end-2.5 flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/90 backdrop-blur-md shadow-xs border border-border/50">
+                    <div className="absolute top-2 end-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-background/90 backdrop-blur-md shadow-xs border border-border/50">
                       <span
-                        className={`size-2 rounded-full ${
+                        className={`size-1.5 rounded-full ${
                           product.is_active ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/50"
                         }`}
                       />
                       <span
-                        className={`text-[10px] font-bold ${
+                        className={`text-[9px] font-bold ${
                           product.is_active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
                         }`}
                       >
@@ -851,98 +868,98 @@ export default function ProductsPage() {
                       <Switch
                         checked={product.is_active}
                         onCheckedChange={() => handleToggle(product)}
-                        className="scale-75 origin-end"
+                        className="scale-65 origin-end"
                         title={product.is_active ? "تعطيل الطبق" : "تفعيل الطبق"}
                       />
                     </div>
 
                     {/* عدد الصور إن وجدت أكثر من صورة */}
                     {totalImages > 1 && (
-                      <span className="absolute bottom-2 start-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-black/70 text-white backdrop-blur-xs flex items-center gap-1">
+                      <span className="absolute bottom-1.5 start-1.5 px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-black/70 text-white backdrop-blur-xs flex items-center gap-1">
                         <ImageIcon className="size-2.5" />
-                        <span>{totalImages} صور</span>
+                        <span>{totalImages}</span>
                       </span>
                     )}
                   </div>
 
                   {/* تفاصيل الطبق */}
-                  <div className="p-4 space-y-2.5 text-right">
-                    <h3 className="text-base font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                  <div className="p-3 space-y-1.5 text-right">
+                    <h3 className="text-sm font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-1" title={product.name}>
                       {product.name}
                     </h3>
 
                     {/* الشارات (الأحجام والإضافات) */}
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1">
                       {hasSizes && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-primary/10 text-primary border border-primary/20">
                           <LayersIcon className="size-2.5" />
                           <span>{product.sizes?.length} أحجام</span>
                         </span>
                       )}
 
                       {hasExtras && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                           <SlidersHorizontalIcon className="size-2.5" />
-                          <span>إضافات خاصة</span>
+                          <span>إضافات</span>
                         </span>
                       )}
 
                       {!hasSizes && !hasExtras && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-muted text-muted-foreground">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-muted text-muted-foreground">
                           صنف قياسي
                         </span>
                       )}
                     </div>
 
                     {/* وصف الطبق */}
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed min-h-[32px]">
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed min-h-[28px]">
                       {product.description || "لا يوجد وصف مدخل لهذا الطبق."}
                     </p>
                   </div>
                 </div>
 
                 {/* ذيل الكرت (السعر وأزرار التحكم) */}
-                <div className="flex items-center justify-between p-3.5 bg-muted/20 border-t border-border/40 mt-1">
+                <div className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/20 border-t border-border/40 mt-1">
                   <div className="flex items-baseline gap-1 text-right">
                     {hasSizes && (
-                      <span className="text-[10px] text-muted-foreground">يبدأ من</span>
+                      <span className="text-[9px] text-muted-foreground">يبدأ من</span>
                     )}
-                    <span className="text-base font-extrabold text-foreground">{product.price}</span>
-                    <span className="text-[11px] font-semibold text-muted-foreground">{activeCurrency}</span>
+                    <span className="text-sm sm:text-base font-extrabold text-foreground">{product.price}</span>
+                    <span className="text-[10px] font-semibold text-muted-foreground">{activeCurrency}</span>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5 sm:gap-1">
                     <Link href={`/dashboard/pos?productId=${product.id}`}>
                       <Button
                         variant="ghost"
-                        size="icon-sm"
-                        className="size-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        size="icon-xs"
+                        className="size-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                         title="طلب عبر الكاشير"
                       >
-                        <ReceiptIcon className="size-4" />
+                        <ReceiptIcon className="size-3.5" />
                         <span className="sr-only">طلب عبر الكاشير</span>
                       </Button>
                     </Link>
 
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon-xs"
                       onClick={() => handleOpenEdit(product)}
-                      className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                       title="تعديل بيانات المنتج"
                     >
-                      <Edit2Icon className="size-4" />
+                      <Edit2Icon className="size-3.5" />
                       <span className="sr-only">تعديل</span>
                     </Button>
 
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon-xs"
                       onClick={() => handleOpenDelete(product)}
-                      className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      className="size-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                       title="حذف المنتج"
                     >
-                      <Trash2Icon className="size-4" />
+                      <Trash2Icon className="size-3.5" />
                       <span className="sr-only">حذف</span>
                     </Button>
                   </div>

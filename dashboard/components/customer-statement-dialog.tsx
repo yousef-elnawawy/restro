@@ -323,9 +323,9 @@ export function CustomerStatementDialog({
                 </div>
               )}
 
-              {/* الخزنة والمبلغ وطريقة الدفع بنمط راقي */}
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-                <div className="sm:col-span-5 space-y-1">
+              {/* الخزنة والمبلغ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-foreground">الخزنة المستلمة *</label>
                   <ComboboxSelect
                     value={voucherData.cash_register_id ? String(voucherData.cash_register_id) : ""}
@@ -342,7 +342,7 @@ export function CustomerStatementDialog({
                   />
                 </div>
 
-                <div className="sm:col-span-3 space-y-1">
+                <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-foreground">المبلغ ({currency}) *</label>
                   <Input
                     type="number"
@@ -354,50 +354,6 @@ export function CustomerStatementDialog({
                     className="h-8 text-xs font-mono font-bold rounded-md"
                     required
                   />
-                </div>
-
-                <div className="sm:col-span-4 space-y-1">
-                  <label className="text-[11px] font-semibold text-foreground">طريقة الدفع *</label>
-                  <div className="grid grid-cols-3 gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setVoucherData({ ...voucherData, payment_method: "cash" })}
-                      className={`flex items-center justify-center gap-1 h-8 rounded-md border text-[11px] font-bold transition-all cursor-pointer ${
-                        voucherData.payment_method === "cash"
-                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                          : "border-border/60 hover:bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <BanknoteIcon className="size-3.5 shrink-0" />
-                      <span>كاش</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setVoucherData({ ...voucherData, payment_method: "card" })}
-                      className={`flex items-center justify-center gap-1 h-8 rounded-md border text-[11px] font-bold transition-all cursor-pointer ${
-                        voucherData.payment_method === "card"
-                          ? "border-primary bg-primary/10 text-primary shadow-xs"
-                          : "border-border/60 hover:bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <CreditCardIcon className="size-3.5 shrink-0" />
-                      <span>شبكة</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setVoucherData({ ...voucherData, payment_method: "transfer" })}
-                      className={`flex items-center justify-center gap-1 h-8 rounded-md border text-[11px] font-bold transition-all cursor-pointer ${
-                        voucherData.payment_method === "transfer"
-                          ? "border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-xs"
-                          : "border-border/60 hover:bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <LandmarkIcon className="size-3.5 shrink-0" />
-                      <span>تحويل</span>
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -473,13 +429,13 @@ export function CustomerStatementDialog({
                       <TableHead className="text-start text-xs font-bold">المرجع / المستند</TableHead>
                       <TableHead className="text-start text-xs font-bold">النوع / البيان</TableHead>
                       <TableHead className="text-center text-xs font-bold text-rose-600 dark:text-rose-400">
-                        مدين (مشتريات)
+                        مطلوب / مشتريات (عليه)
                       </TableHead>
                       <TableHead className="text-center text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        دائن (سداد)
+                        مدفوع / سداد (منه)
                       </TableHead>
                       <TableHead className="text-center text-xs font-bold text-primary">
-                        الرصيد التراكمي
+                        الرصيد المتبقي
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -511,15 +467,6 @@ export function CustomerStatementDialog({
                                   {row.title}
                                 </span>
                               )}
-                              {row.payment_method && (
-                                <span className="text-[10px] text-muted-foreground bg-muted/60 px-1 rounded">
-                                  {row.payment_method === "cash"
-                                    ? "كاش"
-                                    : row.payment_method === "card"
-                                    ? "بطاقة"
-                                    : "تحويل"}
-                                </span>
-                              )}
                             </div>
                             {row.description && (
                               <div className="text-[10px] text-muted-foreground line-clamp-1">
@@ -529,7 +476,7 @@ export function CustomerStatementDialog({
                           </div>
                         </TableCell>
 
-                        {/* مدين */}
+                        {/* مطلوب منه (مشتريات) */}
                         <TableCell className="p-2 text-center font-mono font-bold text-rose-600 dark:text-rose-400">
                           {row.debit > 0 ? (
                             <span>{row.debit.toLocaleString("ar-EG")} {currency}</span>
@@ -538,7 +485,7 @@ export function CustomerStatementDialog({
                           )}
                         </TableCell>
 
-                        {/* دائن */}
+                        {/* مدفوع منه (سداد) */}
                         <TableCell className="p-2 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
                           {row.credit > 0 ? (
                             <span>{row.credit.toLocaleString("ar-EG")} {currency}</span>

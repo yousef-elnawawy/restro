@@ -34,6 +34,10 @@ class CustomerController extends Controller
 
         $customers = $query->orderBy('name', 'asc')->get();
 
+        foreach ($customers as $customer) {
+            $customer->recalculateBalance();
+        }
+
         return $this->successResponse($customers, 'تم جلب قائمة العملاء بنجاح.');
     }
 
@@ -122,6 +126,8 @@ class CustomerController extends Controller
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
         $typeFilter = $request->query('type', 'all');
+
+        $customer->recalculateBalance();
 
         $ordersQuery = $customer->orders()
             ->with(['items.product', 'table', 'payments']);

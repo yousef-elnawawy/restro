@@ -7,6 +7,7 @@ use App\Models\RestaurantTable;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class TableController extends Controller
@@ -203,5 +204,52 @@ class TableController extends Controller
         $statusText = $table->is_active ? 'تفعيل' : 'تعطيل';
 
         return $this->successResponse($table, "تم {$statusText} الطاولة بنجاح.");
+    }
+
+    /**
+     * Transfer the active order from this table to another available table.
+     */
+    public function transferOrder(Request $request, int $id): JsonResponse
+    {
+        $sourceTable = RestaurantTable::find($id);
+
+        if (! $sourceTable) {
+            return $this->errorResponse('طاولة المصدر غير موجودة.', null, Response::HTTP_NOT_FOUND);
+        }
+
+        $order = $sourceTable->currentOrder;
+        if (! $order) {
+            return $this->errorResponse('لا يوجد طلب نشط لنقله من هذه الطاولة.');
+        }
+
+        $validated = $request->validate([
+            'target_table_id' => ['required', 'integer', 'exists:restaurant_tables,id', 'different:'.$id],
+        ], [
+            'target_table_id.required' => 'يرجى اختيار الطاولة الهدف.',
+            'target_table_id.different' => 'لا يمكن نقل الطلب إلى نفس الطاولة.',
+            'target_table_id.exists' => 'الطاولة المختارة غير موجودة.',
+        ]);
+
+        $targetTable = RestaurantTable::find($validated['target_table_id']);
+
+        if (! $targetTable->is_active) {
+            return $this->errorResponse('الطاولة المختارة غير مفعلة.');
+        }
+
+        if ($targetTable->status === 'occupied' && $targetTable->currentOrder) {
+            return $this->errorResponse("الطاولة {$targetTable->name} مشغولة بالفعل بطلب نشط.");
+        }
+
+        DB::transaction(function () use ($order, $sourceTable, $targetTable) {
+            $order->update(['table_id' => $targetTable->id]);
+            $sourceTable->update(['status' => 'available']);
+            $targetTable->update(['status' => 'occupied']);
+        });
+
+        return $this->successResponse([
+            'order' => $order->fresh(['table', 'items']),
+            'source_table' => $sourceTable->fresh(),
+            'target_table' => $targetTable->fresh(),
+        ], "تم نقل الطلب بنجاح من {$sourceTable->name} إلى {$targetTable->name}.");
     }
 }

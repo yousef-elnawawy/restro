@@ -344,7 +344,7 @@ export default function CustomerStatementPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground truncate">
-                  {isDebt ? "مديونية مستحقة" : isCredit ? "رصيد دائن" : "الرصيد الحالي"}
+                  {isDebt ? "مديونية مستحقة (عليه)" : isCredit ? "رصيد متبقي للعميل (له)" : "الحساب خالص تماماً"}
                 </p>
                 <p
                   className={`text-base sm:text-lg font-bold tracking-tight font-mono ${
@@ -415,9 +415,9 @@ export default function CustomerStatementPage() {
                   <TableHead className="text-start font-semibold">نوع المعاملة</TableHead>
                   <TableHead className="text-start font-semibold">رقم المرجع</TableHead>
                   <TableHead className="text-start font-semibold">البيان</TableHead>
-                  <TableHead className="text-center font-semibold text-rose-600 dark:text-rose-400">مدين (+)</TableHead>
-                  <TableHead className="text-center font-semibold text-emerald-600 dark:text-emerald-400">دائن (-)</TableHead>
-                  <TableHead className="text-center font-semibold">الرصيد التراكمي</TableHead>
+                  <TableHead className="text-center font-bold text-rose-600 dark:text-rose-400">مطلوب / مشتريات (عليه)</TableHead>
+                  <TableHead className="text-center font-bold text-emerald-600 dark:text-emerald-400">مدفوع / سداد (منه)</TableHead>
+                  <TableHead className="text-center font-bold">الرصيد المتبقي</TableHead>
                   <TableHead className="text-start font-semibold">حالة السداد</TableHead>
                 </TableRow>
               </TableHeader>
@@ -484,8 +484,19 @@ export default function CustomerStatementPage() {
                           {item.credit > 0 ? `-${item.credit.toLocaleString("ar-EG")}` : "—"}
                         </TableCell>
 
-                        <TableCell className="p-2.5 text-center font-mono font-bold whitespace-nowrap text-foreground bg-muted/15">
-                          {item.running_balance.toLocaleString("ar-EG")} {currency}
+                        <TableCell className="p-2.5 text-center font-mono font-bold whitespace-nowrap bg-muted/15">
+                          <span
+                            className={
+                              item.running_balance < 0
+                                ? "text-rose-600 dark:text-rose-400"
+                                : item.running_balance > 0
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            {Math.abs(item.running_balance).toLocaleString("ar-EG")} {currency}{" "}
+                            {item.running_balance < 0 ? "(عليه)" : item.running_balance > 0 ? "(له)" : "(خالص)"}
+                          </span>
                         </TableCell>
 
                         <TableCell className="p-2.5 whitespace-nowrap text-muted-foreground">
@@ -497,7 +508,7 @@ export default function CustomerStatementPage() {
                             <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">غير مسدد</span>
                           ) : (
                             <span className="text-[11px]">
-                              {item.register_name || (item.payment_method === "cash" ? "نقدي" : item.payment_method || "—")}
+                              {item.register_name || "—"}
                             </span>
                           )}
                         </TableCell>

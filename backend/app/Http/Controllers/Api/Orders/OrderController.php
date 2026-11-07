@@ -391,6 +391,9 @@ class OrderController extends Controller
 
             // Sync Customer name
             $customerName = $validated['customer_name'] ?? $order->customer_name;
+            if ($newOrderType !== 'dinein' && $order->order_type === 'dinein' && $order->table && $customerName === $order->table->name && empty($validated['customer_name'])) {
+                $customerName = null;
+            }
             if (! empty($validated['customer_id']) && $validated['customer_id'] !== $order->customer_id) {
                 $cust = Customer::find($validated['customer_id']);
                 if ($cust) {

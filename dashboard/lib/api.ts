@@ -959,6 +959,33 @@ export async function toggleTableActiveApi(
   }
 }
 
+// نقل الطلب النشط من طاولة إلى طاولة أخرى
+export async function transferTableOrderApi(
+  sourceTableId: number,
+  targetTableId: number
+): Promise<ApiResponse<{ order: Order; source_table: RestaurantTable; target_table: RestaurantTable }>> {
+  const token = getAuthToken()
+
+  try {
+    const res = await fetch(`${API_URL}/tables/${sourceTableId}/transfer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ target_table_id: targetTableId }),
+    })
+
+    return await res.json()
+  } catch {
+    return {
+      success: false,
+      message: "تعذر الاتصال بالخادم لنقل الطلب إلى الطاولة الأخرى.",
+    }
+  }
+}
+
 /* =========================================================
    Cash Registers API (الخزائن المالية)
    ========================================================= */
@@ -1269,6 +1296,8 @@ export interface Order {
   status: OrderStatus
   payment_status: PaymentStatus
   payment_method?: string | null
+  tendered_amount?: number | null
+  change_amount?: number | null
   cash_register_id?: number | null
   subtotal: number
   tax: number

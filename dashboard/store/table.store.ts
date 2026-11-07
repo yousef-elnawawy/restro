@@ -12,6 +12,7 @@ import {
   deleteTableApi,
   updateTableStatusApi,
   toggleTableActiveApi,
+  transferTableOrderApi,
 } from "@/lib/api"
 import { getCachedCatalog, setCachedCatalog } from "@/lib/offline-db"
 
@@ -55,6 +56,7 @@ interface TableState {
   deleteTable: (id: number) => Promise<{ success: boolean; message: string }>
   updateTableStatus: (id: number, status: TableStatus) => Promise<{ success: boolean; message: string }>
   toggleTableActive: (id: number) => Promise<{ success: boolean; message: string }>
+  transferTableOrder: (sourceTableId: number, targetTableId: number) => Promise<{ success: boolean; message: string }>
   setSearchQuery: (query: string) => void
   setStatusFilter: (filter: "all" | TableStatus) => void
   setLocationFilter: (location: "all" | string) => void
@@ -216,6 +218,20 @@ export const useTableStore = create<TableState>()((set, get) => ({
       }
     } catch {
       return { success: false, message: "تعذر الاتصال بالخادم لتغيير حالة الطاولة." }
+    }
+  },
+
+  transferTableOrder: async (sourceTableId, targetTableId) => {
+    try {
+      const res = await transferTableOrderApi(sourceTableId, targetTableId)
+      if (res.success) {
+        await get().fetchTables()
+        return { success: true, message: res.message || "تم نقل الطلب بنجاح إلى الطاولة الجديدة." }
+      } else {
+        return { success: false, message: extractErrorMessage(res, "فشل في نقل الطلب إلى الطاولة الأخرى.") }
+      }
+    } catch {
+      return { success: false, message: "تعذر الاتصال بالخادم لنقل الطلب." }
     }
   },
 

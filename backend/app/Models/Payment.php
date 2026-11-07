@@ -30,6 +30,21 @@ class Payment extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saved(function (Payment $payment) {
+            if ($payment->order?->customer_id) {
+                $payment->order->customer?->recalculateBalance();
+            }
+        });
+
+        static::deleted(function (Payment $payment) {
+            if ($payment->order?->customer_id) {
+                $payment->order->customer?->recalculateBalance();
+            }
+        });
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class, 'order_id');

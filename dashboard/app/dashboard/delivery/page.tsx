@@ -1270,36 +1270,6 @@ export default function DeliveryOperationsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">طريقة السداد المستلمة</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSettlementMethod("cash")}
-                    className={`flex items-center justify-center gap-2 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                      settlementMethod === "cash"
-                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "border-border/60 hover:bg-muted"
-                    }`}
-                  >
-                    <BanknoteIcon className="size-4" />
-                    <span>نقدي / كاش</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSettlementMethod("card")}
-                    className={`flex items-center justify-center gap-2 p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                      settlementMethod === "card"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border/60 hover:bg-muted"
-                    }`}
-                  >
-                    <CreditCardIcon className="size-4" />
-                    <span>بطاقة / فيزا</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-foreground">ملاحظات التوريد</label>
                 <Input
                   value={settlementNotes}

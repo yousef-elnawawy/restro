@@ -95,6 +95,21 @@ class Order extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saved(function (Order $order) {
+            if ($order->customer_id) {
+                $order->customer?->recalculateBalance();
+            }
+        });
+
+        static::deleted(function (Order $order) {
+            if ($order->customer_id) {
+                $order->customer?->recalculateBalance();
+            }
+        });
+    }
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');

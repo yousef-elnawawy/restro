@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useSidebar } from "@/components/ui/sidebar"
 import {
   ChefHatIcon,
   ClockIcon,
@@ -19,20 +18,13 @@ import {
   BikeIcon,
   RefreshCwIcon,
   Loader2Icon,
-  Maximize2Icon,
-  Minimize2Icon,
-  Volume2Icon,
-  VolumeXIcon,
   ArmchairIcon,
   AlertTriangleIcon,
   CheckSquareIcon,
   SquareIcon,
   SearchIcon,
   TruckIcon,
-  LayoutGridIcon,
-  ListIcon,
   UtensilsCrossedIcon,
-  PanelLeftIcon,
   CheckIcon,
   ClipboardListIcon,
 } from "lucide-react"
@@ -88,16 +80,12 @@ export default function KitchenPage() {
   const [filterTab, setFilterTab] = React.useState<"all" | "pending" | "preparing" | "ready">("all")
   const [orderTypeFilter, setOrderTypeFilter] = React.useState<"all" | "dinein" | "takeaway" | "delivery">("all")
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [viewMode, setViewMode] = React.useState<"grid" | "compact">("grid")
   const [updatingId, setUpdatingId] = React.useState<number | null>(null)
   const [now, setNow] = React.useState(Date.now())
-  const [soundEnabled, setSoundEnabled] = React.useState(true)
-  const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [completedItems, setCompletedItems] = React.useState<Set<string>>(new Set())
 
   const user = useAuthStore((state) => state.user)
   const isChef = user?.role === "kitchen"
-  const { open, toggleSidebar } = useSidebar()
 
   // تحديث عنوان الصفحة في المتصفح
   React.useEffect(() => {
@@ -107,44 +95,6 @@ export default function KitchenPage() {
   // تتبع الطلبات المعروفة لإطلاق الصوت فقط عند دخول طلب جديد
   const knownOrderIdsRef = React.useRef<Set<number>>(new Set())
   const isFirstLoadRef = React.useRef(true)
-
-  // استرجاع تفضيل الصوت من التخزين المحلي
-  React.useEffect(() => {
-    try {
-      const savedSound = localStorage.getItem("restro_kitchen_sound")
-      if (savedSound !== null) {
-        setSoundEnabled(savedSound === "true")
-      }
-    } catch {}
-  }, [])
-
-  const toggleSound = () => {
-    setSoundEnabled((prev) => {
-      const next = !prev
-      try {
-        localStorage.setItem("restro_kitchen_sound", String(next))
-      } catch {}
-      if (next) {
-        playKitchenChime()
-      }
-      return next
-    })
-  }
-
-  // وضع ملء الشاشة لشاشات العرض داخل المطبخ
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {})
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {})
-    }
-  }
-
-  React.useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement)
-    document.addEventListener("fullscreenchange", handleFsChange)
-    return () => document.removeEventListener("fullscreenchange", handleFsChange)
-  }, [])
 
   // تحديث التوقيت الدوري والـ Auto-polling التلقائي كل 7 ثوانٍ
   React.useEffect(() => {
@@ -180,11 +130,11 @@ export default function KitchenPage() {
     const currentIds = new Set(orders.map((o) => o.id))
     knownOrderIdsRef.current = currentIds
 
-    if (!isFirstLoadRef.current && hasNewPending && soundEnabled) {
+    if (!isFirstLoadRef.current && hasNewPending) {
       playKitchenChime()
     }
     isFirstLoadRef.current = false
-  }, [orders, soundEnabled])
+  }, [orders])
 
   // فلترة الطلبات المعنية بالمطبخ فقط (جديد، قيد التحضير، جاهز)
   const kitchenOrders = React.useMemo(() => {
@@ -276,85 +226,11 @@ export default function KitchenPage() {
       className="p-1 sm:p-2.5 max-w-full gap-2 sm:gap-2.5"
       action={
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* شارة عدد الطلبات النشطة الحالية (مثل شارة الخزنة في الكاشير) */}
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-            <ChefHatIcon className="size-3.5" />
+          {/* شارة عدد الطلبات النشطة الحالية */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold shadow-xs">
+            <ChefHatIcon className="size-4" />
             <span>{kitchenOrders.length} طلبات نشطة</span>
           </div>
-
-          {/* تبديل طريقة العرض شبكة / مدمج (نفس الكاشير) */}
-          <div className="flex items-center bg-muted/60 p-0.5 rounded-md border border-border/50">
-            <button
-              type="button"
-              onClick={() => setViewMode("grid")}
-              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
-                viewMode === "grid"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="عرض الشبكة"
-            >
-              <LayoutGridIcon className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("compact")}
-              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
-                viewMode === "compact"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="عرض القائمة"
-            >
-              <ListIcon className="size-3.5" />
-            </button>
-          </div>
-
-          {/* زر تبديل القائمة الجانبية لتوفير أقصى مساحة */}
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={toggleSidebar}
-            className="h-8 px-2 rounded-md border-border/60 text-xs"
-            title={open ? "طي القائمة الجانبية" : "عرض القائمة"}
-          >
-            <PanelLeftIcon className="size-3.5" />
-            <span className="hidden md:inline">{open ? "طي" : "قائمة"}</span>
-          </Button>
-
-          {/* زر التحكم بالصوت */}
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={toggleSound}
-            className="size-8 p-0 rounded-md border-border/60"
-            title={soundEnabled ? "الصوت مفعل - انقر للكتم" : "الصوت مكتوم - انقر للتفعيل"}
-          >
-            {soundEnabled ? <Volume2Icon className="size-3.5 text-emerald-600" /> : <VolumeXIcon className="size-3.5 text-muted-foreground" />}
-          </Button>
-
-          {/* زر شاشة كاملة */}
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={toggleFullscreen}
-            className="size-8 p-0 rounded-md border-border/60"
-            title="ملء الشاشة"
-          >
-            {isFullscreen ? <Minimize2Icon className="size-3.5" /> : <Maximize2Icon className="size-3.5" />}
-          </Button>
-
-          {/* زر التحديث اليدوي */}
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={() => fetchOrders()}
-            disabled={isLoading}
-            className="size-8 p-0 rounded-md border-border/60"
-            title="تحديث البيانات"
-          >
-            <RefreshCwIcon className={`size-3.5 ${isLoading ? "animate-spin text-primary" : "text-muted-foreground"}`} />
-          </Button>
         </div>
       }
     >
@@ -522,13 +398,7 @@ export default function KitchenPage() {
           شبكة تذاكر المطبخ المتجاوبة تلقائياً (نفس نظام شبكة كروت الكاشير)
           ========================================================================= */}
       {displayedOrders.length > 0 ? (
-        <div
-          className={
-            viewMode === "grid"
-              ? "grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-2.5 sm:gap-3"
-              : "grid grid-cols-1 md:grid-cols-2 gap-2"
-          }
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-2.5 sm:gap-3">
           {displayedOrders.map((order) => {
             const elapsed = getElapsedMinutes(order.created_at, now)
             const isUrgent = elapsed >= 25

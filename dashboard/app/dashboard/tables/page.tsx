@@ -45,10 +45,9 @@ import {
   ClockIcon,
   ShoppingBagIcon,
   CreditCardIcon,
+  ArrowRightLeftIcon,
   XIcon,
-  QrCodeIcon,
 } from "lucide-react"
-import { TableQrDialog } from "@/components/table-qr-dialog"
 
 export default function TablesPage() {
   const router = useRouter()
@@ -64,6 +63,7 @@ export default function TablesPage() {
     createTable,
     updateTable,
     deleteTable,
+    transferTableOrder,
     setSearchQuery,
     setStatusFilter,
     setLocationFilter,
@@ -110,9 +110,10 @@ export default function TablesPage() {
   const [activeOrderModalOpen, setActiveOrderModalOpen] = React.useState(false)
   const [selectedTableWithOrder, setSelectedTableWithOrder] = React.useState<RestaurantTable | null>(null)
 
-  // نافذة ملصقات باركود الـ QR
-  const [qrDialogOpen, setQrDialogOpen] = React.useState(false)
-  const [qrSelectedTable, setQrSelectedTable] = React.useState<RestaurantTable | null>(null)
+  // نافذة نقل الطلب إلى طاولة أخرى
+  const [transferModalOpen, setTransferModalOpen] = React.useState(false)
+  const [targetTableId, setTargetTableId] = React.useState<number | null>(null)
+  const [isTransferring, setIsTransferring] = React.useState(false)
 
   // إشعار العملية (Alert Banner)
   const [bannerMessage, setBannerMessage] = React.useState<{
@@ -274,20 +275,6 @@ export default function TablesPage() {
           >
             <RefreshCwIcon className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />
             <span>تحديث</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setQrSelectedTable(null)
-              setQrDialogOpen(true)
-            }}
-            className="h-8.5 rounded-lg text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
-            title="توليد وطباعة ملصقات الباركود لكافة الطاولات"
-          >
-            <QrCodeIcon className="size-3.5" />
-            <span>طباعة الباركود</span>
           </Button>
 
           {isAdmin && (
@@ -565,52 +552,20 @@ export default function TablesPage() {
               {/* أزرار الإجراءات السفلية */}
               <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs">
                 {isOccupied && currentOrder ? (
-                  <div className="flex items-center gap-1.5 w-full">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleProceedToPayment(currentOrder)
-                      }}
-                      className="flex-1 gap-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-bold"
-                    >
-                      <CreditCardIcon className="size-3.5" />
-                      <span>الدفع في الكاشير</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setQrSelectedTable(table)
-                        setQrDialogOpen(true)
-                      }}
-                      className="p-2 h-auto rounded-md text-primary hover:bg-primary/10 border-primary/20"
-                      title="طباعة باركود الطاولة"
-                    >
-                      <QrCodeIcon className="size-3.5" />
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProceedToPayment(currentOrder)
+                    }}
+                    className="w-full gap-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-bold"
+                  >
+                    <CreditCardIcon className="size-3.5" />
+                    <span>الدفع في الكاشير</span>
+                  </Button>
                 ) : (
-                  <div className="flex items-center justify-between w-full">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setQrSelectedTable(table)
-                        setQrDialogOpen(true)
-                      }}
-                      className="text-xs text-primary hover:text-primary hover:bg-primary/10 p-1.5 h-auto rounded-md"
-                      title="توليد وطباعة باركود الطاولة"
-                    >
-                      <QrCodeIcon className="size-3.5 ms-1" />
-                      <span>الباركود</span>
-                    </Button>
-
+                  <div className="flex items-center justify-end w-full">
                     {isAdmin && (
                       <div className="flex items-center gap-1">
                         <Button
@@ -747,6 +702,20 @@ export default function TablesPage() {
               variant="outline"
               size="sm"
               onClick={() => {
+                setTargetTableId(null)
+                setTransferModalOpen(true)
+              }}
+              className="gap-1.5 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 font-bold rounded-md text-xs"
+            >
+              <ArrowRightLeftIcon className="size-3.5" />
+              <span>نقل الطاولة</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
                 if (selectedTableWithOrder?.current_order) {
                   setActiveOrderModalOpen(false)
                   router.push(`/dashboard/pos?orderId=${selectedTableWithOrder.current_order.id}&tableId=${selectedTableWithOrder.id}`)
@@ -770,6 +739,88 @@ export default function TablesPage() {
             >
               <CreditCardIcon className="size-3.5" />
               <span>الدفع في نقطة البيع</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* =========================================================
+          نافذة نقل الطلب إلى طاولة أخرى
+          ========================================================= */}
+      <Dialog open={transferModalOpen} onOpenChange={setTransferModalOpen}>
+        <DialogContent className="max-w-md rounded-xl p-5 bg-card border border-border/60 text-right shadow-xl">
+          <DialogHeader className="text-right space-y-1">
+            <DialogTitle className="text-base font-bold text-foreground">
+              نقل طلب ({selectedTableWithOrder?.name}) إلى طاولة أخرى
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-2 text-xs">
+            <p className="text-muted-foreground">
+              اختر الطاولة الفارغة المراد نقل الطلب إليها:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto p-1">
+              {tables
+                .filter((t) => t.id !== selectedTableWithOrder?.id && (t.status === "available" || !t.current_order))
+                .map((t) => {
+                  const isSelected = targetTableId === t.id
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTargetTableId(t.id)}
+                      className={`p-2.5 rounded-lg border text-start transition-all cursor-pointer ${
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
+                          : "border-border/60 hover:border-primary/40 bg-card text-foreground"
+                      }`}
+                    >
+                      <div className="font-bold text-xs">{t.name}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        سعة {t.capacity} أفراد • {t.location || "الصالة الرئيسية"}
+                      </div>
+                    </button>
+                  )
+                })}
+            </div>
+            {tables.filter((t) => t.id !== selectedTableWithOrder?.id && (t.status === "available" || !t.current_order)).length === 0 && (
+              <p className="text-xs text-amber-600 p-2 bg-amber-500/10 rounded-md">
+                لا توجد طاولات فارغة متاحة حالياً للنقل إليها.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:space-x-reverse pt-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setTransferModalOpen(false)}
+              className="rounded-md text-xs"
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!targetTableId || isTransferring}
+              onClick={async () => {
+                if (!selectedTableWithOrder || !targetTableId) return
+                setIsTransferring(true)
+                const res = await transferTableOrder(selectedTableWithOrder.id, targetTableId)
+                setIsTransferring(false)
+                if (res.success) {
+                  showBanner("تم نقل الطلب إلى الطاولة بنجاح!", "success")
+                  setTransferModalOpen(false)
+                  setActiveOrderModalOpen(false)
+                } else {
+                  alert(res.message || "فشل نقل الطاولة")
+                }
+              }}
+              className="bg-primary text-primary-foreground font-bold rounded-md text-xs"
+            >
+              {isTransferring ? "جاري النقل..." : "تأكيد نقل الطلب"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -894,16 +945,6 @@ export default function TablesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* =========================================================
-          نافذة توليد وطباعة ملصقات الـ QR Code للطاولات
-          ========================================================= */}
-      <TableQrDialog
-        open={qrDialogOpen}
-        onOpenChange={setQrDialogOpen}
-        tables={tables}
-        initialTable={qrSelectedTable}
-      />
     </PageContainer>
   )
 }

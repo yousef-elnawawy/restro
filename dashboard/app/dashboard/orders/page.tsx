@@ -287,7 +287,7 @@ export default function OrdersPage() {
       amount: remaining > 0 ? remaining.toFixed(2) : Number(order.total || 0).toFixed(2),
       paymentMethod: "cash",
       notes: `سداد للطلب ${order.order_number}`,
-      completeOrder: true,
+      completeOrder: order.order_type === "dinein" || ["ready", "served", "out_for_delivery"].includes(order.status),
     })
     setPayModalOpen(true)
   }
@@ -977,48 +977,17 @@ export default function OrdersPage() {
                 />
               </div>
 
-              {/* المبلغ وطريقة السداد */}
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">طريقة الدفع:</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: "cash", label: "نقدي (كاش)", icon: BanknoteIcon, color: "text-emerald-600 dark:text-emerald-400" },
-                      { id: "card", label: "بطاقة / فيزا", icon: CreditCardIcon, color: "text-blue-600 dark:text-blue-400" },
-                      { id: "transfer", label: "تحويل بنكي", icon: LandmarkIcon, color: "text-purple-600 dark:text-purple-400" },
-                    ].map((pm) => {
-                      const Icon = pm.icon
-                      const active = payForm.paymentMethod === pm.id
-                      return (
-                        <button
-                          key={pm.id}
-                          type="button"
-                          onClick={() => setPayForm({ ...payForm, paymentMethod: pm.id })}
-                          className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-semibold transition-all ${
-                            active
-                              ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
-                              : "border-border/70 bg-card hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <Icon className={`size-4 ${active ? "text-primary" : pm.color}`} />
-                          <span className="text-[11px] text-center leading-tight">{pm.label}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">مبلغ الدفع ({activeCurrency}):</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={payForm.amount}
-                    onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
-                    className="h-9.5 text-xs font-mono font-bold"
-                  />
-                </div>
+              {/* مبلغ الدفع */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground">مبلغ الدفع ({activeCurrency}):</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={payForm.amount}
+                  onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
+                  className="h-9.5 text-xs font-mono font-bold"
+                />
               </div>
 
               {/* ملاحظات */}
@@ -1042,7 +1011,9 @@ export default function OrdersPage() {
                   className="size-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
                 />
                 <label htmlFor="completeOrderCheck" className="text-xs cursor-pointer select-none">
-                  إغلاق الطلب وتفريغ الطاولة تلقائياً فور السداد الكامل
+                  {selectedOrder.order_type === "dinein"
+                    ? "إغلاق الطلب وتفريغ الطاولة تلقائياً فور السداد الكامل"
+                    : "إغلاق الطلب واعتباره مكتملاً فور السداد الكامل"}
                 </label>
               </div>
             </div>

@@ -21,6 +21,26 @@ import { Input } from "@/components/ui/input"
 import { DatePicker } from "@/components/ui/date-picker"
 import { ComboboxSelect } from "@/components/ui/combobox-select"
 import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import {
   Table,
   TableBody,
   TableCell,
@@ -220,6 +240,102 @@ export default function ReportsPage() {
 
   const currency = reportsData?.summary?.currency || menuData?.summary?.currency || peakData?.currency || settings?.currency || "ج.م"
   const summary = reportsData?.summary
+
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // مؤشرات الأداء الحسابية والتحليلات
+  const totalSales = Number(summary?.total_sales || 0)
+  const ordersCount = Number(summary?.orders_count || 0)
+  const cancelledCount = Number(summary?.cancelled_orders_count || 0)
+  const totalOrdersAttempted = ordersCount + cancelledCount
+  const completionRate = totalOrdersAttempted > 0 ? Math.round((ordersCount / totalOrdersAttempted) * 100) : 100
+  const aov = ordersCount > 0 ? Math.round(totalSales / ordersCount) : 0
+  const totalSubtotal = Number(summary?.total_subtotal || 0)
+  const totalTax = Number(summary?.total_tax || 0)
+  const totalDeliveryFees = Number(summary?.total_delivery_fees || 0)
+
+  // 1. بيانات منحنى تطور المبيعات
+  const salesTrendData = React.useMemo(() => {
+    if (!reportsData?.orders || reportsData.orders.length === 0) {
+      if (reportsData?.summary?.total_sales) {
+        return [
+          {
+            date: dateFrom,
+            displayDate: new Date(dateFrom).toLocaleDateString("ar-EG", { month: "short", day: "numeric" }),
+            sales: Number(reportsData.summary.total_sales || 0),
+            orders: Number(reportsData.summary.orders_count || 0),
+          },
+        ]
+      }
+      return []
+    }
+
+    const map = new Map<string, { date: string; displayDate: string; sales: number; orders: number }>()
+    const sorted = [...reportsData.orders].sort(
+      (a, b) => new Date(a.created_at || "").getTime() - new Date(b.created_at || "").getTime()
+    )
+
+    for (const o of sorted) {
+      if (!o.created_at) continue
+      const d = o.created_at.split("T")[0]
+      const existing = map.get(d)
+      const display = new Date(d).toLocaleDateString("ar-EG", { month: "short", day: "numeric" })
+      if (existing) {
+        existing.sales += Number(o.total || 0)
+        existing.orders += 1
+      } else {
+        map.set(d, {
+          date: d,
+          displayDate: display,
+          sales: Number(o.total || 0),
+          orders: 1,
+        })
+      }
+    }
+
+    return Array.from(map.values())
+  }, [reportsData?.orders, reportsData?.summary, dateFrom])
+
+  // 2. بيانات توزيع مبيعات أنواع الطلبات (صالة / سفري / دليفري)
+  const orderTypesData = React.useMemo(() => {
+    const dinein = reportsData?.by_order_type?.dinein || { count: 0, total: 0 }
+    const takeaway = reportsData?.by_order_type?.takeaway || { count: 0, total: 0 }
+    const delivery = reportsData?.by_order_type?.delivery || { count: 0, total: 0 }
+    const total = (dinein.total || 0) + (takeaway.total || 0) + (delivery.total || 0)
+
+    return [
+      {
+        name: "تناول محلي (صالة)",
+        shortName: "صالة",
+        value: Number(dinein.total || 0),
+        total: Number(dinein.total || 0),
+        count: Number(dinein.count || 0),
+        color: "#3b82f6",
+        percent: total > 0 ? Math.round((dinein.total / total) * 100) : 0,
+      },
+      {
+        name: "سفري واستلام",
+        shortName: "سفري",
+        value: Number(takeaway.total || 0),
+        total: Number(takeaway.total || 0),
+        count: Number(takeaway.count || 0),
+        color: "#10b981",
+        percent: total > 0 ? Math.round((takeaway.total / total) * 100) : 0,
+      },
+      {
+        name: "توصيل دليفري",
+        shortName: "دليفري",
+        value: Number(delivery.total || 0),
+        total: Number(delivery.total || 0),
+        count: Number(delivery.count || 0),
+        color: "#f59e0b",
+        percent: total > 0 ? Math.round((delivery.total / total) * 100) : 0,
+      },
+    ].filter((item) => item.value > 0 || item.count > 0)
+  }, [reportsData?.by_order_type])
 
   // فلاتر المواعيد السريعة للتقرير المالي
   const setQuickDate = (type: "today" | "yesterday" | "week" | "month") => {
@@ -603,186 +719,361 @@ export default function ReportsPage() {
             </div>
           </Card>
 
-          {/* المؤشرات المالية الإجمالية للفترة */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-            <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <DollarSignIcon className="size-4.5" />
+          {/* شبكة المؤشرات المالية التنفيذية للفترة (Executive KPI Cards) */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+            {/* 1. إجمالي المبيعات */}
+            <div className="flex flex-col justify-between p-3.5 rounded-xl bg-card border border-border/60 shadow-xs hover:border-primary/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground">إجمالي المبيعات</span>
+                <div className="flex size-7.5 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <DollarSignIcon className="size-4" />
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">إجمالي مبيعات الفترة</p>
+              <div className="mt-2">
                 <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono">
-                  {(summary?.total_sales ?? 0).toLocaleString()} {currency}
+                  {totalSales.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">{currency}</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                  الصافي: {totalSubtotal.toLocaleString()} {currency}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                <ShoppingBagIcon className="size-4.5" />
+            {/* 2. الطلبات المكتملة */}
+            <div className="flex flex-col justify-between p-3.5 rounded-xl bg-card border border-border/60 shadow-xs hover:border-blue-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground">الطلبات المكتملة</span>
+                <div className="flex size-7.5 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <ShoppingBagIcon className="size-4" />
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">الطلبات المكتملة</p>
+              <div className="mt-2">
                 <p className="text-lg sm:text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400 font-mono">
-                  {summary?.orders_count ?? 0} طلب
+                  {ordersCount.toLocaleString()} <span className="text-xs font-normal">طلب</span>
                 </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1 rounded">
+                    {completionRate}% نجاح
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <ReceiptIcon className="size-4.5" />
+            {/* 3. متوسط قيمة الطلب AOV */}
+            <div className="flex flex-col justify-between p-3.5 rounded-xl bg-card border border-border/60 shadow-xs hover:border-emerald-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground">متوسط الفاتورة (AOV)</span>
+                <div className="flex size-7.5 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <TrendingUpIcon className="size-4" />
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">الضرائب المحسوبة</p>
-                <p className="text-lg sm:text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
-                  {(summary?.total_tax ?? 0).toLocaleString()} {currency}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border/60 shadow-xs">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <TruckIcon className="size-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">رسوم التوصيل المحصلة</p>
+              <div className="mt-2">
                 <p className="text-lg sm:text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
-                  {(summary?.total_delivery_fees ?? 0).toLocaleString()} {currency}
+                  {aov.toLocaleString()} <span className="text-xs font-normal">{currency}</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                  لكل طلب منجز
+                </p>
+              </div>
+            </div>
+
+            {/* 4. الضرائب المحسوبة */}
+            <div className="flex flex-col justify-between p-3.5 rounded-xl bg-card border border-border/60 shadow-xs hover:border-amber-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground">الضرائب المحسوبة</span>
+                <div className="flex size-7.5 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <ReceiptIcon className="size-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <p className="text-lg sm:text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
+                  {totalTax.toLocaleString()} <span className="text-xs font-normal">{currency}</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                  ضريبة القيمة المضافة
+                </p>
+              </div>
+            </div>
+
+            {/* 5. رسوم التوصيل */}
+            <div className="flex flex-col justify-between p-3.5 rounded-xl bg-card border border-border/60 shadow-xs hover:border-orange-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground">رسوم الدليفري</span>
+                <div className="flex size-7.5 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                  <TruckIcon className="size-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <p className="text-lg sm:text-xl font-bold tracking-tight text-orange-600 dark:text-orange-400 font-mono">
+                  {totalDeliveryFees.toLocaleString()} <span className="text-xs font-normal">{currency}</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                  {reportsData?.by_order_type?.delivery?.count || 0} طلب توصيل
+                </p>
+              </div>
+            </div>
+
+            {/* 6. الطلبات الملغاة */}
+            <div className="flex flex-col justify-between p-3.5 rounded-xl bg-card border border-border/60 shadow-xs hover:border-rose-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground">طلبات ملغاة</span>
+                <div className="flex size-7.5 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                  <AlertTriangleIcon className="size-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <p className="text-lg sm:text-xl font-bold tracking-tight text-rose-600 dark:text-rose-400 font-mono">
+                  {cancelledCount.toLocaleString()} <span className="text-xs font-normal">طلب</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                  {totalOrdersAttempted > 0 ? ((cancelledCount / totalOrdersAttempted) * 100).toFixed(1) : 0}% من الإجمالي
                 </p>
               </div>
             </div>
           </div>
 
-          {/* تفكيك المبيعات: أنواع الطلبات وطرق الدفع */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* طرق الدفع */}
-            <Card className="rounded-xl border-border/60 shadow-xs">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <CreditCardIcon className="size-4 text-primary" />
-                  <span>طرق الدفع والتحصيل</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="space-y-3">
-                  {[
-                    {
-                      label: "نقدي (كاش)",
-                      icon: BanknoteIcon,
-                      color: "text-emerald-500",
-                      data: reportsData?.by_payment_method?.cash,
-                    },
-                    {
-                      label: "بطاقة دفع إلكتروني (شبكة / فيزا)",
-                      icon: CreditCardIcon,
-                      color: "text-blue-500",
-                      data: reportsData?.by_payment_method?.card,
-                    },
-                    {
-                      label: "تحويل بنكي / محفظة إلكترونية",
-                      icon: LandmarkIcon,
-                      color: "text-purple-500",
-                      data: reportsData?.by_payment_method?.transfer,
-                    },
-                  ].map((pm, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border/50 text-xs">
-                      <div className="flex items-center gap-2">
-                        <pm.icon className={cn("size-4", pm.color)} />
-                        <span className="font-semibold text-foreground">{pm.label}</span>
-                        <span className="text-muted-foreground">({pm.data?.count ?? 0} عملية)</span>
-                      </div>
-                      <span className="font-mono font-bold text-foreground">
-                        {(pm.data?.total ?? 0).toLocaleString()} {currency}
-                      </span>
-                    </div>
-                  ))}
+          {/* رسم بياني لتطور المبيعات اليومية عبر الفترة */}
+          <Card className="rounded-xl border-border/60 shadow-xs overflow-hidden">
+            <CardHeader className="p-4 pb-2 border-b border-border/40 bg-muted/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <TrendingUpIcon className="size-4 text-primary" />
+                    <span>منحنى حركة وتطور المبيعات خلال الفترة</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                    متابعة التدفق المالي وحجم المبيعات اليومي للمطعم
+                  </CardDescription>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* أنواع الطلبات */}
-            <Card className="rounded-xl border-border/60 shadow-xs">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <ShoppingBagIcon className="size-4 text-primary" />
-                  <span>توزيع المبيعات حسب نوع الطلب</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="space-y-3">
-                  {[
-                    {
-                      label: "تناول محلي (صالة)",
-                      icon: ArmchairIcon,
-                      color: "text-blue-500",
-                      data: reportsData?.by_order_type?.dinein,
-                    },
-                    {
-                      label: "سفري واستلام (تيك أواي)",
-                      icon: ShoppingBagIcon,
-                      color: "text-emerald-500",
-                      data: reportsData?.by_order_type?.takeaway,
-                    },
-                    {
-                      label: "خدمة التوصيل (دليفري)",
-                      icon: TruckIcon,
-                      color: "text-amber-500",
-                      data: reportsData?.by_order_type?.delivery,
-                    },
-                  ].map((ot, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border/50 text-xs">
-                      <div className="flex items-center gap-2">
-                        <ot.icon className={cn("size-4", ot.color)} />
-                        <span className="font-semibold text-foreground">{ot.label}</span>
-                        <span className="text-muted-foreground">({ot.data?.count ?? 0} طلب)</span>
-                      </div>
-                      <span className="font-mono font-bold text-foreground">
-                        {(ot.data?.total ?? 0).toLocaleString()} {currency}
-                      </span>
-                    </div>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {dateFrom} إلى {dateTo}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs font-bold font-mono">
+                    {totalSales.toLocaleString()} {currency}
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-4">
+              {isLoadingFinancial ? (
+                <div className="h-[240px] flex items-center justify-center">
+                  <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : salesTrendData.length > 0 && mounted ? (
+                <div className="h-[240px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={salesTrendData}
+                      margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="fillReportSales" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
+                      <XAxis
+                        dataKey="displayDate"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        className="text-xs fill-muted-foreground font-medium"
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        className="text-xs fill-muted-foreground font-mono"
+                        tickFormatter={(v) => Number(v) >= 1000 ? `${(Number(v) / 1000).toFixed(0)}k` : `${v}`}
+                      />
+                      <RechartsTooltip
+                        content={({ active, payload }: any) => {
+                          if (!active || !payload || !payload.length) return null
+                          const item = payload[0].payload
+                          return (
+                            <div className="rounded-lg border bg-popover p-2.5 shadow-md text-right text-xs space-y-1">
+                              <p className="font-bold text-foreground">{item.date || item.displayDate}</p>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="text-muted-foreground">المبيعات:</span>
+                                <span className="font-mono font-bold text-primary">
+                                  {Number(item.sales || 0).toLocaleString()} {currency}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="text-muted-foreground">عدد الطلبات:</span>
+                                <span className="font-mono font-semibold text-foreground">
+                                  {item.orders} طلب
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="sales"
+                        stroke="var(--primary)"
+                        strokeWidth={2.5}
+                        fillOpacity={1}
+                        fill="url(#fillReportSales)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[200px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                  <BarChart3Icon className="size-10 stroke-[1.5] text-muted-foreground/50" />
+                  <p className="text-xs">لا توجد مبيعات مسجلة في هذا النطاق الزمني لعرض الرسم البياني.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* الأطباق الأكثر مبيعاً وإيراداً */}
+          {/* قسم التحليلات البصرية: مبيعات أنواع الطلبات */}
           <Card className="rounded-xl border-border/60 shadow-xs">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <BarChart3Icon className="size-4 text-primary" />
-                <span>الأطباق الأكثر طلباً ومساهمة في المبيعات</span>
+            <CardHeader className="p-4 pb-2 border-b border-border/40">
+              <CardTitle className="text-sm font-bold flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <ShoppingBagIcon className="size-4 text-primary" />
+                  <span>مبيعات أنواع الطلبات (صالة / سفري / دليفري)</span>
+                </span>
+                <Badge variant="outline" className="text-[11px] font-mono">
+                  {orderTypesData.reduce((acc, c) => acc + c.count, 0)} طلب
+                </Badge>
               </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                {mounted && orderTypesData.some((d) => d.value > 0) ? (
+                  <div className="h-[200px] w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <RechartsTooltip
+                          content={({ active, payload }: any) => {
+                            if (!active || !payload || !payload.length) return null
+                            const p = payload[0].payload
+                            return (
+                              <div className="rounded-lg border bg-popover p-2 shadow-md text-right text-xs">
+                                <span className="font-bold text-foreground block">{p.name}</span>
+                                <span className="font-mono text-primary font-bold">
+                                  {Number(p.value).toLocaleString()} {currency} ({p.percent}%)
+                                </span>
+                              </div>
+                            )
+                          }}
+                        />
+                        <Pie
+                          data={orderTypesData}
+                          dataKey="value"
+                          nameKey="shortName"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={52}
+                          outerRadius={78}
+                          paddingAngle={3}
+                        >
+                          {orderTypesData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-[180px] flex items-center justify-center text-xs text-muted-foreground">
+                    لا توجد بيانات طلبات مسجلة
+                  </div>
+                )}
+
+                {/* تفصيل أنواع الطلبات */}
+                <div className="space-y-2.5">
+                  {orderTypesData.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                      <div className="flex items-center gap-2.5">
+                        <span className="size-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="font-bold text-foreground">{item.name}</span>
+                        <span className="text-[11px] text-muted-foreground">({item.count} طلب)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-foreground">
+                          {item.total.toLocaleString()} {currency}
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                          {item.percent}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* الأطباق الأكثر طلباً ومساهمة في المبيعات مع أشرطة تقدم بصرية */}
+          <Card className="rounded-xl border-border/60 shadow-xs overflow-hidden">
+            <CardHeader className="p-4 pb-3 border-b border-border/40 bg-muted/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <AwardIcon className="size-4 text-amber-500" />
+                    <span>الأطباق الأكثر طلباً ومساهمة في الإيرادات</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                    تحليل الأطباق الأكثر شعبية وحصة كل طبق من دخل المطعم
+                  </CardDescription>
+                </div>
+                {reportsData?.top_dishes && reportsData.top_dishes.length > 0 && (
+                  <Badge variant="outline" className="gap-1 bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-bold">
+                    <SparklesIcon className="size-3" />
+                    <span>الأعلى مبيعاً: {reportsData.top_dishes[0].name}</span>
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow className="border-border/60">
-                    <TableHead className="text-right font-bold text-xs py-3">الصنف</TableHead>
+                    <TableHead className="text-right font-bold text-xs py-3 w-12">#</TableHead>
+                    <TableHead className="text-right font-bold text-xs">الصنف / الطبق</TableHead>
                     <TableHead className="text-right font-bold text-xs">الكمية المباعة</TableHead>
                     <TableHead className="text-right font-bold text-xs">إجمالي الإيرادات</TableHead>
-                    <TableHead className="text-right font-bold text-xs">نسبة المساهمة</TableHead>
+                    <TableHead className="text-right font-bold text-xs w-48">نسبة المساهمة المالية</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reportsData?.top_dishes && reportsData.top_dishes.length > 0 ? (
                     reportsData.top_dishes.map((dish, idx) => {
-                      const totalRev = summary?.total_sales || 1
+                      const totalRev = totalSales || 1
                       const pct = Math.round((dish.revenue / totalRev) * 100)
                       return (
                         <TableRow key={idx} className="border-border/40 hover:bg-muted/30">
+                          <TableCell className="font-mono font-bold text-xs py-3 text-muted-foreground">
+                            #{idx + 1}
+                          </TableCell>
                           <TableCell className="font-bold text-xs py-3">{dish.name}</TableCell>
-                          <TableCell className="font-mono text-xs">{dish.quantity.toLocaleString()} طلب</TableCell>
-                          <TableCell className="font-mono font-bold text-xs">
+                          <TableCell className="font-mono text-xs font-medium">
+                            <span className="px-2 py-0.5 rounded bg-muted font-bold">{dish.quantity.toLocaleString()}</span> طلب
+                          </TableCell>
+                          <TableCell className="font-mono font-bold text-xs text-primary">
                             {dish.revenue.toLocaleString()} {currency}
                           </TableCell>
                           <TableCell className="text-xs">
                             <div className="flex items-center gap-2">
-                              <div className="w-24 bg-muted rounded-full h-2 overflow-hidden">
-                                <div className="bg-primary h-2 rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                              <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-2 rounded-full transition-all duration-500"
+                                  style={{
+                                    width: `${Math.min(pct, 100)}%`,
+                                    backgroundColor: idx === 0 ? "#f59e0b" : idx === 1 ? "#3b82f6" : "#10b981",
+                                  }}
+                                />
                               </div>
-                              <span className="font-mono text-[11px] text-muted-foreground">{pct}%</span>
+                              <span className="font-mono text-[11px] font-bold text-muted-foreground w-8 text-left">
+                                {pct}%
+                              </span>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -790,8 +1081,8 @@ export default function ReportsPage() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground text-xs">
-                        لا توجد بيانات أطباق مسجلة بالفترة
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-xs">
+                        لا توجد بيانات أطباق مسجلة خلال الفترة المحددة.
                       </TableCell>
                     </TableRow>
                   )}

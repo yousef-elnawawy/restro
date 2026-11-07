@@ -160,6 +160,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::delete('tables/{table}', [TableController::class, 'destroy']);
     Route::patch('tables/{table}/status', [TableController::class, 'updateStatus']);
     Route::patch('tables/{table}/toggle-status', [TableController::class, 'toggleActive']);
+    Route::post('tables/{table}/transfer', [TableController::class, 'transferOrder']);
 
     // Cash Registers CRUD
     Route::post('cash-registers', [CashRegisterController::class, 'store']);

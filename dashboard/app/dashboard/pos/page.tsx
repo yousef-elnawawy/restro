@@ -29,9 +29,10 @@ import {
 } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { ComboboxSelect, type ComboboxOption } from "@/components/ui/combobox-select"
 import { ThermalReceiptCard } from "@/components/thermal-receipt-card"
-import { printThermalReceipt } from "@/lib/receipt-printer"
+import { printThermalReceipt, openCashDrawer } from "@/lib/receipt-printer"
 import {
   Dialog,
   DialogContent,
@@ -86,6 +87,22 @@ interface InvoiceItem {
   unitPrice: number
   quantity: number
   totalPrice: number
+}
+
+// نوع الطلب المعلق (Hold / Park Order)
+interface HeldOrder {
+  id: string
+  label: string
+  createdAt: string
+  items: InvoiceItem[]
+  orderType: "dinein" | "takeaway" | "delivery"
+  selectedTableId: number | null
+  selectedCustomerId: number | null
+  customerName: string
+  deliveryAddress: string
+  distanceKm: number
+  orderNotes: string
+  grandTotal: number
 }
 
 // مكوّن حقل إدخال الكمية المباشر (بالكتابة والأزرار)
@@ -238,6 +255,14 @@ function PosContent() {
   const [selectedRegisterId, setSelectedRegisterId] = React.useState<number | null>(null)
   const [isProcessingPayment, setIsProcessingPayment] = React.useState(false)
   const [isSubmittingOrder, setIsSubmittingOrder] = React.useState(false)
+  const [paymentMethod, setPaymentMethod] = React.useState<"cash" | "card">("cash")
+  const [tenderedAmount, setTenderedAmount] = React.useState<string>("")
+
+  // حالة الطلبات المعلقة (Hold / Park Orders)
+  const [heldOrders, setHeldOrders] = React.useState<HeldOrder[]>([])
+
+  // مرجع حقل البحث للتركيز الفوري بالأزرار والباركود
+  const searchInputRef = React.useRef<HTMLInputElement | null>(null)
 
   // حالة فاتورة الطباعة بعد السداد
   const [receiptModalOpen, setReceiptModalOpen] = React.useState(false)
@@ -245,7 +270,24 @@ function PosContent() {
 
   // التبديل بين الكتالوج والفاتورة في الشاشات الصغيرة (الموبايل والتابلت)
   const [mobileTab, setMobileTab] = React.useState<"catalog" | "invoice">("catalog")
-  const [viewMode, setViewMode] = React.useState<"grid" | "compact">("grid")
+  const [viewMode, setViewModeState] = React.useState<"grid" | "compact">("grid")
+
+  // استرجاع نمط عرض الكاشير من التخزين المحلي
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("restro_pos_view_mode")
+      if (saved === "grid" || saved === "compact") {
+        setViewModeState(saved)
+      }
+    } catch {}
+  }, [])
+
+  const setViewMode = (mode: "grid" | "compact") => {
+    setViewModeState(mode)
+    try {
+      localStorage.setItem("restro_pos_view_mode", mode)
+    } catch {}
+  }
 
   // حالة الورديات والـ Z-Report
   const {
@@ -325,7 +367,7 @@ function PosContent() {
         setLoadedOrderNumber(order.order_number)
         setLoadedOrderStatus(order.status)
         setOrderType(order.order_type)
-        if (order.table_id) setSelectedTableId(order.table_id)
+        setSelectedTableId(order.order_type === "dinein" ? (order.table_id || null) : null)
         if (order.customer_id) setSelectedCustomerId(order.customer_id)
         if (order.customer_name) setCustomerName(order.customer_name)
         if (order.delivery_address) {
@@ -353,7 +395,13 @@ function PosContent() {
           totalPrice: Number(it.total_price),
         }))
         setInvoiceItems(items)
-        triggerQuickToast(`تم تحميل طلب الطاولة ${order.table?.name || ""} (${order.order_number}) بنجاح وهو جاهز للدفع`)
+        triggerQuickToast(
+          order.order_type === "dinein"
+            ? `تم تحميل طلب الطاولة ${order.table?.name || ""} (${order.order_number}) بنجاح وهو جاهز للدفع`
+            : order.order_type === "takeaway"
+            ? `تم تحميل طلب السفري (${order.order_number}) بنجاح وهو جاهز للتعديل أو السداد`
+            : `تم تحميل طلب التوصيل (${order.order_number}) بنجاح وهو جاهز للتعديل أو السداد`
+        )
       }
     }
 
@@ -643,6 +691,7 @@ function PosContent() {
     setLoadedOrderId(null)
     setLoadedOrderNumber(null)
     setLoadedOrderStatus(null)
+    setSelectedTableId(null)
     setSelectedCustomerId(null)
     setCustomerName("")
     setDeliveryAddress("")
@@ -670,6 +719,71 @@ function PosContent() {
   const grandTotal = subtotal + vatTax + deliveryFee
   const totalItemsCount = invoiceItems.reduce((acc, it) => acc + it.quantity, 0)
 
+  // استرجاع الطلبات المعلقة من التخزين المحلي
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("restro_held_orders")
+      if (saved) {
+        setHeldOrders(JSON.parse(saved))
+      }
+    } catch {}
+  }, [])
+
+  const saveHeldOrdersToStorage = (orders: HeldOrder[]) => {
+    setHeldOrders(orders)
+    try {
+      localStorage.setItem("restro_held_orders", JSON.stringify(orders))
+    } catch {}
+  }
+
+  const handleHoldOrder = () => {
+    if (invoiceItems.length === 0) return
+    const newHeld: HeldOrder = {
+      id: String(Date.now()),
+      label: `معلق #${heldOrders.length + 1} (${orderType === "dinein" ? (selectedTable?.name || "صالة") : orderType === "takeaway" ? "سفري" : "توصيل"})`,
+      createdAt: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
+      items: [...invoiceItems],
+      orderType,
+      selectedTableId,
+      selectedCustomerId,
+      customerName,
+      deliveryAddress,
+      distanceKm,
+      orderNotes,
+      grandTotal,
+    }
+    saveHeldOrdersToStorage([...heldOrders, newHeld])
+    handleClearInvoice()
+    triggerQuickToast(`تم تعليق الطلب (${newHeld.label}) بنجاح`)
+  }
+
+  const handleResumeHeldOrder = (held: HeldOrder) => {
+    if (invoiceItems.length > 0) {
+      if (!window.confirm("هناك طلب مفتوح حالياً في الفاتورة. هل تريد استبداله بالطلب المعلق؟")) {
+        return
+      }
+    }
+    setInvoiceItems(held.items)
+    setOrderType(held.orderType)
+    setSelectedTableId(held.selectedTableId)
+    setSelectedCustomerId(held.selectedCustomerId)
+    setCustomerName(held.customerName)
+    setDeliveryAddress(held.deliveryAddress)
+    setDeliveryDistance(held.distanceKm ? String(held.distanceKm) : "")
+    setOrderNotes(held.orderNotes)
+    setLoadedOrderId(null)
+    setLoadedOrderNumber(null)
+    setLoadedOrderStatus(null)
+
+    saveHeldOrdersToStorage(heldOrders.filter((h) => h.id !== held.id))
+    triggerQuickToast(`تم استرجاع الطلب (${held.label}) إلى الفاتورة`)
+  }
+
+  const handleDeleteHeldOrder = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    saveHeldOrdersToStorage(heldOrders.filter((h) => h.id !== id))
+  }
+
   // الإضافات المتاحة للمنتج الجاري تخصيصه
   const currentProductAvailableExtras = React.useMemo(() => {
     if (!customizingProduct) return []
@@ -696,7 +810,7 @@ function PosContent() {
   // الطاولة المختارة حالياً
   const selectedTable = tables.find((t) => t.id === selectedTableId)
 
-  // 1. إجراء: "تم الطلب" (إنشاء الطلب في قاعدة البيانات بدون دفع فوري، مثل طلب صالة أو توصيل)
+  // 1. إجراء: "تم الطلب" (إنشاء الطلب في قاعدة البيانات بدون دفع فوري، مثل طلب صالة أو سفري أو توصيل)
   const handleSubmitOrderOnly = async () => {
     if (invoiceItems.length === 0) return
 
@@ -710,7 +824,7 @@ function PosContent() {
       order_type: orderType,
       table_id: orderType === "dinein" ? selectedTableId : null,
       customer_id: selectedCustomerId || undefined,
-      customer_name: customerName.trim() || (selectedTable ? selectedTable.name : undefined),
+      customer_name: customerName.trim() || (orderType === "dinein" && selectedTable ? selectedTable.name : undefined),
       notes: orderNotes.trim() || undefined,
       items: invoiceItems.map((it) => ({
         product_id: it.productId || undefined,
@@ -764,7 +878,11 @@ function PosContent() {
       triggerQuickToast(
         isOfflineSaved
           ? `تم حفظ الطلب محلياً (${orderNumber}) بنجاح! سيتم مزامنته عند عودة الاتصال.`
-          : `تم إنشاء الطلب (${orderNumber}) بنجاح! الطاولة أصبحت مشغولة.`
+          : orderType === "dinein"
+          ? `تم إنشاء طلب الصالة (${orderNumber}) بنجاح! الطاولة أصبحت مشغولة.`
+          : orderType === "takeaway"
+          ? `تم إنشاء طلب السفري (${orderNumber}) وإرساله للمطبخ بنجاح!`
+          : `تم إنشاء طلب التوصيل (${orderNumber}) وإرساله للمطبخ بنجاح!`
       )
       handleClearInvoice()
     }
@@ -783,7 +901,7 @@ function PosContent() {
       order_type: orderType,
       table_id: orderType === "dinein" ? selectedTableId : null,
       customer_id: selectedCustomerId || undefined,
-      customer_name: customerName.trim() || (selectedTable ? selectedTable.name : undefined),
+      customer_name: customerName.trim() || (orderType === "dinein" && selectedTable ? selectedTable.name : undefined),
       notes: orderNotes.trim() || undefined,
       items: invoiceItems.map((it) => ({
         product_id: it.productId || undefined,
@@ -814,8 +932,8 @@ function PosContent() {
     }
   }
 
-  // 2. إجراء: فتح نافذة اختيار الخزنة للدفع
-  const handleOpenPaymentDialog = () => {
+  // 2. إجراء: فتح نافذة اختيار الخزنة وتأكيد الدفع
+  const handleOpenPaymentDialog = (method: "cash" | "card" = "cash") => {
     if (invoiceItems.length === 0) return
 
     if (orderType === "dinein" && !selectedTableId && !loadedOrderId) {
@@ -823,6 +941,8 @@ function PosContent() {
       return
     }
 
+    setPaymentMethod("cash")
+    setTenderedAmount(String(grandTotal))
     setPayDialogOpen(true)
   }
 
@@ -832,6 +952,9 @@ function PosContent() {
       alert("يرجى اختيار الخزنة التي سيتم إيداع المبلغ بها.")
       return
     }
+
+    const tenderedNum = paymentMethod === "cash" ? (Number(tenderedAmount) || grandTotal) : grandTotal
+    const changeDue = Math.max(0, tenderedNum - grandTotal)
 
     setIsProcessingPayment(true)
 
@@ -843,7 +966,7 @@ function PosContent() {
         order_type: orderType,
         table_id: orderType === "dinein" ? selectedTableId : null,
         customer_id: selectedCustomerId || undefined,
-        customer_name: customerName.trim() || (selectedTable ? selectedTable.name : undefined),
+        customer_name: customerName.trim() || (orderType === "dinein" && selectedTable ? selectedTable.name : undefined),
         notes: orderNotes.trim() || undefined,
         items: invoiceItems.map((it) => ({
           product_id: it.productId || undefined,
@@ -872,7 +995,7 @@ function PosContent() {
         order_type: orderType,
         table_id: orderType === "dinein" ? selectedTableId : null,
         customer_id: selectedCustomerId || undefined,
-        customer_name: customerName.trim() || (selectedTable ? selectedTable.name : undefined),
+        customer_name: customerName.trim() || (orderType === "dinein" && selectedTable ? selectedTable.name : undefined),
         notes: orderNotes.trim() || undefined,
         items: invoiceItems.map((it) => ({
           product_id: it.productId || undefined,
@@ -897,13 +1020,22 @@ function PosContent() {
         const offRes = await saveOrderLocally(createPayload, {
           cash_register_id: selectedRegisterId,
           amount: grandTotal,
-          payment_method: "cash",
+          payment_method: paymentMethod,
           complete_order: true,
         })
         setIsProcessingPayment(false)
         setPayDialogOpen(false)
-        setCompletedOrder(offRes.order)
+        const completedData: Order = {
+          ...offRes.order,
+          payment_method: paymentMethod,
+          tendered_amount: tenderedNum,
+          change_amount: changeDue,
+        }
+        setCompletedOrder(completedData)
         setReceiptModalOpen(true)
+        if (paymentMethod === "cash") {
+          openCashDrawer().catch(() => {})
+        }
         handleClearInvoice()
         triggerQuickToast(`تم تحصيل وسداد الطلب محلياً (${offRes.order.order_number}) - وضع عدم الاتصال`)
         return
@@ -916,13 +1048,22 @@ function PosContent() {
           const offRes = await saveOrderLocally(createPayload, {
             cash_register_id: selectedRegisterId,
             amount: grandTotal,
-            payment_method: "cash",
+            payment_method: paymentMethod,
             complete_order: true,
           })
           setIsProcessingPayment(false)
           setPayDialogOpen(false)
-          setCompletedOrder(offRes.order)
+          const completedData: Order = {
+            ...offRes.order,
+            payment_method: paymentMethod,
+            tendered_amount: tenderedNum,
+            change_amount: changeDue,
+          }
+          setCompletedOrder(completedData)
           setReceiptModalOpen(true)
+          if (paymentMethod === "cash") {
+            openCashDrawer().catch(() => {})
+          }
           handleClearInvoice()
           triggerQuickToast(`تم تحصيل وسداد الطلب محلياً (${offRes.order.order_number}) - انقطع الاتصال`)
           return
@@ -939,15 +1080,25 @@ function PosContent() {
     const payRes = await payOrder(targetOrderId, {
       cash_register_id: selectedRegisterId,
       amount: grandTotal,
-      complete_order: loadedOrderId && orderType === "dinein" ? true : undefined,
+      payment_method: paymentMethod,
+      complete_order: loadedOrderId && (orderType === "dinein" || loadedOrderStatus === "ready") ? true : undefined,
     })
 
     setIsProcessingPayment(false)
 
     if (payRes.success && payRes.data) {
       setPayDialogOpen(false)
-      setCompletedOrder(payRes.data)
+      const completedData: Order = {
+        ...payRes.data,
+        payment_method: paymentMethod,
+        tendered_amount: tenderedNum,
+        change_amount: changeDue,
+      }
+      setCompletedOrder(completedData)
       setReceiptModalOpen(true)
+      if (paymentMethod === "cash") {
+        openCashDrawer().catch(() => {})
+      }
       fetchTables()
       fetchRegisters()
       handleClearInvoice()
@@ -955,6 +1106,95 @@ function PosContent() {
       alert(payRes.message || "فشل في تسجيل عملية الدفع على الخزنة.")
     }
   }
+
+  // اختصارات لوحة المفاتيح والتركيز التلقائي على البحث
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. F1 أو F2: فتح نافذة السداد والدفع
+      if (e.key === "F1" || e.key === "F2") {
+        e.preventDefault()
+        if (invoiceItems.length > 0 && !payDialogOpen && !receiptModalOpen) {
+          handleOpenPaymentDialog()
+        }
+        return
+      }
+
+      // 3. F6: تعليق الطلب الحالي
+      if (e.key === "F6") {
+        e.preventDefault()
+        if (invoiceItems.length > 0 && !payDialogOpen && !receiptModalOpen) {
+          handleHoldOrder()
+        }
+        return
+      }
+
+      // 4. Escape: إغلاق النوافذ المفتوحة
+      if (e.key === "Escape") {
+        if (payDialogOpen) {
+          e.preventDefault()
+          setPayDialogOpen(false)
+          return
+        }
+        if (receiptModalOpen) {
+          e.preventDefault()
+          setReceiptModalOpen(false)
+          setCompletedOrder(null)
+          return
+        }
+        if (customizingProduct) {
+          e.preventDefault()
+          setCustomizingProduct(null)
+          return
+        }
+        return
+      }
+
+      // 5. Space: طباعة عند فتح الإيصال أو تأكيد الدفع في نافذة الدفع
+      if (e.code === "Space" && !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) {
+        if (receiptModalOpen && completedOrder) {
+          e.preventDefault()
+          printThermalReceipt(completedOrder)
+          return
+        }
+        if (payDialogOpen && !isProcessingPayment) {
+          e.preventDefault()
+          handleConfirmPayment()
+          return
+        }
+      }
+
+      // 6. توجيه الكتابة المباشرة إلى خانة البحث (لأجهزة الباركود والبحث الفوري)
+      if (
+        !payDialogOpen &&
+        !receiptModalOpen &&
+        !customizingProduct &&
+        !openShiftModalOpen &&
+        !closeShiftModalOpen &&
+        !["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName)
+      ) {
+        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+          searchInputRef.current?.focus()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [
+    invoiceItems,
+    payDialogOpen,
+    receiptModalOpen,
+    customizingProduct,
+    completedOrder,
+    isProcessingPayment,
+    heldOrders,
+    grandTotal,
+    selectedTableId,
+    loadedOrderId,
+    orderType,
+    openShiftModalOpen,
+    closeShiftModalOpen,
+  ])
 
   return (
     <PageContainer
@@ -1273,9 +1513,10 @@ function PosContent() {
               <div className="relative flex-1">
                 <SearchIcon className="absolute start-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
                 <Input
+                  ref={searchInputRef}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن صنف بالاسم أو الوصف..."
+                  placeholder="ابحث عن صنف بالاسم أو الوصف (أو امسح الباركود)..."
                   className="ps-8.5 h-8.5 bg-muted/30 rounded-lg text-xs"
                 />
               </div>
@@ -1529,19 +1770,71 @@ function PosContent() {
               </div>
             </div>
 
-            {invoiceItems.length > 0 && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                onClick={handleClearInvoice}
-                className="text-muted-foreground hover:text-destructive size-6 rounded-md"
-                title="تفريغ الفاتورة"
-              >
-                <RotateCcwIcon className="size-3" />
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {invoiceItems.length > 0 && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={handleHoldOrder}
+                    className="h-6 px-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 rounded-md gap-1 cursor-pointer"
+                    title="تعليق الطلب لخدمة عميل آخر (F6)"
+                  >
+                    <ClockIcon className="size-3" />
+                    <span>تعليق (F6)</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={handleClearInvoice}
+                    className="text-muted-foreground hover:text-destructive size-6 rounded-md cursor-pointer"
+                    title="تفريغ الفاتورة"
+                  >
+                    <RotateCcwIcon className="size-3" />
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
+
+          {/* شريط الطلبات المعلقة إن وجدت */}
+          {heldOrders.length > 0 && (
+            <div className="bg-amber-500/10 border-b border-amber-500/20 px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto shrink-0">
+              <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 shrink-0 flex items-center gap-1">
+                <ClockIcon className="size-3" />
+                <span>معلقة ({heldOrders.length}):</span>
+              </span>
+              <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                {heldOrders.map((h) => (
+                  <div
+                    key={h.id}
+                    className="flex items-center gap-1 bg-card border border-amber-500/30 rounded-md px-2 py-0.5 text-[10px] shadow-xs shrink-0"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleResumeHeldOrder(h)}
+                      className="font-bold hover:text-primary flex items-center gap-1 cursor-pointer"
+                      title="اضغط لاسترجاع الطلب المعلق للسلة فوراً"
+                    >
+                      <span>{h.label}</span>
+                      <span className="font-mono text-muted-foreground">({h.grandTotal} {currency})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteHeldOrder(h.id, e)}
+                      className="text-muted-foreground hover:text-destructive ms-1 cursor-pointer text-xs leading-none"
+                      title="حذف هذا الطلب المعلق"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* تفاصيل العميل في الفاتورة */}
           {(customerName || selectedCustomerId) && (
@@ -1735,7 +2028,7 @@ function PosContent() {
                     type="button"
                     onClick={handleUpdateOrderOnly}
                     disabled={invoiceItems.length === 0 || isSubmittingOrder}
-                    className="w-full gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md text-xs py-2 shadow-xs"
+                    className="w-full gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md text-xs py-2 shadow-xs cursor-pointer"
                   >
                     {isSubmittingOrder ? (
                       <Loader2Icon className="size-3.5 animate-spin" />
@@ -1747,25 +2040,27 @@ function PosContent() {
 
                   <Button
                     type="button"
-                    onClick={handleOpenPaymentDialog}
+                    onClick={() => handleOpenPaymentDialog()}
                     disabled={invoiceItems.length === 0 || isSubmittingOrder}
-                    className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs py-1.5 shadow-xs"
+                    className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-sm py-2.5 shadow-sm cursor-pointer"
+                    title="سداد الحساب وإتمام الطلب (F1 / Space)"
                   >
-                    <BanknoteIcon className="size-3.5" />
-                    <span>سداد الحساب وإخلاء الطاولة</span>
+                    <CheckCircle2Icon className="size-4" />
+                    <span>سداد وإتمام الطلب (F1)</span>
                   </Button>
                 </div>
               ) : (
-                /* طلبات السفري والتوصيل: يتاح الدفع الفوري كزر رئيسي أو الحفظ كمعلق */
+                /* طلبات السفري والتوصيل: يتاح الدفع الفوري كزر رئيسي أو الإرسال للمطبخ بدون دفع فوري */
                 <>
                   <Button
                     type="button"
-                    onClick={handleOpenPaymentDialog}
+                    onClick={() => handleOpenPaymentDialog()}
                     disabled={invoiceItems.length === 0}
-                    className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs py-2 shadow-xs"
+                    className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-sm py-2.5 shadow-sm cursor-pointer"
+                    title="دفع وسداد الحساب (F1)"
                   >
-                    <BanknoteIcon className="size-3.5" />
-                    <span>الدفع واختيار الخزنة</span>
+                    <CheckCircle2Icon className="size-4" />
+                    <span>دفع وسداد الحساب (F1)</span>
                   </Button>
 
                   <Button
@@ -1780,7 +2075,11 @@ function PosContent() {
                     ) : (
                       <CheckCircle2Icon className="size-3 text-primary" />
                     )}
-                    <span>حفظ كطلب قيد الانتظار</span>
+                    <span>
+                      {orderType === "takeaway"
+                        ? "إرسال طلب السفري للمطبخ (الدفع عند الاستلام)"
+                        : "إرسال طلب التوصيل للمطبخ (الدفع عند الاستلام)"}
+                    </span>
                   </Button>
                 </>
               )}
@@ -1809,50 +2108,154 @@ function PosContent() {
       )}
 
       {/* =========================================================
-          نافذة اختيار الخزنة وتسجيل الدفع
+          نافذة اختيار الخزنة وتسجيل الدفع مع أزرار الكاش السريع
           ========================================================= */}
       <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
-        <DialogContent className="w-[96vw] max-w-md max-h-[90vh] overflow-y-auto rounded-md p-4 sm:p-6 bg-card border text-right shadow-xl">
+        <DialogContent className="w-[96vw] max-w-lg max-h-[92vh] overflow-y-auto rounded-xl p-4 sm:p-6 bg-card border text-right shadow-2xl">
           <DialogHeader className="text-right space-y-1">
-            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
-              <LandmarkIcon className="size-5 text-emerald-600" />
-              <span>تحديد الخزنة وتسجيل الدفع النقدي</span>
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                <LandmarkIcon className="size-5 text-emerald-600" />
+                <span>سداد الفاتورة وتحصيل النقدية</span>
+              </DialogTitle>
+              <Badge variant="outline" className="font-mono text-xs">
+                {orderType === "dinein"
+                  ? `طاولة (${selectedTable?.name || "صالة"})`
+                  : orderType === "takeaway"
+                  ? "استلام مباشر (سفري)"
+                  : "توصيل دليفري"}
+              </Badge>
+            </div>
           </DialogHeader>
 
           <div className="space-y-4 mt-2 text-xs">
-            {/* ملخص المبلغ المستحق */}
-            <div className="p-3.5 rounded-md bg-muted/30 border space-y-1">
-              <div className="flex justify-between text-muted-foreground">
-                <span>نوع الطلب:</span>
-                <span className="font-semibold text-foreground">
-                  {orderType === "dinein"
-                    ? `طاولة (${selectedTable?.name || "صالة"})`
-                    : orderType === "takeaway"
-                    ? "استلام مباشر"
-                    : "توصيل دليفري"}
-                </span>
-              </div>
-              <div className="flex justify-between text-base font-bold text-foreground pt-1 border-t border-border">
-                <span>المبلغ المطلوب تحصيله:</span>
-                <span className="text-emerald-600 font-black font-mono text-lg">{grandTotal} {currency}</span>
-              </div>
+            {/* بطاقة المبلغ المطلوب تحصيله */}
+            <div className="p-3 rounded-lg bg-muted/40 border border-border/60 flex items-center justify-between">
+              <span className="font-semibold text-muted-foreground">المبلغ المطلوب تحصيله:</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-black font-mono text-xl">
+                {grandTotal} {currency}
+              </span>
+            </div>
+
+            {/* قسم الدفع مع أزرار الكاش السريع وحساب الباقي */}
+            <div className="space-y-2.5 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-foreground">
+                    المبلغ المستلم من العميل:
+                  </label>
+                  <span className="text-[10px] text-muted-foreground">
+                    اكتب أو اضغط الأزرار السريعة
+                  </span>
+                </div>
+
+                {/* حقل إدخال المبلغ المستلم */}
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={tenderedAmount}
+                    onChange={(e) => setTenderedAmount(e.target.value)}
+                    placeholder={String(grandTotal)}
+                    className="h-10 text-base font-bold font-mono text-center rounded-lg bg-background border-border"
+                  />
+                </div>
+
+                {/* أزرار المبالغ الشائعة */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-muted-foreground block font-medium">أزرار نقدية شائعة:</span>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setTenderedAmount(String(grandTotal))}
+                      className="p-1.5 rounded-md bg-card border border-border/80 hover:bg-muted font-bold text-[11px] text-primary transition-all cursor-pointer"
+                      title="المبلغ المطلوب بالضبط"
+                    >
+                      بالضبط
+                    </button>
+                    {[50, 100, 200, 500].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setTenderedAmount(String(amt))}
+                        className={`p-1.5 rounded-md border font-mono font-bold text-[11px] transition-all cursor-pointer ${
+                          Number(tenderedAmount) === amt
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-card border-border/80 hover:bg-muted text-foreground"
+                        }`}
+                      >
+                        {amt}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* أزرار الإضافة السريعة */}
+                  <div className="grid grid-cols-4 gap-1.5 pt-1">
+                    {[10, 20, 50, 100].map((plusAmt) => (
+                      <button
+                        key={plusAmt}
+                        type="button"
+                        onClick={() => {
+                          const current = Number(tenderedAmount) || 0
+                          setTenderedAmount(String(current + plusAmt))
+                        }}
+                        className="p-1 rounded-md bg-muted/60 hover:bg-muted font-mono font-semibold text-[10.5px] text-muted-foreground hover:text-foreground border border-border/50 transition-all cursor-pointer"
+                      >
+                        +{plusAmt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* كارت حساب الباقي أو المتبقي */}
+                {(() => {
+                  const tendered = Number(tenderedAmount) || 0
+                  const change = Math.max(0, tendered - grandTotal)
+                  const remaining = Math.max(0, grandTotal - tendered)
+
+                  if (tendered >= grandTotal) {
+                    return (
+                      <div className="p-2.5 rounded-lg bg-emerald-600 text-white flex items-center justify-between shadow-xs animate-in fade-in duration-200">
+                        <span className="font-bold text-xs flex items-center gap-1.5">
+                          <CheckCircle2Icon className="size-4" />
+                          <span>الباقي للعميل:</span>
+                        </span>
+                        <span className="font-black font-mono text-lg">
+                          {change.toFixed(2)} {currency}
+                        </span>
+                      </div>
+                    )
+                  } else if (tendered > 0) {
+                    return (
+                      <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                        <span className="font-bold text-xs flex items-center gap-1.5">
+                          <AlertCircleIcon className="size-4 text-amber-600" />
+                          <span>المتبقي المطلوب:</span>
+                        </span>
+                        <span className="font-black font-mono text-base">
+                          {remaining.toFixed(2)} {currency}
+                        </span>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
             </div>
 
             {/* قائمة اختيار الخزنة */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground block">
                 الخزنة المالية <span className="text-destructive">*</span>
               </label>
 
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              <div className="space-y-1 max-h-36 overflow-y-auto">
                 {registers
                   .filter((r) => r.is_active)
                   .map((reg) => (
                     <label
                       key={reg.id}
                       onClick={() => setSelectedRegisterId(reg.id)}
-                      className={`flex items-center justify-between p-3 rounded-md border cursor-pointer transition-all ${
+                      className={`flex items-center justify-between p-2.5 rounded-md border cursor-pointer transition-all ${
                         selectedRegisterId === reg.id
                           ? "bg-emerald-500/10 border-emerald-500 text-emerald-800 dark:text-emerald-300 font-bold"
                           : "bg-card border-border/70 hover:bg-muted text-foreground"
@@ -1871,12 +2274,12 @@ function PosContent() {
                         <div>
                           <span>{reg.name}</span>
                           {reg.is_default && (
-                            <span className="ms-2 px-1 text-[10px] font-normal bg-muted rounded-sm">افتراضية</span>
+                            <span className="ms-1.5 px-1 text-[9px] font-normal bg-muted rounded-sm">افتراضية</span>
                           )}
                         </div>
                       </div>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        رصيدها: {Number(reg.balance || 0).toLocaleString("ar-EG")} {currency}
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {Number(reg.balance || 0).toLocaleString("ar-EG")} {currency}
                       </span>
                     </label>
                   ))}
@@ -1884,27 +2287,27 @@ function PosContent() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:space-x-reverse pt-3">
+          <DialogFooter className="gap-2 sm:space-x-reverse pt-2">
             <Button
               type="button"
               variant="ghost"
               onClick={() => setPayDialogOpen(false)}
-              className="rounded-md text-xs"
+              className="rounded-lg text-xs"
             >
-              إلغاء
+              إلغاء (Esc)
             </Button>
             <Button
               type="button"
               onClick={handleConfirmPayment}
               disabled={isProcessingPayment || !selectedRegisterId}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs gap-1.5 px-5 shadow-xs cursor-pointer"
             >
               {isProcessingPayment ? (
                 <Loader2Icon className="size-3.5 animate-spin" />
               ) : (
                 <CheckCircle2Icon className="size-3.5" />
               )}
-              <span>تأكيد تسجيل الدفع بالخزنة</span>
+              <span>تأكيد وسداد الفاتورة (Space)</span>
             </Button>
           </DialogFooter>
         </DialogContent>
