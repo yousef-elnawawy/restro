@@ -68,6 +68,7 @@ Route::middleware(['auth:sanctum', 'role:admin,cashier,kitchen,delivery'])->grou
 Route::middleware(['auth:sanctum', 'role:admin,cashier'])->group(function () {
     Route::put('orders/{order}', [OrderController::class, 'update']);
     Route::post('orders/{order}/pay', [OrderController::class, 'pay']);
+    Route::post('orders/{order}/split', [OrderController::class, 'split']);
     Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
 });
 

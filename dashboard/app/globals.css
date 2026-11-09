@@ -272,42 +272,89 @@ select option {
 }
 
 /* =========================================================
-   THERMAL RECEIPT PRINT STYLES (MONOCHROME BLACK & WHITE)
+   GLOBAL PRINT PROTECTION (ISOLATES RECEIPTS & REPORTS CLEANLY)
    ========================================================= */
 @media print {
   @page {
-    size: 80mm auto;
-    margin: 0;
+    size: auto;
+    margin: 8mm;
   }
 
-  body {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
   }
 
-  /* Hide website chrome, sidebar, dialog overlays, buttons */
+  /* إخفاء عناصر لوحة التحكم، القائمة الجانبية، أشرطة الأدوات، والأزرار نهائياً عند الطباعة */
   header,
   nav,
   aside,
   button,
+  input,
+  select,
+  textarea,
+  [data-sidebar="sidebar"],
+  [data-sidebar="rail"],
+  [data-sidebar-provider] > aside,
+  [data-slot="dashboard-header"],
   [data-slot="dialog-overlay"],
   [data-slot="dialog-close"],
-  [data-slot="dialog-header"],
   [data-slot="dialog-footer"],
+  [data-sonner-toaster],
+  #nprogress,
+  .print\:hidden,
   .no-print {
     display: none !important;
   }
 
+  /* عند طباعة محتوى من داخل نافذة منبثقة (Modal/Dialog): يتم إخفاء الموقع بالكامل خلفها */
+  body:has([role="dialog"]) [data-sidebar-provider],
+  body:has([data-radix-portal] [role="dialog"]) [data-sidebar-provider],
+  body:has(.printable-thermal-receipt) [data-sidebar-provider] {
+    display: none !important;
+  }
+
+  /* تحرير النافذة المنبثقة من التثبيت لتشغل الصفحة بطبيعتها */
+  [role="dialog"] {
+    position: static !important;
+    transform: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* إزالة هوامش لوحة التحكم عند طباعة كشوف الحسابات المباشرة */
+  [data-sidebar-inset] {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: #ffffff !important;
+  }
+
+  /* تنسيق كارت الفاتورة الحرارية */
   .printable-thermal-receipt {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
     width: 100% !important;
     max-width: 80mm !important;
     margin: 0 auto !important;
-    padding: 4mm 2mm !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
     border: none !important;

@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ComboboxSelect, type ComboboxOption } from "@/components/ui/combobox-select"
 import { ThermalReceiptCard } from "@/components/thermal-receipt-card"
-import { printThermalReceipt } from "@/lib/receipt-printer"
+import { printThermalReceipt, printKotSlip } from "@/lib/receipt-printer"
+import { SplitBillDialog } from "@/components/split-bill-dialog"
 import {
   Dialog,
   DialogContent,
@@ -63,6 +64,7 @@ import {
   UserIcon,
   Edit2Icon,
   BanknoteIcon,
+  SplitIcon,
 } from "lucide-react"
 
 // خريطة تفاصيل حالات الطلب
@@ -175,6 +177,10 @@ export default function OrdersPage() {
   const [mounted, setMounted] = React.useState(false)
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null)
   const [detailsModalOpen, setDetailsModalOpen] = React.useState(false)
+
+  // نافذة تقسيم الفاتورة (Split Bill)
+  const [splitModalOpen, setSplitModalOpen] = React.useState(false)
+  const [selectedOrderForSplit, setSelectedOrderForSplit] = React.useState<Order | null>(null)
 
   // نوافذ التعديل والسداد
   const [payModalOpen, setPayModalOpen] = React.useState(false)
@@ -818,6 +824,27 @@ export default function OrdersPage() {
                               <span>طباعة إيصال حراري</span>
                             </DropdownMenuItem>
 
+                            <DropdownMenuItem
+                              onClick={() => printKotSlip(order)}
+                              className="gap-2 cursor-pointer text-xs text-amber-700 dark:text-amber-400 font-medium"
+                            >
+                              <ChefHatIcon className="size-3.5 text-amber-600" />
+                              <span>طباعة بون المطبخ (KOT)</span>
+                            </DropdownMenuItem>
+
+                            {!isKitchen && order.payment_status !== "paid" && order.status !== "cancelled" && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedOrderForSplit(order)
+                                  setSplitModalOpen(true)
+                                }}
+                                className="gap-2 cursor-pointer text-xs text-indigo-600 font-medium"
+                              >
+                                <SplitIcon className="size-3.5 text-indigo-600" />
+                                <span>تقسيم الفاتورة (Split Bill)</span>
+                              </DropdownMenuItem>
+                            )}
+
                             {!isKitchen && order.status !== "cancelled" && order.payment_status !== "paid" && (
                               <>
                                 <DropdownMenuSeparator />
@@ -866,7 +893,7 @@ export default function OrdersPage() {
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:space-x-reverse pt-2">
+          <DialogFooter className="gap-2 sm:space-x-reverse pt-2 flex-wrap">
             <Button
               type="button"
               variant="outline"
@@ -877,6 +904,33 @@ export default function OrdersPage() {
               <PrinterIcon className="size-3.5" />
               <span>طباعة ريسيت حراري</span>
             </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => selectedOrder && printKotSlip(selectedOrder)}
+              className="gap-1.5 rounded-md text-xs font-bold border-amber-600/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+            >
+              <ChefHatIcon className="size-3.5" />
+              <span>بون المطبخ (KOT)</span>
+            </Button>
+
+            {!isKitchen && selectedOrder && selectedOrder.payment_status !== "paid" && selectedOrder.status !== "cancelled" && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedOrderForSplit(selectedOrder)
+                  setSplitModalOpen(true)
+                }}
+                className="gap-1.5 border-indigo-500/40 text-indigo-600 hover:bg-indigo-500/10 font-bold rounded-md text-xs cursor-pointer"
+              >
+                <SplitIcon className="size-3.5" />
+                <span>تقسيم الفاتورة</span>
+              </Button>
+            )}
 
             {!isKitchen && selectedOrder && selectedOrder.status !== "completed" && selectedOrder.status !== "cancelled" && (
               <Button
@@ -1170,6 +1224,17 @@ export default function OrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* نافذة تقسيم الفاتورة (Split Bill) */}
+      <SplitBillDialog
+        open={splitModalOpen}
+        onOpenChange={setSplitModalOpen}
+        order={selectedOrderForSplit}
+        onSuccess={() => {
+          fetchOrders()
+          setDetailsModalOpen(false)
+        }}
+      />
     </PageContainer>
   )
 }

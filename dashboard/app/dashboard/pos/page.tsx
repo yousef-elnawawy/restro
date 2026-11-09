@@ -32,7 +32,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ComboboxSelect, type ComboboxOption } from "@/components/ui/combobox-select"
 import { ThermalReceiptCard } from "@/components/thermal-receipt-card"
-import { printThermalReceipt, openCashDrawer } from "@/lib/receipt-printer"
+import { printThermalReceipt, printKotSlip, openCashDrawer } from "@/lib/receipt-printer"
+import { SplitBillDialog } from "@/components/split-bill-dialog"
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,12 @@ import {
   TruckIcon,
   MapPinIcon,
   ShieldCheckIcon,
+  ChefHatIcon,
+  SplitIcon,
+  TagIcon,
+  PercentIcon,
+  GiftIcon,
+  XIcon,
 } from "lucide-react"
 
 // نوع الصنف داخل الفاتورة
@@ -258,6 +265,16 @@ function PosContent() {
   const [paymentMethod, setPaymentMethod] = React.useState<"cash" | "card">("cash")
   const [tenderedAmount, setTenderedAmount] = React.useState<string>("")
 
+  // حالة الخصومات والضيافة وخدمة الصالة
+  const [discountType, setDiscountType] = React.useState<"none" | "percentage" | "fixed" | "complimentary">("none")
+  const [discountValue, setDiscountValue] = React.useState<number>(0)
+  const [discountReason, setDiscountReason] = React.useState<string>("")
+  const [discountDialogOpen, setDiscountDialogOpen] = React.useState(false)
+  const [serviceChargeEnabled, setServiceChargeEnabled] = React.useState(true)
+
+  // نافذة تقسيم الفاتورة (Split Bill)
+  const [splitBillOpen, setSplitBillOpen] = React.useState(false)
+
   // حالة الطلبات المعلقة (Hold / Park Orders)
   const [heldOrders, setHeldOrders] = React.useState<HeldOrder[]>([])
 
@@ -382,6 +399,12 @@ function PosContent() {
           setCustomDeliveryFee(Number(order.delivery_fee))
         }
         if (order.notes) setOrderNotes(order.notes)
+        if (order.discount_type) setDiscountType(order.discount_type as any)
+        if (order.discount_value !== undefined && order.discount_value !== null) setDiscountValue(Number(order.discount_value))
+        if (order.discount_reason) setDiscountReason(order.discount_reason)
+        if (order.service_charge !== undefined && order.service_charge !== null) {
+          setServiceChargeEnabled(Number(order.service_charge) > 0)
+        }
 
         const items: InvoiceItem[] = order.items.map((it) => ({
           id: `loaded-${it.id}`,
@@ -437,6 +460,12 @@ function PosContent() {
               setDeliveryAddress(order.customer.address)
             }
             if (order.notes) setOrderNotes(order.notes)
+        if (order.discount_type) setDiscountType(order.discount_type as any)
+        if (order.discount_value !== undefined && order.discount_value !== null) setDiscountValue(Number(order.discount_value))
+        if (order.discount_reason) setDiscountReason(order.discount_reason)
+        if (order.service_charge !== undefined && order.service_charge !== null) {
+          setServiceChargeEnabled(Number(order.service_charge) > 0)
+        }
 
             const items: InvoiceItem[] = (order.items || []).map((it) => ({
               id: `loaded-${it.id}`,
@@ -698,13 +727,33 @@ function PosContent() {
     setDeliveryDistance("")
     setCustomDeliveryFee(null)
     setOrderNotes("")
+    setDiscountType("none")
+    setDiscountValue(0)
+    setDiscountReason("")
+    setServiceChargeEnabled(true)
     if (paramOrderId || paramTableId) {
       router.replace("/dashboard/pos")
     }
   }
 
   // حساب الإجماليات
+  const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0)
+
+  // حساب الخصومات
+  const discountAmount = React.useMemo(() => {
+    if (discountType === "complimentary") return subtotal
+    if (discountType === "percentage") return Math.round(subtotal * (discountValue / 100) * 100) / 100
+    if (discountType === "fixed") return Math.min(subtotal, discountValue)
+    return 0
+  }, [discountType, discountValue, subtotal])
+
+  const netSubtotal = Math.max(0, subtotal - discountAmount)
+
+  // حساب ضريبة القيمة المضافة على الصافي بعد الخصم
   const taxRate = settings.tax_enabled ? (Number(settings.tax_percentage || 0) / 100) : 0
+  const vatTax = Math.round(netSubtotal * taxRate * 100) / 100
+
+  // حساب رسوم التوصيل
   const baseDeliveryFee = Number(settings.delivery_base_fee ?? settings.delivery_fee ?? 15)
   const deliveryFeePerKm = Number(settings.delivery_fee_per_km ?? 5)
   const distanceKm = parseFloat(deliveryDistance) || 0
@@ -714,9 +763,14 @@ function PosContent() {
   const deliveryFee = orderType === "delivery"
     ? (customDeliveryFee !== null ? customDeliveryFee : calculatedDeliveryFee)
     : 0
-  const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0)
-  const vatTax = Math.round(subtotal * taxRate)
-  const grandTotal = subtotal + vatTax + deliveryFee
+
+  // حساب خدمة الصالة (Dine-in فقط عند تفعيلها)
+  const isDineInServiceActive = orderType === "dinein" && (settings.service_charge_enabled ?? true) && serviceChargeEnabled
+  const serviceChargePercentage = isDineInServiceActive ? Number(settings.service_charge_percentage || 12) : 0
+  const serviceChargeAmount = Math.round(netSubtotal * (serviceChargePercentage / 100) * 100) / 100
+
+  // الإجمالي النهائي
+  const grandTotal = Math.round((netSubtotal + vatTax + serviceChargeAmount + deliveryFee) * 100) / 100
   const totalItemsCount = invoiceItems.reduce((acc, it) => acc + it.quantity, 0)
 
   // استرجاع الطلبات المعلقة من التخزين المحلي
@@ -841,6 +895,12 @@ function PosContent() {
       delivery_fee: deliveryFee,
       delivery_address: orderType === "delivery" ? (deliveryAddress.trim() || undefined) : undefined,
       delivery_distance: orderType === "delivery" && distanceKm > 0 ? distanceKm : undefined,
+      discount_type: discountType !== "none" ? discountType : undefined,
+      discount_value: discountValue > 0 ? discountValue : undefined,
+      discount_amount: discountAmount > 0 ? discountAmount : undefined,
+      discount_reason: discountReason.trim() || undefined,
+      service_charge: serviceChargeAmount > 0 ? serviceChargeAmount : undefined,
+      service_charge_percentage: serviceChargePercentage > 0 ? serviceChargePercentage : undefined,
       total: grandTotal,
     }
 
@@ -918,6 +978,12 @@ function PosContent() {
       delivery_fee: deliveryFee,
       delivery_address: orderType === "delivery" ? (deliveryAddress.trim() || undefined) : undefined,
       delivery_distance: orderType === "delivery" && distanceKm > 0 ? distanceKm : undefined,
+      discount_type: discountType !== "none" ? discountType : undefined,
+      discount_value: discountValue > 0 ? discountValue : undefined,
+      discount_amount: discountAmount > 0 ? discountAmount : undefined,
+      discount_reason: discountReason.trim() || undefined,
+      service_charge: serviceChargeAmount > 0 ? serviceChargeAmount : undefined,
+      service_charge_percentage: serviceChargePercentage > 0 ? serviceChargePercentage : undefined,
       total: grandTotal,
     }
 
@@ -983,6 +1049,12 @@ function PosContent() {
         delivery_fee: deliveryFee,
         delivery_address: orderType === "delivery" ? (deliveryAddress.trim() || undefined) : undefined,
         delivery_distance: orderType === "delivery" && distanceKm > 0 ? distanceKm : undefined,
+        discount_type: discountType !== "none" ? discountType : undefined,
+        discount_value: discountValue > 0 ? discountValue : undefined,
+        discount_amount: discountAmount > 0 ? discountAmount : undefined,
+        discount_reason: discountReason.trim() || undefined,
+        service_charge: serviceChargeAmount > 0 ? serviceChargeAmount : undefined,
+        service_charge_percentage: serviceChargePercentage > 0 ? serviceChargePercentage : undefined,
         total: grandTotal,
       }
 
@@ -1012,6 +1084,12 @@ function PosContent() {
         delivery_fee: deliveryFee,
         delivery_address: orderType === "delivery" ? (deliveryAddress.trim() || undefined) : undefined,
         delivery_distance: orderType === "delivery" && distanceKm > 0 ? distanceKm : undefined,
+        discount_type: discountType !== "none" ? discountType : undefined,
+        discount_value: discountValue > 0 ? discountValue : undefined,
+        discount_amount: discountAmount > 0 ? discountAmount : undefined,
+        discount_reason: discountReason.trim() || undefined,
+        service_charge: serviceChargeAmount > 0 ? serviceChargeAmount : undefined,
+        service_charge_percentage: serviceChargePercentage > 0 ? serviceChargePercentage : undefined,
         total: grandTotal,
       }
 
@@ -1105,6 +1183,36 @@ function PosContent() {
     } else {
       alert(payRes.message || "فشل في تسجيل عملية الدفع على الخزنة.")
     }
+  }
+
+  // طباعة بون المطبخ (KOT) للأصناف الحالية
+  const handlePrintCurrentKot = () => {
+    if (invoiceItems.length === 0) return
+    printKotSlip({
+      order_number: loadedOrderNumber || `بون-${new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}`,
+      order_type: orderType,
+      table: orderType === "dinein" && selectedTable ? { name: selectedTable.name, location: selectedTable.location } : undefined,
+      customer_name: customerName.trim() || undefined,
+      items: invoiceItems.map((it) => ({
+        product_name: it.name,
+        quantity: it.quantity,
+        unit_price: it.unitPrice,
+        total_price: it.totalPrice,
+        size_name: it.selectedSize?.name,
+        selected_extras: it.selectedExtras,
+        notes: it.notes,
+      })),
+      subtotal,
+      tax: vatTax,
+      total: grandTotal,
+      payment_status: "unpaid",
+      notes: orderNotes.trim() || undefined,
+      created_at: new Date().toISOString(),
+    }, {
+      restaurantName: settings?.restaurant_name,
+      currency,
+    })
+    triggerQuickToast("تم إرسال بون المطبخ للطابعة بنجاح!")
   }
 
   // اختصارات لوحة المفاتيح والتركيز التلقائي على البحث
@@ -1777,6 +1885,32 @@ function PosContent() {
                     type="button"
                     variant="outline"
                     size="xs"
+                    onClick={handlePrintCurrentKot}
+                    className="h-6 px-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 rounded-md gap-1 cursor-pointer"
+                    title="طباعة بون المطبخ والبار (KOT) للأصناف الحالية"
+                  >
+                    <ChefHatIcon className="size-3" />
+                    <span className="hidden sm:inline">بون المطبخ</span>
+                  </Button>
+
+                  {loadedOrderId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() => setSplitBillOpen(true)}
+                      className="h-6 px-1.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 border-indigo-500/30 rounded-md gap-1 cursor-pointer"
+                      title="تقسيم الفاتورة (Split Bill)"
+                    >
+                      <SplitIcon className="size-3" />
+                      <span className="hidden sm:inline">تقسيم</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
                     onClick={handleHoldOrder}
                     className="h-6 px-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 rounded-md gap-1 cursor-pointer"
                     title="تعليق الطلب لخدمة عميل آخر (F6)"
@@ -1978,11 +2112,90 @@ function PosContent() {
 
           {/* ملخص الحساب والأزرار الإجرائية (ثابتة تماماً في الأسفل) */}
           <div className="p-2.5 sm:p-3 bg-muted/20 border-t border-border/50 space-y-2 text-xs shrink-0 mt-auto">
-            <div className="space-y-0.5 text-muted-foreground">
+            <div className="space-y-1 text-muted-foreground">
               <div className="flex justify-between text-[11px]">
                 <span>المجموع الفرعي:</span>
                 <span className="font-semibold text-foreground">{subtotal} {currency}</span>
               </div>
+
+              {/* سطر الخصم أو الضيافة التفاعلي */}
+              {discountType !== "none" && discountAmount > 0 ? (
+                <div className="flex items-center justify-between text-[11px] text-rose-600 dark:text-rose-400 font-medium bg-rose-500/10 px-2 py-1 rounded-md border border-rose-500/20">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <TagIcon className="size-3 shrink-0" />
+                    <span className="truncate">
+                      {discountType === "complimentary"
+                        ? "ضيافة 100% (على حساب المحل)"
+                        : discountType === "percentage"
+                        ? `خصم ${discountValue}%`
+                        : `خصم مبلغ`}
+                      {discountReason ? ` (${discountReason})` : ""}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setDiscountDialogOpen(true)}
+                      className="text-[10px] text-foreground underline hover:text-primary cursor-pointer shrink-0 ms-1"
+                    >
+                      تعديل
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-mono font-bold shrink-0">
+                    <span>-{discountAmount.toFixed(2)} {currency}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscountType("none")
+                        setDiscountValue(0)
+                        setDiscountReason("")
+                      }}
+                      className="text-rose-500 hover:text-rose-700 cursor-pointer p-0.5 rounded hover:bg-rose-500/20"
+                      title="إلغاء الخصم"
+                    >
+                      <XIcon className="size-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center text-[11px] py-0.5">
+                  <span className="text-muted-foreground">الخصومات والضيافة:</span>
+                  <button
+                    type="button"
+                    onClick={() => setDiscountDialogOpen(true)}
+                    disabled={invoiceItems.length === 0}
+                    className="text-primary hover:text-primary/80 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-40 text-[11px]"
+                  >
+                    <PlusIcon className="size-3" />
+                    <span>إضافة خصم / ضيافة</span>
+                  </button>
+                </div>
+              )}
+
+              {/* الصافي بعد الخصم إن وجد */}
+              {discountType !== "none" && discountAmount > 0 && (
+                <div className="flex justify-between text-[11px] text-muted-foreground">
+                  <span>الصافي بعد الخصم:</span>
+                  <span className="font-semibold text-foreground">{netSubtotal.toFixed(2)} {currency}</span>
+                </div>
+              )}
+
+              {/* خدمة الصالة لطلبات الطاولات فقط */}
+              {orderType === "dinein" && (settings.service_charge_enabled ?? true) && (
+                <div className="flex items-center justify-between text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={serviceChargeEnabled}
+                      onChange={(e) => setServiceChargeEnabled(e.target.checked)}
+                      className="size-3 accent-amber-600 rounded cursor-pointer"
+                    />
+                    <span>خدمة الصالة ({settings.service_charge_percentage || 12}%):</span>
+                  </label>
+                  <span className="font-bold font-mono">
+                    {serviceChargeEnabled ? `+${serviceChargeAmount.toFixed(2)} ${currency}` : `0 ${currency}`}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between text-[11px]">
                 <span>ضريبة القيمة المضافة ({settings.tax_enabled ? `${settings.tax_percentage}%` : "معفاة"}):</span>
                 <span className="font-semibold text-foreground">{vatTax} {currency}</span>
@@ -2285,6 +2498,22 @@ function PosContent() {
                   ))}
               </div>
             </div>
+
+            {loadedOrderId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setPayDialogOpen(false)
+                  setSplitBillOpen(true)
+                }}
+                className="w-full gap-2 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 font-bold rounded-lg text-xs py-2 cursor-pointer"
+              >
+                <SplitIcon className="size-3.5" />
+                <span>تقسيم الفاتورة (Split Bill) بين الأفراد أو حسب الأصناف</span>
+              </Button>
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:space-x-reverse pt-2">
@@ -2347,6 +2576,17 @@ function PosContent() {
             >
               <PrinterIcon className="size-3.5" />
               <span>طباعة ريسيت حراري</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => completedOrder && printKotSlip(completedOrder)}
+              className="gap-1.5 rounded-md text-xs font-bold border-amber-600/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+            >
+              <ChefHatIcon className="size-3.5" />
+              <span>طباعة بون المطبخ (KOT)</span>
             </Button>
 
             <Button
@@ -2763,6 +3003,236 @@ function PosContent() {
         open={!!activeZReport}
         onOpenChange={(open) => !open && setActiveZReport(null)}
         zReport={activeZReport}
+      />
+
+      {/* نافذة تطبيق الخصم والضيافة */}
+      <Dialog open={discountDialogOpen} onOpenChange={setDiscountDialogOpen}>
+        <DialogContent className="w-[96vw] max-w-md rounded-xl p-4 sm:p-5 bg-card border border-border/70 text-right shadow-2xl">
+          <DialogHeader className="text-right space-y-1">
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <TagIcon className="size-4 text-rose-600" />
+              <span>تطبيق خصم أو ضيافة</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              حدد نوع الخصم المطلوب تطبيقه على إجمالي أصناف الفاتورة ({subtotal} {currency})
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3.5 mt-2 text-xs">
+            <div className="grid grid-cols-3 gap-1 p-1 bg-muted/60 rounded-lg border border-border/50 text-center font-bold">
+              <button
+                type="button"
+                onClick={() => setDiscountType("percentage")}
+                className={`py-1.5 rounded-md transition-all cursor-pointer ${
+                  discountType === "percentage"
+                    ? "bg-card text-foreground shadow-xs border border-border/50"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                نسبة مئوية %
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscountType("fixed")}
+                className={`py-1.5 rounded-md transition-all cursor-pointer ${
+                  discountType === "fixed"
+                    ? "bg-card text-foreground shadow-xs border border-border/50"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                مبلغ ثابت ({currency})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDiscountType("complimentary")
+                  setDiscountValue(100)
+                  if (!discountReason) setDiscountReason("ضيافة إدارة")
+                }}
+                className={`py-1.5 rounded-md transition-all cursor-pointer ${
+                  discountType === "complimentary"
+                    ? "bg-rose-600 text-white shadow-xs"
+                    : "text-rose-600 hover:bg-rose-500/10"
+                }`}
+              >
+                ضيافة 100%
+              </button>
+            </div>
+
+            {discountType === "percentage" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[5, 10, 15, 20, 25, 50].map((pct) => (
+                    <Button
+                      key={pct}
+                      type="button"
+                      variant={discountValue === pct ? "default" : "outline"}
+                      size="xs"
+                      onClick={() => setDiscountValue(pct)}
+                      className="h-7 text-xs rounded-md font-mono font-bold"
+                    >
+                      {pct}%
+                    </Button>
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-muted-foreground">نسبة مخصصة (%):</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={discountValue || ""}
+                    onChange={(e) => setDiscountValue(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    placeholder="اكتب النسبة المئوية"
+                    className="h-8.5 rounded-lg text-xs font-mono font-bold text-center"
+                  />
+                </div>
+              </div>
+            )}
+
+            {discountType === "fixed" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[10, 20, 50, 100, 200].map((amt) => (
+                    <Button
+                      key={amt}
+                      type="button"
+                      variant={discountValue === amt ? "default" : "outline"}
+                      size="xs"
+                      onClick={() => setDiscountValue(amt)}
+                      className="h-7 text-xs rounded-md font-mono font-bold"
+                    >
+                      {amt} {currency}
+                    </Button>
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-muted-foreground">مبلغ مخصص ({currency}):</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max={subtotal}
+                    value={discountValue || ""}
+                    onChange={(e) => setDiscountValue(Math.min(subtotal, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    placeholder="اكتب المبلغ المراد خصمه"
+                    className="h-8.5 rounded-lg text-xs font-mono font-bold text-center"
+                  />
+                </div>
+              </div>
+            )}
+
+            {discountType === "complimentary" && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/25 space-y-2">
+                <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400 font-bold">
+                  <GiftIcon className="size-4 shrink-0" />
+                  <span>ضيافة كاملة (On the House) - خصم 100% من أصناف الفاتورة</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  سيتم تصفير قيمة أصناف الطلب بالكامل، وتوثيق سبب الضيافة في سجلات المطعم والتقارير المالية.
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {["ضيافة إدارة", "VIP", "وجبة موظف (Staff Meal)", "اعتذار للعميل"].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setDiscountReason(r)}
+                      className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                        discountReason === r
+                          ? "bg-rose-600 text-white border-rose-600"
+                          : "bg-card border-border/70 text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1 pt-1">
+              <label className="text-[11px] font-semibold text-foreground">
+                سبب الخصم / الضيافة (اختياري للتوثيق):
+              </label>
+              <Input
+                value={discountReason}
+                onChange={(e) => setDiscountReason(e.target.value)}
+                placeholder="مثال: عرض خاص، خصم موظف، اعتذار للعميل..."
+                className="h-8.5 rounded-lg text-xs"
+              />
+            </div>
+
+            {discountType !== "none" && (
+              <div className="p-2.5 rounded-lg bg-muted/40 border border-border/60 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">قيمة الخصم المحسوم:</span>
+                <span className="font-bold font-mono text-rose-600">
+                  -{discountAmount.toFixed(2)} {currency}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:space-x-reverse pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDiscountType("none")
+                setDiscountValue(0)
+                setDiscountReason("")
+                setDiscountDialogOpen(false)
+              }}
+              className="rounded-lg text-xs text-destructive hover:bg-destructive/10"
+            >
+              إلغاء الخصم
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setDiscountDialogOpen(false)}
+              className="bg-primary text-primary-foreground font-bold rounded-lg text-xs px-4"
+            >
+              تطبيق الخصم
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة تقسيم الفاتورة (Split Bill) */}
+      <SplitBillDialog
+        open={splitBillOpen}
+        onOpenChange={setSplitBillOpen}
+        order={
+          loadedOrderId
+            ? ({
+                id: loadedOrderId,
+                order_number: loadedOrderNumber || `طلب-${loadedOrderId}`,
+                order_type: orderType,
+                table: selectedTable ? { id: selectedTable.id, name: selectedTable.name, location: selectedTable.location } : undefined,
+                customer_name: customerName || undefined,
+                items: invoiceItems.map((it) => ({
+                  id: Number(it.id.replace("loaded-", "")) || 0,
+                  order_id: loadedOrderId,
+                  product_id: it.productId,
+                  product_name: it.name,
+                  unit_price: it.unitPrice,
+                  quantity: it.quantity,
+                  total_price: it.totalPrice,
+                  size_name: it.selectedSize?.name,
+                })),
+                subtotal,
+                tax: vatTax,
+                total: grandTotal,
+                payment_status: "unpaid",
+                payments: [],
+              } as any)
+            : null
+        }
+        onSuccess={() => {
+          fetchTables()
+          fetchRegisters()
+          handleClearInvoice()
+        }}
       />
     </PageContainer>
   )

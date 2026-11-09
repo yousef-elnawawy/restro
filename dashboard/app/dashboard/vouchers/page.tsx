@@ -7,6 +7,7 @@ import { useRegisterStore } from "@/store/register.store"
 import { useSettingStore } from "@/store/setting.store"
 import { useAuthStore } from "@/store/auth.store"
 import { type FinancialTransaction, type FinancialTransactionType } from "@/lib/api"
+import { printVoucherSlip } from "@/lib/receipt-printer"
 import { QuickVoucherDialog } from "@/components/quick-voucher-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -75,9 +76,6 @@ export default function VouchersPage() {
   const [deleteId, setDeleteId] = React.useState<number | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
 
-  // Single Voucher Print
-  const [printingTx, setPrintingTx] = React.useState<FinancialTransaction | null>(null)
-
   // Date filters
   const [dateFrom, setDateFrom] = React.useState("")
   const [dateTo, setDateTo] = React.useState("")
@@ -102,10 +100,12 @@ export default function VouchersPage() {
   }
 
   const handlePrintVoucher = (tx: FinancialTransaction) => {
-    setPrintingTx(tx)
-    setTimeout(() => {
-      window.print()
-    }, 100)
+    printVoucherSlip(tx, settings ? {
+      restaurantName: settings.restaurant_name,
+      address: settings.restaurant_address,
+      phone: settings.restaurant_phone,
+      currency: settings.currency,
+    } : undefined)
   }
 
   // Filtered transactions
@@ -409,58 +409,6 @@ export default function VouchersPage() {
             </Table>
           </div>
         </div>
-
-        {/* PRINT RECEIPT */}
-        {printingTx && (
-          <div className="hidden print:block fixed inset-0 bg-white p-6 text-black z-50">
-            <div className="max-w-sm mx-auto border border-black p-4 rounded text-center space-y-3">
-              <h2 className="text-base font-bold">{restaurantName}</h2>
-              <div className="border-b border-dashed border-black pb-2">
-                <h3 className="text-sm font-bold">
-                  {printingTx.transaction_type === "receipt"
-                    ? "سند قبض نقدي"
-                    : printingTx.transaction_type === "expense"
-                    ? "سند مصروفات تشغيلية"
-                    : "سند صرف نقدي"}
-                </h3>
-                <p className="text-xs font-mono">رقم السند: {printingTx.voucher_number || `VOU-${printingTx.id}`}</p>
-                <p className="text-xs">التاريخ: {printingTx.date}</p>
-              </div>
-
-              <div className="text-right space-y-1.5 text-xs">
-                <div className="flex justify-between border-b pb-1">
-                  <span className="font-bold">المبلغ:</span>
-                  <span className="font-bold font-mono">
-                    {Number(printingTx.amount).toLocaleString("ar-EG")} {currency}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b pb-1">
-                  <span>الخزنة:</span>
-                  <span>{printingTx.cash_register?.name || "الخزنة"}</span>
-                </div>
-                <div className="flex justify-between border-b pb-1">
-                  <span>المعني:</span>
-                  <span>{printingTx.recipient_or_payer || printingTx.customer?.name || "—"}</span>
-                </div>
-                <div className="flex justify-between border-b pb-1">
-                  <span>البيان:</span>
-                  <span>{printingTx.description || printingTx.category || "—"}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-between pt-6 text-[11px]">
-                <div>
-                  <p className="mb-4">المستلم</p>
-                  <p>................</p>
-                </div>
-                <div>
-                  <p className="mb-4">أمين الخزنة</p>
-                  <p>................</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Quick Voucher Dialog */}

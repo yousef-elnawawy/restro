@@ -132,6 +132,12 @@ class OrderController extends Controller
             'delivery_fee' => ['nullable', 'numeric', 'min:0'],
             'delivery_distance' => ['nullable', 'numeric', 'min:0'],
             'delivery_address' => ['nullable', 'string', 'max:500'],
+            'discount_type' => ['nullable', 'string', 'in:none,percentage,fixed,complimentary'],
+            'discount_value' => ['nullable', 'numeric', 'min:0'],
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'discount_reason' => ['nullable', 'string', 'max:255'],
+            'service_charge' => ['nullable', 'numeric', 'min:0'],
+            'service_charge_percentage' => ['nullable', 'numeric', 'min:0'],
             'total' => ['nullable', 'numeric', 'min:0'],
         ], [
             'order_type.required' => 'نوع الطلب مطلوب.',
@@ -180,12 +186,67 @@ class OrderController extends Controller
             $calculatedSubtotal += (float) $item['total_price'];
         }
         $subtotal = isset($validated['subtotal']) ? (float) $validated['subtotal'] : $calculatedSubtotal;
-        $taxPercentage = $setting->tax_enabled ? (float) $setting->tax_percentage : 0;
-        $calculatedTax = round($subtotal * ($taxPercentage / 100), 2);
-        $tax = isset($validated['tax']) ? (float) $validated['tax'] : $calculatedTax;
-        $total = isset($validated['total']) ? (float) $validated['total'] : round($subtotal + $tax + $deliveryFee, 2);
 
-        $order = DB::transaction(function () use ($validated, $table, $subtotal, $tax, $deliveryFee, $deliveryDistance, $deliveryAddress, $total, $request) {
+        // Calculate discounts
+        $discountType = $validated['discount_type'] ?? 'none';
+        $discountValue = isset($validated['discount_value']) ? (float) $validated['discount_value'] : 0.00;
+        $discountReason = $validated['discount_reason'] ?? null;
+        $discountAmount = 0.00;
+
+        if ($discountType === 'complimentary') {
+            $discountAmount = $subtotal;
+            $discountValue = 100.00;
+        } elseif ($discountType === 'percentage') {
+            $discountAmount = round($subtotal * ($discountValue / 100), 2);
+        } elseif ($discountType === 'fixed') {
+            $discountAmount = min($subtotal, $discountValue);
+        } elseif (isset($validated['discount_amount']) && (float) $validated['discount_amount'] > 0) {
+            $discountAmount = min($subtotal, (float) $validated['discount_amount']);
+        }
+
+        $subtotalAfterDiscount = max(0, $subtotal - $discountAmount);
+
+        // Tax calculation on net subtotal
+        $taxPercentage = $setting->tax_enabled ? (float) $setting->tax_percentage : 0;
+        $calculatedTax = round($subtotalAfterDiscount * ($taxPercentage / 100), 2);
+        $tax = isset($validated['tax']) ? (float) $validated['tax'] : $calculatedTax;
+
+        // Service charge (Dine-in only)
+        $serviceChargePercentage = 0.00;
+        $serviceCharge = 0.00;
+        if ($validated['order_type'] === 'dinein') {
+            if (isset($validated['service_charge_percentage'])) {
+                $serviceChargePercentage = (float) $validated['service_charge_percentage'];
+                $serviceCharge = round($subtotalAfterDiscount * ($serviceChargePercentage / 100), 2);
+            } elseif (isset($validated['service_charge'])) {
+                $serviceCharge = (float) $validated['service_charge'];
+            } elseif ($setting->service_charge_enabled && (float) $setting->service_charge_percentage > 0) {
+                $serviceChargePercentage = (float) $setting->service_charge_percentage;
+                $serviceCharge = round($subtotalAfterDiscount * ($serviceChargePercentage / 100), 2);
+            }
+        }
+
+        $total = isset($validated['total'])
+            ? (float) $validated['total']
+            : round($subtotalAfterDiscount + $tax + $serviceCharge + $deliveryFee, 2);
+
+        $order = DB::transaction(function () use (
+            $validated,
+            $table,
+            $subtotal,
+            $tax,
+            $deliveryFee,
+            $deliveryDistance,
+            $deliveryAddress,
+            $discountType,
+            $discountValue,
+            $discountAmount,
+            $discountReason,
+            $serviceCharge,
+            $serviceChargePercentage,
+            $total,
+            $request
+        ) {
             // Generate unique human-readable order number
             $todayCount = Order::whereDate('created_at', today())->count();
             $orderNumber = 'ORD-'.date('Ymd').'-'.str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
@@ -235,6 +296,12 @@ class OrderController extends Controller
                 'tax' => $tax,
                 'delivery_fee' => $deliveryFee,
                 'delivery_distance' => $deliveryDistance,
+                'discount_type' => $discountType,
+                'discount_value' => $discountValue,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'service_charge' => $serviceCharge,
+                'service_charge_percentage' => $serviceChargePercentage,
                 'total' => $total,
                 'notes' => $validated['notes'] ?? null,
                 'user_id' => $request->user()?->id,
@@ -333,6 +400,12 @@ class OrderController extends Controller
             'delivery_fee' => ['nullable', 'numeric', 'min:0'],
             'delivery_distance' => ['nullable', 'numeric', 'min:0'],
             'delivery_address' => ['nullable', 'string', 'max:500'],
+            'discount_type' => ['nullable', 'string', 'in:none,percentage,fixed,complimentary'],
+            'discount_value' => ['nullable', 'numeric', 'min:0'],
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'discount_reason' => ['nullable', 'string', 'max:255'],
+            'service_charge' => ['nullable', 'numeric', 'min:0'],
+            'service_charge_percentage' => ['nullable', 'numeric', 'min:0'],
             'total' => ['nullable', 'numeric'],
         ], [
             'items.required' => 'يجب أن يحتوي الطلب على صنف واحد على الأقل.',
@@ -364,12 +437,69 @@ class OrderController extends Controller
         }
         $subtotal = isset($validated['subtotal']) ? (float) $validated['subtotal'] : $calculatedSubtotal;
 
-        $taxPercentage = $setting->tax_enabled ? (float) $setting->tax_percentage : 0;
-        $calculatedTax = round($subtotal * ($taxPercentage / 100), 2);
-        $tax = isset($validated['tax']) ? (float) $validated['tax'] : $calculatedTax;
-        $total = isset($validated['total']) ? (float) $validated['total'] : round($subtotal + $tax + $deliveryFee, 2);
+        // Calculate discounts
+        $discountType = array_key_exists('discount_type', $validated) ? $validated['discount_type'] : $order->discount_type;
+        $discountValue = array_key_exists('discount_value', $validated) ? (float) $validated['discount_value'] : (float) $order->discount_value;
+        $discountReason = array_key_exists('discount_reason', $validated) ? $validated['discount_reason'] : $order->discount_reason;
+        $discountAmount = 0.00;
 
-        $order = DB::transaction(function () use ($order, $validated, $newOrderType, $subtotal, $tax, $deliveryFee, $deliveryDistance, $deliveryAddress, $total) {
+        if ($discountType === 'complimentary') {
+            $discountAmount = $subtotal;
+            $discountValue = 100.00;
+        } elseif ($discountType === 'percentage') {
+            $discountAmount = round($subtotal * ($discountValue / 100), 2);
+        } elseif ($discountType === 'fixed') {
+            $discountAmount = min($subtotal, $discountValue);
+        } elseif (isset($validated['discount_amount']) && (float) $validated['discount_amount'] > 0) {
+            $discountAmount = min($subtotal, (float) $validated['discount_amount']);
+        }
+
+        $subtotalAfterDiscount = max(0, $subtotal - $discountAmount);
+
+        // Tax calculation on net subtotal
+        $taxPercentage = $setting->tax_enabled ? (float) $setting->tax_percentage : 0;
+        $calculatedTax = round($subtotalAfterDiscount * ($taxPercentage / 100), 2);
+        $tax = isset($validated['tax']) ? (float) $validated['tax'] : $calculatedTax;
+
+        // Service charge (Dine-in only)
+        $serviceChargePercentage = 0.00;
+        $serviceCharge = 0.00;
+        if ($newOrderType === 'dinein') {
+            if (isset($validated['service_charge_percentage'])) {
+                $serviceChargePercentage = (float) $validated['service_charge_percentage'];
+                $serviceCharge = round($subtotalAfterDiscount * ($serviceChargePercentage / 100), 2);
+            } elseif (isset($validated['service_charge'])) {
+                $serviceCharge = (float) $validated['service_charge'];
+            } elseif ((float) $order->service_charge_percentage > 0) {
+                $serviceChargePercentage = (float) $order->service_charge_percentage;
+                $serviceCharge = round($subtotalAfterDiscount * ($serviceChargePercentage / 100), 2);
+            } elseif ($setting->service_charge_enabled && (float) $setting->service_charge_percentage > 0) {
+                $serviceChargePercentage = (float) $setting->service_charge_percentage;
+                $serviceCharge = round($subtotalAfterDiscount * ($serviceChargePercentage / 100), 2);
+            }
+        }
+
+        $total = isset($validated['total'])
+            ? (float) $validated['total']
+            : round($subtotalAfterDiscount + $tax + $serviceCharge + $deliveryFee, 2);
+
+        $order = DB::transaction(function () use (
+            $order,
+            $validated,
+            $newOrderType,
+            $subtotal,
+            $tax,
+            $deliveryFee,
+            $deliveryDistance,
+            $deliveryAddress,
+            $discountType,
+            $discountValue,
+            $discountAmount,
+            $discountReason,
+            $serviceCharge,
+            $serviceChargePercentage,
+            $total
+        ) {
             $oldTableId = $order->table_id;
             $newTableId = $newOrderType === 'dinein' ? ($validated['table_id'] ?? $order->table_id) : null;
 
@@ -416,6 +546,12 @@ class OrderController extends Controller
                 'tax' => $tax,
                 'delivery_fee' => $deliveryFee,
                 'delivery_distance' => $deliveryDistance,
+                'discount_type' => $discountType,
+                'discount_value' => $discountValue,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'service_charge' => $serviceCharge,
+                'service_charge_percentage' => $serviceChargePercentage,
                 'total' => $total,
                 'notes' => array_key_exists('notes', $validated) ? $validated['notes'] : $order->notes,
             ]);
@@ -808,6 +944,170 @@ class OrderController extends Controller
             'preparing' => $preparing,
             'ready' => $ready,
         ], 'تم جلب طلبات شاشة النداء بنجاح.');
+    }
+
+    /**
+     * Split items from an active dine-in or takeaway order into a new separate order.
+     */
+    public function split(Request $request, int $id): JsonResponse
+    {
+        $order = Order::with(['table', 'customer', 'items', 'payments'])->find($id);
+
+        if (! $order) {
+            return $this->errorResponse('الطلب غير موجود.', null, Response::HTTP_NOT_FOUND);
+        }
+
+        if (in_array($order->status, [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED])) {
+            return $this->errorResponse('لا يمكن تقسيم طلب مكتمل أو ملغي.', null, Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $validated = $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.order_item_id' => ['required', 'integer'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'pay_now' => ['nullable', 'boolean'],
+            'cash_register_id' => ['required_if:pay_now,true', 'nullable', 'exists:cash_registers,id'],
+            'payment_method' => ['nullable', 'string'],
+        ]);
+
+        $setting = Setting::instance();
+
+        try {
+            $result = DB::transaction(function () use ($order, $validated, $setting, $request) {
+                $splitItemsData = [];
+
+                foreach ($validated['items'] as $splitReq) {
+                    $orderItem = OrderItem::where('order_id', $order->id)->where('id', $splitReq['order_item_id'])->first();
+                    if (! $orderItem) {
+                        throw new \Exception("الصنف المحدد غير موجود في هذا الطلب.");
+                    }
+
+                    $qtyToSplit = min($orderItem->quantity, (int) $splitReq['quantity']);
+                    $unitPrice = (float) $orderItem->unit_price;
+                    $splitItemTotal = round($unitPrice * $qtyToSplit, 2);
+
+                    $splitItemsData[] = [
+                        'product_id' => $orderItem->product_id,
+                        'product_name' => $orderItem->product_name,
+                        'size_name' => $orderItem->size_name,
+                        'unit_price' => $unitPrice,
+                        'quantity' => $qtyToSplit,
+                        'total_price' => $splitItemTotal,
+                        'selected_extras' => $orderItem->selected_extras,
+                        'notes' => $orderItem->notes,
+                    ];
+
+                    // Deduct or remove from original order
+                    if ($orderItem->quantity <= $qtyToSplit) {
+                        $orderItem->delete();
+                    } else {
+                        $newQty = $orderItem->quantity - $qtyToSplit;
+                        $orderItem->quantity = $newQty;
+                        $orderItem->total_price = round($unitPrice * $newQty, 2);
+                        $orderItem->save();
+                    }
+                }
+
+                // Recalculate original order
+                $order->load('items');
+                $originalSubtotal = (float) $order->items->sum('total_price');
+                $originalTaxPercentage = $setting->tax_enabled ? (float) $setting->tax_percentage : 0;
+                $originalTax = round($originalSubtotal * ($originalTaxPercentage / 100), 2);
+                $originalTotal = round($originalSubtotal + $originalTax, 2);
+
+                $order->update([
+                    'subtotal' => $originalSubtotal,
+                    'tax' => $originalTax,
+                    'total' => $originalTotal,
+                ]);
+
+                // Create new child order for the split items
+                $todayCount = Order::whereDate('created_at', today())->count();
+                $splitOrderNumber = 'ORD-' . date('Ymd') . '-' . str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
+
+                $splitSubtotal = 0;
+                foreach ($splitItemsData as $si) {
+                    $splitSubtotal += (float) $si['total_price'];
+                }
+                $splitTax = round($splitSubtotal * ($originalTaxPercentage / 100), 2);
+                $splitTotal = round($splitSubtotal + $splitTax, 2);
+
+                $splitOrder = Order::create([
+                    'order_number' => $splitOrderNumber,
+                    'order_type' => $order->order_type,
+                    'table_id' => null, // child order is standalone
+                    'customer_id' => $order->customer_id,
+                    'customer_name' => $order->customer_name ? "{$order->customer_name} (فاتورة منفصلة)" : "فاتورة منفصلة",
+                    'status' => $order->status,
+                    'payment_status' => 'unpaid',
+                    'cash_register_id' => $validated['cash_register_id'] ?? $order->cash_register_id,
+                    'shift_id' => $order->shift_id,
+                    'subtotal' => $splitSubtotal,
+                    'tax' => $splitTax,
+                    'total' => $splitTotal,
+                    'notes' => "مفصولة من الطلب {$order->order_number}",
+                    'user_id' => $request->user()?->id,
+                ]);
+
+                foreach ($splitItemsData as $si) {
+                    OrderItem::create([
+                        'order_id' => $splitOrder->id,
+                        'product_id' => $si['product_id'],
+                        'product_name' => $si['product_name'],
+                        'size_name' => $si['size_name'],
+                        'unit_price' => $si['unit_price'],
+                        'quantity' => $si['quantity'],
+                        'total_price' => $si['total_price'],
+                        'selected_extras' => $si['selected_extras'],
+                        'notes' => $si['notes'],
+                    ]);
+                }
+
+                // Pay child order immediately if requested
+                if (! empty($validated['pay_now']) && ! empty($validated['cash_register_id'])) {
+                    $reg = CashRegister::find($validated['cash_register_id']);
+                    if ($reg) {
+                        Payment::create([
+                            'order_id' => $splitOrder->id,
+                            'cash_register_id' => $reg->id,
+                            'shift_id' => $splitOrder->shift_id,
+                            'amount' => $splitTotal,
+                            'payment_method' => $validated['payment_method'] ?? 'cash',
+                            'notes' => "سداد فاتورة مفصولة {$splitOrder->order_number}",
+                            'paid_at' => now(),
+                        ]);
+
+                        $reg->increment('balance', $splitTotal);
+
+                        $splitOrder->update([
+                            'payment_status' => Order::PAYMENT_PAID,
+                            'paid_at' => now(),
+                            'status' => Order::STATUS_COMPLETED,
+                        ]);
+                    }
+                }
+
+                // If original order has 0 items remaining, mark it completed/freed
+                if ($order->items->count() === 0) {
+                    $order->update([
+                        'status' => Order::STATUS_COMPLETED,
+                        'payment_status' => Order::PAYMENT_PAID,
+                    ]);
+                    if ($order->table_id) {
+                        RestaurantTable::where('id', $order->table_id)->update(['status' => 'available']);
+                    }
+                }
+
+                return [
+                    'original_order' => $order->fresh(['items', 'table']),
+                    'split_order' => $splitOrder->fresh(['items', 'payments']),
+                ];
+            });
+
+            return $this->successResponse($result, 'تم تقسيم الفاتورة وسداد الحصة بنجاح.');
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e->getMessage(), null, Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
     }
 
     /**

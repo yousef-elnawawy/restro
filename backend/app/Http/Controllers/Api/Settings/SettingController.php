@@ -38,6 +38,8 @@ class SettingController extends Controller
             'delivery_fee' => ['nullable', 'numeric', 'min:0'],
             'delivery_base_fee' => ['nullable', 'numeric', 'min:0'],
             'delivery_fee_per_km' => ['nullable', 'numeric', 'min:0'],
+            'service_charge_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'service_charge_enabled' => ['boolean'],
             'receipt_header' => ['nullable', 'string', 'max:500'],
             'receipt_footer' => ['nullable', 'string', 'max:500'],
             'logo' => ['nullable', 'string'],

@@ -185,10 +185,22 @@ export function ThermalReceiptCard({
           <span>المجموع الفرعي:</span>
           <span>{Number(data.subtotal).toFixed(2)} {activeCurrency}</span>
         </div>
+        {data.discount_amount && Number(data.discount_amount) > 0 && (
+          <div className="flex justify-between text-black font-bold">
+            <span>الخصم{data.discount_reason ? ` (${data.discount_reason})` : data.discount_type === "percentage" ? ` (${data.discount_value}%)` : data.discount_type === "complimentary" ? " (ضيافة 100%)" : ""}:</span>
+            <span className="font-mono">-{Number(data.discount_amount).toFixed(2)} {activeCurrency}</span>
+          </div>
+        )}
         <div className="flex justify-between text-neutral-800">
           <span>ضريبة القيمة المضافة ({activeTaxRate}%):</span>
           <span>{Number(data.tax).toFixed(2)} {activeCurrency}</span>
         </div>
+        {data.service_charge && Number(data.service_charge) > 0 && (
+          <div className="flex justify-between text-neutral-900 font-bold">
+            <span>خدمة الصالة{data.service_charge_percentage ? ` (${data.service_charge_percentage}%)` : ""}:</span>
+            <span className="font-mono">+{Number(data.service_charge).toFixed(2)} {activeCurrency}</span>
+          </div>
+        )}
         {data.order_type === "delivery" && Number(data.delivery_fee || 0) > 0 && (
           <div className="flex justify-between text-neutral-900 font-bold">
             <span>رسوم التوصيل{data.delivery_distance ? ` (${data.delivery_distance} كم)` : ""}:</span>

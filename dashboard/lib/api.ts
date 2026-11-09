@@ -1303,6 +1303,12 @@ export interface Order {
   tax: number
   delivery_fee?: number
   delivery_distance?: number | null
+  discount_type?: "none" | "percentage" | "fixed" | "complimentary"
+  discount_value?: number
+  discount_amount?: number
+  discount_reason?: string | null
+  service_charge?: number
+  service_charge_percentage?: number
   total: number
   notes?: string | null
   paid_at?: string | null
@@ -1338,6 +1344,12 @@ export interface CreateOrderPayload {
   tax?: number
   delivery_fee?: number
   delivery_distance?: number
+  discount_type?: "none" | "percentage" | "fixed" | "complimentary"
+  discount_value?: number
+  discount_amount?: number
+  discount_reason?: string
+  service_charge?: number
+  service_charge_percentage?: number
   total?: number
 }
 
@@ -1475,6 +1487,35 @@ export async function payOrderApi(
     return {
       success: false,
       message: "تعذر الاتصال بالخادم لتسجيل دفع الطلب.",
+    }
+  }
+}
+
+export async function splitOrderApi(
+  id: number,
+  payload: {
+    items: { order_item_id: number; quantity: number }[]
+    pay_now?: boolean
+    cash_register_id?: number
+    payment_method?: string
+  }
+): Promise<ApiResponse<{ original_order: Order; split_order: Order }>> {
+  const token = getAuthToken()
+  try {
+    const res = await fetch(`${API_URL}/orders/${id}/split`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    })
+    return await res.json()
+  } catch {
+    return {
+      success: false,
+      message: "تعذر الاتصال بالخادم لتقسيم الفاتورة.",
     }
   }
 }
@@ -2056,6 +2097,8 @@ export interface RestaurantSettings {
   delivery_fee: number
   delivery_base_fee?: number
   delivery_fee_per_km?: number
+  service_charge_percentage?: number
+  service_charge_enabled?: boolean
   receipt_header?: string | null
   receipt_footer?: string | null
   logo?: string | null

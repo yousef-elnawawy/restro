@@ -47,7 +47,11 @@ import {
   CreditCardIcon,
   ArrowRightLeftIcon,
   XIcon,
+  ChefHatIcon,
+  SplitIcon,
 } from "lucide-react"
+import { printKotSlip } from "@/lib/receipt-printer"
+import { SplitBillDialog } from "@/components/split-bill-dialog"
 
 export default function TablesPage() {
   const router = useRouter()
@@ -114,6 +118,9 @@ export default function TablesPage() {
   const [transferModalOpen, setTransferModalOpen] = React.useState(false)
   const [targetTableId, setTargetTableId] = React.useState<number | null>(null)
   const [isTransferring, setIsTransferring] = React.useState(false)
+
+  // نافذة تقسيم الفاتورة (Split Bill)
+  const [splitBillOpen, setSplitBillOpen] = React.useState(false)
 
   // إشعار العملية (Alert Banner)
   const [bannerMessage, setBannerMessage] = React.useState<{
@@ -680,7 +687,7 @@ export default function TablesPage() {
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:space-x-reverse pt-2">
+          <DialogFooter className="gap-2 sm:space-x-reverse pt-2 flex-wrap">
             <Button
               type="button"
               variant="outline"
@@ -702,10 +709,42 @@ export default function TablesPage() {
               variant="outline"
               size="sm"
               onClick={() => {
+                if (selectedTableWithOrder?.current_order) {
+                  printKotSlip(selectedTableWithOrder.current_order)
+                }
+              }}
+              className="gap-1.5 border-amber-600/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400 font-bold rounded-md text-xs cursor-pointer"
+              title="طباعة بون المطبخ والبار المستقل"
+            >
+              <ChefHatIcon className="size-3.5" />
+              <span>بون المطبخ (KOT)</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (selectedTableWithOrder?.current_order) {
+                  setSplitBillOpen(true)
+                }
+              }}
+              className="gap-1.5 border-indigo-500/40 text-indigo-600 hover:bg-indigo-500/10 font-bold rounded-md text-xs cursor-pointer"
+              title="تقسيم الفاتورة بالتساوي أو حسب الأصناف"
+            >
+              <SplitIcon className="size-3.5" />
+              <span>تقسيم الفاتورة</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
                 setTargetTableId(null)
                 setTransferModalOpen(true)
               }}
-              className="gap-1.5 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 font-bold rounded-md text-xs"
+              className="gap-1.5 border-border/80 text-foreground hover:bg-muted font-bold rounded-md text-xs"
             >
               <ArrowRightLeftIcon className="size-3.5" />
               <span>نقل الطاولة</span>
@@ -724,7 +763,7 @@ export default function TablesPage() {
               className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 font-bold rounded-md text-xs"
             >
               <PlusIcon className="size-3.5" />
-              <span>إضافة أصناف / تعديل الطلب</span>
+              <span>إضافة أصناف</span>
             </Button>
 
             <Button
@@ -743,6 +782,17 @@ export default function TablesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* نافذة تقسيم الفاتورة (Split Bill) */}
+      <SplitBillDialog
+        open={splitBillOpen}
+        onOpenChange={setSplitBillOpen}
+        order={selectedTableWithOrder?.current_order || null}
+        onSuccess={() => {
+          fetchTables()
+          setActiveOrderModalOpen(false)
+        }}
+      />
 
       {/* =========================================================
           نافذة نقل الطلب إلى طاولة أخرى

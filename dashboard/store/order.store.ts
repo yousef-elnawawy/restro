@@ -11,6 +11,7 @@ import {
   createOrderApi,
   updateOrderApi,
   payOrderApi,
+  splitOrderApi,
   cancelOrderApi,
   updateOrderStatusApi,
   assignOrderDriverApi,
@@ -50,6 +51,15 @@ interface OrderState {
   updateOrderStatus: (id: number, payload: UpdateOrderStatusPayload) => Promise<{ success: boolean; message: string; data?: Order }>
   assignDriver: (id: number, driverId: number) => Promise<{ success: boolean; message: string; data?: Order }>
   payOrder: (id: number, payload: PayOrderPayload) => Promise<{ success: boolean; message: string; data?: Order }>
+  splitOrder: (
+    id: number,
+    payload: {
+      items: { order_item_id: number; quantity: number }[]
+      pay_now?: boolean
+      cash_register_id?: number
+      payment_method?: string
+    }
+  ) => Promise<{ success: boolean; message: string; data?: { original_order: Order; split_order: Order } }>
   cancelOrder: (id: number) => Promise<{ success: boolean; message: string }>
   setActiveOrder: (order: Order | null) => void
   setSearchQuery: (query: string) => void
@@ -200,6 +210,24 @@ export const useOrderStore = create<OrderState>()((set, get) => ({
     } catch {
       set({ isSaving: false })
       return { success: false, message: "تعذر الاتصال بالخادم لتسجيل دفع الطلب." }
+    }
+  },
+
+  splitOrder: async (id, payload) => {
+    set({ isSaving: true, error: null })
+    try {
+      const res = await splitOrderApi(id, payload)
+      if (res.success && res.data) {
+        await get().fetchOrders()
+        set({ isSaving: false })
+        return { success: true, message: res.message || "تم تقسيم الفاتورة بنجاح.", data: res.data }
+      } else {
+        set({ isSaving: false })
+        return { success: false, message: extractErrorMessage(res, "فشل في تقسيم الفاتورة.") }
+      }
+    } catch {
+      set({ isSaving: false })
+      return { success: false, message: "تعذر الاتصال بالخادم لتقسيم الفاتورة." }
     }
   },
 

@@ -4,6 +4,7 @@ import * as React from "react"
 import QRCode from "qrcode"
 import { type RestaurantTable } from "@/lib/api"
 import { useSettingStore } from "@/store/setting.store"
+import { printHtmlIsolated } from "@/lib/receipt-printer"
 import {
   Dialog,
   DialogContent,
@@ -311,32 +312,7 @@ export function TableQrDialog({
       </html>
     `
 
-    const printFrame = document.createElement("iframe")
-    printFrame.style.position = "fixed"
-    printFrame.style.right = "0"
-    printFrame.style.bottom = "0"
-    printFrame.style.width = "0"
-    printFrame.style.height = "0"
-    printFrame.style.border = "none"
-    document.body.appendChild(printFrame)
-
-    const doc = printFrame.contentWindow?.document
-    if (doc) {
-      doc.open()
-      doc.write(printHtml)
-      doc.close()
-
-      setTimeout(() => {
-        try {
-          printFrame.contentWindow?.focus()
-          printFrame.contentWindow?.print()
-        } catch {
-          window.print()
-        } finally {
-          setTimeout(() => document.body.removeChild(printFrame), 2000)
-        }
-      }, 300)
-    }
+    printHtmlIsolated(printHtml)
   }
 
   return (

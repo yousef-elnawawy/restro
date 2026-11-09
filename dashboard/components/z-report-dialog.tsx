@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { type ZReportData, type Shift } from "@/lib/api"
+import { printZReportSlip } from "@/lib/receipt-printer"
 import {
   Dialog,
   DialogContent,
@@ -39,7 +40,7 @@ export function ZReportDialog({ open, onOpenChange, zReport, shift }: ZReportDia
   const diff = zReport.cash_drawer?.difference ?? 0
 
   const handlePrint = () => {
-    window.print()
+    printZReportSlip(zReport)
   }
 
   return (

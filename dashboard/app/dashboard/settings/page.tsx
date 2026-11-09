@@ -43,6 +43,7 @@ import {
   SparklesIcon,
   XIcon,
   CameraIcon,
+  ArmchairIcon,
   LinkIcon,
   ImageIcon,
 } from "lucide-react"
@@ -104,6 +105,14 @@ const TAX_PRESETS = [
   { label: "15% (السعودية)", value: 15 },
   { label: "5% (الإمارات)", value: 5 },
   { label: "10% (البحرين)", value: 10 },
+]
+
+// نسب خدمة الصالة الشائعة
+const SERVICE_CHARGE_PRESETS = [
+  { label: "10%", value: 10 },
+  { label: "12% (شائع)", value: 12 },
+  { label: "14%", value: 14 },
+  { label: "15%", value: 15 },
 ]
 
 // نماذج ترويسة وتذييل الفاتورة
@@ -725,6 +734,79 @@ export default function SettingsPage() {
                           dir="ltr"
                         />
                       </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* بطاقة خدمة الصالة (Service Charge) */}
+            <Card className="rounded-xl border border-border/60 bg-card shadow-xs">
+              <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/40">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <ArmchairIcon className="size-4 text-amber-600 dark:text-amber-400" />
+                      <span>خدمة الصالة (Service Charge)</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                      تطبق تلقائياً على طلبات الصالة والطاولات (Dine-in) فقط
+                    </CardDescription>
+                  </div>
+                  <Switch
+                    checked={formData.service_charge_enabled ?? true}
+                    onCheckedChange={(checked) => setFormData({ ...formData, service_charge_enabled: checked })}
+                  />
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-4 sm:p-5 space-y-3.5">
+                <div
+                  className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${
+                    formData.service_charge_enabled ?? true
+                      ? "bg-amber-500/10 border-amber-500/25 text-amber-800 dark:text-amber-300 font-medium"
+                      : "bg-muted/30 border-border/50 text-muted-foreground"
+                  }`}
+                >
+                  <ShieldCheckIcon className="size-4 shrink-0" />
+                  <span>
+                    {formData.service_charge_enabled ?? true
+                      ? `خدمة الصالة مفعلة بنسبة ${formData.service_charge_percentage ?? 12}% وتضاف لطلبات الصالة بعد الخصومات.`
+                      : "خدمة الصالة معطلة، تصدر فواتير الصالة بدون احتساب أي نسبة خدمة إضافية."}
+                  </span>
+                </div>
+
+                {(formData.service_charge_enabled ?? true) && (
+                  <div className="space-y-3 pt-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs font-semibold text-muted-foreground ms-1">نسب شائعة:</span>
+                      {SERVICE_CHARGE_PRESETS.map((p) => (
+                        <Button
+                          key={p.value}
+                          type="button"
+                          variant={(formData.service_charge_percentage ?? 12) === p.value ? "default" : "outline"}
+                          size="xs"
+                          onClick={() => setFormData({ ...formData, service_charge_percentage: p.value })}
+                          className="h-7 text-xs rounded-md"
+                        >
+                          {p.label}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-1 max-w-xs">
+                      <label className="text-xs font-semibold text-foreground">نسبة خدمة الصالة (%)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={formData.service_charge_percentage ?? 12}
+                        onChange={(e) =>
+                          setFormData({ ...formData, service_charge_percentage: parseFloat(e.target.value) || 0 })
+                        }
+                        className="h-9 rounded-lg text-xs font-mono text-center font-bold"
+                      />
                     </div>
                   </div>
                 )}
